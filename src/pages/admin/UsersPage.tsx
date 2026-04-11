@@ -136,7 +136,7 @@ export default function UsersPage() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" onClick={() => handleFreeze(u.id, u.balance_frozen)}>
-                          <Snowflake className={`h-4 w-4 ${u.balance_frozen ? "text-blue-500" : ""}`} />
+                          <Snowflake className={`h-4 w-4 ${u.balance_frozen ? "text-primary" : ""}`} />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>{u.balance_frozen ? "Разморозить" : "Заморозить баланс"}</TooltipContent>
