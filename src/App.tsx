@@ -9,6 +9,7 @@ import StatisticsPage from "@/pages/admin/StatisticsPage";
 import UsersPage from "@/pages/admin/UsersPage";
 import AlertsPage from "@/pages/admin/AlertsPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
+import MiniApp from "@/pages/MiniApp";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
