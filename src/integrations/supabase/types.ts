@@ -14,7 +14,358 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logs_activity: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      task_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          channel_id: number | null
+          channel_username: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          reward_pt: number
+          type: Database["public"]["Enums"]["task_type"]
+        }
+        Insert: {
+          channel_id?: number | null
+          channel_username?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reward_pt?: number
+          type: Database["public"]["Enums"]["task_type"]
+        }
+        Update: {
+          channel_id?: number | null
+          channel_username?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reward_pt?: number
+          type?: Database["public"]["Enums"]["task_type"]
+        }
+        Relationships: []
+      }
+      user_ips: {
+        Row: {
+          first_seen_at: string
+          id: string
+          ip_address: unknown
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          first_seen_at?: string
+          id?: string
+          ip_address: unknown
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          first_seen_at?: string
+          id?: string
+          ip_address?: unknown
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ips_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          balance_frozen: boolean
+          balance_pt: number
+          captcha_count: number
+          created_at: string
+          id: string
+          is_banned: boolean
+          is_suspicious: boolean
+          referrer_id: string | null
+          telegram_id: number
+          username: string | null
+          violation_count: number
+        }
+        Insert: {
+          balance_frozen?: boolean
+          balance_pt?: number
+          captcha_count?: number
+          created_at?: string
+          id?: string
+          is_banned?: boolean
+          is_suspicious?: boolean
+          referrer_id?: string | null
+          telegram_id: number
+          username?: string | null
+          violation_count?: number
+        }
+        Update: {
+          balance_frozen?: boolean
+          balance_pt?: number
+          captcha_count?: number
+          created_at?: string
+          id?: string
+          is_banned?: boolean
+          is_suspicious?: boolean
+          referrer_id?: string | null
+          telegram_id?: number
+          username?: string | null
+          violation_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_ads: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          id: string
+          is_active: boolean
+          reward_pt: number
+          title: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds: number
+          id?: string
+          is_active?: boolean
+          reward_pt?: number
+          title: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          is_active?: boolean
+          reward_pt?: number
+          title?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
+      video_views: {
+        Row: {
+          finished_at: string | null
+          id: string
+          ip_address: unknown
+          rewarded: boolean
+          started_at: string
+          user_id: string
+          video_ad_id: string
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          ip_address: unknown
+          rewarded?: boolean
+          started_at?: string
+          user_id: string
+          video_ad_id: string
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          ip_address?: unknown
+          rewarded?: boolean
+          started_at?: string
+          user_id?: string
+          video_ad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_views_video_ad_id_fkey"
+            columns: ["video_ad_id"]
+            isOneToOne: false
+            referencedRelation: "video_ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          amount_pt: number
+          amount_stars: number
+          created_at: string
+          id: string
+          ip_address: unknown
+          processed_at: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"]
+          user_id: string
+        }
+        Insert: {
+          amount_pt: number
+          amount_stars: number
+          created_at?: string
+          id?: string
+          ip_address: unknown
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          user_id: string
+        }
+        Update: {
+          amount_pt?: number
+          amount_stars?: number
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          processed_at?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +374,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      task_type: "subscribe" | "video"
+      withdrawal_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +502,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      task_type: ["subscribe", "video"],
+      withdrawal_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const
