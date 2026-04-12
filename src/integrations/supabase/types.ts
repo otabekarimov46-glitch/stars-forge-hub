@@ -49,6 +49,51 @@ export type Database = {
           },
         ]
       }
+      delayed_checks: {
+        Row: {
+          check_at: string
+          checked: boolean
+          created_at: string
+          id: string
+          reward_deducted: boolean
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          check_at: string
+          checked?: boolean
+          created_at?: string
+          id?: string
+          reward_deducted?: boolean
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          check_at?: string
+          checked?: boolean
+          created_at?: string
+          id?: string
+          reward_deducted?: boolean
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delayed_checks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delayed_checks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logs_activity: {
         Row: {
           action: string
@@ -145,6 +190,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          post_url: string | null
+          reaction_emoji: string | null
           reward_pt: number
           type: Database["public"]["Enums"]["task_type"]
         }
@@ -154,6 +201,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          post_url?: string | null
+          reaction_emoji?: string | null
           reward_pt?: number
           type: Database["public"]["Enums"]["task_type"]
         }
@@ -163,6 +212,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          post_url?: string | null
+          reaction_emoji?: string | null
           reward_pt?: number
           type?: Database["public"]["Enums"]["task_type"]
         }
@@ -204,7 +255,9 @@ export type Database = {
         Row: {
           balance_frozen: boolean
           balance_pt: number
+          captcha_answer: number | null
           captcha_count: number
+          captcha_pending: string | null
           created_at: string
           id: string
           is_banned: boolean
@@ -217,7 +270,9 @@ export type Database = {
         Insert: {
           balance_frozen?: boolean
           balance_pt?: number
+          captcha_answer?: number | null
           captcha_count?: number
+          captcha_pending?: string | null
           created_at?: string
           id?: string
           is_banned?: boolean
@@ -230,7 +285,9 @@ export type Database = {
         Update: {
           balance_frozen?: boolean
           balance_pt?: number
+          captcha_answer?: number | null
           captcha_count?: number
+          captcha_pending?: string | null
           created_at?: string
           id?: string
           is_banned?: boolean
@@ -374,7 +431,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      task_type: "subscribe" | "video"
+      task_type: "subscribe" | "video" | "view_post" | "reaction"
       withdrawal_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -503,7 +560,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      task_type: ["subscribe", "video"],
+      task_type: ["subscribe", "video", "view_post", "reaction"],
       withdrawal_status: ["pending", "approved", "rejected"],
     },
   },
