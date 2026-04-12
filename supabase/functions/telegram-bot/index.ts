@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
   const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
   const GROUP_ID = Deno.env.get("TELEGRAM_GROUP_ID")!;
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-  const PROJECT_ID = SUPABASE_URL.replace("https://", "").split(".")[0];
 
   const supabase = createClient(
     SUPABASE_URL,
@@ -25,31 +24,23 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
 
-    // Handle webhook update from Telegram
     if (body.update_id !== undefined) {
-      return await handleUpdate(body, supabase, BOT_TOKEN, GROUP_ID, PROJECT_ID);
+      return await handleUpdate(body, supabase, BOT_TOKEN, GROUP_ID, SUPABASE_URL);
     }
 
-    // Handle manual action: set_webhook
     if (body.action === "set_webhook") {
       const webhookUrl = `${SUPABASE_URL}/functions/v1/telegram-bot`;
       const res = await fetch(`${TELEGRAM_API}${BOT_TOKEN}/setWebhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: webhookUrl,
-          allowed_updates: ["message", "callback_query"],
-        }),
+        body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message", "callback_query"] }),
       });
-      const data = await res.json();
-      return jsonResponse({ data });
+      return jsonResponse({ data: await res.json() });
     }
 
-    // Handle manual action: delete_webhook
     if (body.action === "delete_webhook") {
       const res = await fetch(`${TELEGRAM_API}${BOT_TOKEN}/deleteWebhook`);
-      const data = await res.json();
-      return jsonResponse({ data });
+      return jsonResponse({ data: await res.json() });
     }
 
     return jsonResponse({ error: "Unknown request" }, 400);
@@ -59,7 +50,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function handleUpdate(update: any, supabase: any, botToken: string, groupId: string, projectId: string) {
+async function handleUpdate(update: any, supabase: any, botToken: string, groupId: string, supabaseUrl: string) {
   const message = update.message;
   const callback = update.callback_query;
 
@@ -70,38 +61,38 @@ async function handleUpdate(update: any, supabase: any, botToken: string, groupI
     const username = message.from.username || null;
 
     // Get or create user
-    let { data: user } = await supabase
-      .from("users")
-      .select("*")
-      .eq("telegram_id", telegramId)
-      .single();
+    let { data: user } = await supabase.from("users").select("*").eq("telegram_id", telegramId).single();
 
     if (!user) {
-      // Check for referral
       let referrerId = null;
       if (text.startsWith("/start ")) {
         const refCode = text.split(" ")[1];
         if (refCode) {
-          const { data: referrer } = await supabase
-            .from("users")
-            .select("id")
-            .eq("id", refCode)
-            .single();
+          const { data: referrer } = await supabase.from("users").select("id").eq("id", refCode).single();
           if (referrer) referrerId = referrer.id;
         }
       }
-
-      const { data: newUser } = await supabase
-        .from("users")
+      const { data: newUser } = await supabase.from("users")
         .insert({ telegram_id: telegramId, username, referrer_id: referrerId })
-        .select("*")
-        .single();
+        .select("*").single();
       user = newUser;
-    } else {
-      // Update username if changed
-      if (username && username !== user.username) {
-        await supabase.from("users").update({ username }).eq("id", user.id);
-        user.username = username;
+    } else if (username && username !== user.username) {
+      await supabase.from("users").update({ username }).eq("id", user.id);
+      user.username = username;
+    }
+
+    // Check captcha pending — block all actions until solved
+    if (user.captcha_pending) {
+      const userAnswer = parseInt(text.trim(), 10);
+      if (!isNaN(userAnswer) && userAnswer === user.captcha_answer) {
+        await supabase.from("users").update({ captcha_pending: null, captcha_answer: null }).eq("id", user.id);
+        await sendMessage(chatId, botToken, "✅ Капча пройдена! Доступ восстановлен.");
+        await sendMainMenu(chatId, botToken, { ...user, captcha_pending: null });
+        return jsonResponse({ ok: true });
+      } else {
+        const parts = user.captcha_pending.split("+");
+        await sendMessage(chatId, botToken, `🔒 *Сначала решите капчу!*\n\n*${parts[0]} + ${parts[1]} = ?*\n\nОтправьте ответ числом.`);
+        return jsonResponse({ ok: true });
       }
     }
 
@@ -111,31 +102,26 @@ async function handleUpdate(update: any, supabase: any, botToken: string, groupI
     }
 
     if (text === "💰 Заработать") {
-      await handleEarn(chatId, botToken, user, projectId);
+      await handleEarn(chatId, botToken, user, supabase, supabaseUrl);
       return jsonResponse({ ok: true });
     }
-
     if (text === "👤 Профиль") {
       await handleProfile(chatId, botToken, user, supabase);
       return jsonResponse({ ok: true });
     }
-
     if (text === "👥 Рефералы") {
       await handleReferrals(chatId, botToken, user, supabase);
       return jsonResponse({ ok: true });
     }
-
     if (text === "⭐ Вывод") {
       await handleWithdraw(chatId, botToken, user, supabase, groupId);
       return jsonResponse({ ok: true });
     }
 
-    // Default: show main menu
     await sendMainMenu(chatId, botToken, user);
   }
 
   if (callback) {
-    // Acknowledge callback
     await fetch(`${TELEGRAM_API}${botToken}/answerCallbackQuery`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,23 +130,24 @@ async function handleUpdate(update: any, supabase: any, botToken: string, groupI
 
     const chatId = callback.message.chat.id;
     const telegramId = callback.from.id;
-    const data = callback.data;
+    const cbData = callback.data;
 
-    const { data: user } = await supabase
-      .from("users")
-      .select("*")
-      .eq("telegram_id", telegramId)
-      .single();
-
+    const { data: user } = await supabase.from("users").select("*").eq("telegram_id", telegramId).single();
     if (!user) return jsonResponse({ ok: true });
 
-    if (data?.startsWith("subscribe_")) {
-      const taskId = data.replace("subscribe_", "");
+    // Check captcha
+    if (user.captcha_pending) {
+      await sendMessage(chatId, botToken, "🔒 Сначала решите капчу!");
+      return jsonResponse({ ok: true });
+    }
+
+    if (cbData?.startsWith("task_")) {
+      const taskId = cbData.replace("task_", "");
       await handleTaskComplete(chatId, botToken, user, taskId, supabase);
     }
 
-    if (data?.startsWith("withdraw_")) {
-      const amount = parseInt(data.replace("withdraw_", ""));
+    if (cbData?.startsWith("withdraw_")) {
+      const amount = parseInt(cbData.replace("withdraw_", ""));
       await processWithdraw(chatId, botToken, user, amount, supabase, groupId);
     }
   }
@@ -182,16 +169,60 @@ async function sendMainMenu(chatId: number, botToken: string, user: any) {
   });
 }
 
-async function handleEarn(chatId: number, botToken: string, user: any, projectId: string) {
+async function handleEarn(chatId: number, botToken: string, user: any, supabase: any, supabaseUrl: string) {
   if (user.is_banned) {
     await sendMessage(chatId, botToken, "⛔ Ваш аккаунт заблокирован.");
     return;
   }
 
-  const miniAppUrl = `https://${projectId}.supabase.co/functions/v1/miniapp-api`;
+  // Get all active tasks
+  const { data: tasks } = await supabase.from("tasks").select("*").eq("is_active", true);
+  // Get user completions
+  const { data: completions } = await supabase.from("task_completions").select("task_id").eq("user_id", user.id);
+  const completedIds = new Set((completions || []).map((c: any) => c.task_id));
+
   const webAppUrl = `https://id-preview--13572394-3347-4564-a651-8996fe1cafa4.lovable.app/app?user_id=${user.telegram_id}`;
 
-  const text = `💰 *Способы заработка:*\n\n🎬 *Смотри видео* — открой Mini App и смотри рекламные ролики\n📢 *Подписки* — подпишись на каналы за PT`;
+  let text = `💰 *Способы заработка:*\n\n🎬 *Смотри видео* — открой Mini App\n`;
+
+  const typeLabels: Record<string, string> = {
+    subscribe: "📢 Подписки на каналы",
+    view_post: "👁 Просмотр постов",
+    reaction: "❤️ Реакции на посты",
+  };
+
+  const tasksByType: Record<string, any[]> = {};
+  (tasks || []).forEach((t: any) => {
+    if (t.type === "video") return; // video tasks are in mini app
+    if (!tasksByType[t.type]) tasksByType[t.type] = [];
+    tasksByType[t.type].push(t);
+  });
+
+  for (const [type, label] of Object.entries(typeLabels)) {
+    const typeTasks = tasksByType[type] || [];
+    if (typeTasks.length > 0) {
+      text += `\n${label}:\n`;
+      typeTasks.forEach((t: any) => {
+        const done = completedIds.has(t.id);
+        const emoji = done ? "✅" : "🔹";
+        let desc = t.channel_username || t.post_url || "";
+        if (t.reaction_emoji) desc += ` ${t.reaction_emoji}`;
+        text += `${emoji} ${desc} — *${t.reward_pt} PT*\n`;
+      });
+    }
+  }
+
+  // Build inline buttons for uncompleted tasks
+  const buttons: any[][] = [[{ text: "🎬 Смотреть видео", web_app: { url: webAppUrl } }]];
+
+  (tasks || []).forEach((t: any) => {
+    if (t.type === "video" || completedIds.has(t.id)) return;
+    let label = "";
+    if (t.type === "subscribe") label = `📢 ${t.channel_username || "Подписка"} — ${t.reward_pt} PT`;
+    else if (t.type === "view_post") label = `👁 Просмотр — ${t.reward_pt} PT`;
+    else if (t.type === "reaction") label = `${t.reaction_emoji || "❤️"} Реакция — ${t.reward_pt} PT`;
+    if (label) buttons.push([{ text: label, callback_data: `task_${t.id}` }]);
+  });
 
   await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
     method: "POST",
@@ -200,31 +231,15 @@ async function handleEarn(chatId: number, botToken: string, user: any, projectId
       chat_id: chatId,
       text,
       parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "🎬 Смотреть видео", web_app: { url: webAppUrl } }],
-        ],
-      },
+      reply_markup: { inline_keyboard: buttons },
     }),
   });
 }
 
 async function handleProfile(chatId: number, botToken: string, user: any, supabase: any) {
-  const { count: tasksCount } = await supabase
-    .from("task_completions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  const { count: videosCount } = await supabase
-    .from("video_views")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("rewarded", true);
-
-  const { count: referralsCount } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .eq("referrer_id", user.id);
+  const { count: tasksCount } = await supabase.from("task_completions").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+  const { count: videosCount } = await supabase.from("video_views").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("rewarded", true);
+  const { count: referralsCount } = await supabase.from("users").select("id", { count: "exact", head: true }).eq("referrer_id", user.id);
 
   const statusEmoji = user.is_banned ? "⛔" : user.is_suspicious ? "⚠️" : "✅";
   const frozenText = user.balance_frozen ? " (🧊 заморожен)" : "";
@@ -233,8 +248,8 @@ async function handleProfile(chatId: number, botToken: string, user: any, supaba
     `🆔 ID: \`${user.telegram_id}\`\n` +
     `👤 Username: @${user.username || "нет"}\n` +
     `💎 Баланс: *${user.balance_pt} PT*${frozenText}\n` +
-    `📋 Заданий выполнено: ${tasksCount || 0}\n` +
-    `🎬 Видео просмотрено: ${videosCount || 0}\n` +
+    `📋 Заданий: ${tasksCount || 0}\n` +
+    `🎬 Видео: ${videosCount || 0}\n` +
     `👥 Рефералов: ${referralsCount || 0}\n` +
     `${statusEmoji} Статус: ${user.is_banned ? "Заблокирован" : user.is_suspicious ? "Под наблюдением" : "Активен"}\n` +
     `📅 Регистрация: ${new Date(user.created_at).toLocaleDateString("ru-RU")}`;
@@ -252,9 +267,7 @@ async function handleReferrals(chatId: number, botToken: string, user: any, supa
 
   const refLink = `https://t.me/YOUR_BOT_USERNAME?start=${user.id}`;
 
-  let text = `👥 *Реферальная программа*\n\n` +
-    `🔗 Ваша ссылка:\n\`${refLink}\`\n\n` +
-    `Всего рефералов: *${count || 0}*\n`;
+  let text = `👥 *Реферальная программа*\n\n🔗 Ваша ссылка:\n\`${refLink}\`\n\nВсего рефералов: *${count || 0}*\n`;
 
   if (referrals && referrals.length > 0) {
     text += `\nПоследние:\n`;
@@ -267,36 +280,23 @@ async function handleReferrals(chatId: number, botToken: string, user: any, supa
 }
 
 async function handleWithdraw(chatId: number, botToken: string, user: any, supabase: any, groupId: string) {
-  if (user.is_banned) {
-    await sendMessage(chatId, botToken, "⛔ Ваш аккаунт заблокирован.");
-    return;
-  }
-  if (user.balance_frozen) {
-    await sendMessage(chatId, botToken, "🧊 Ваш баланс заморожен. Вывод невозможен.");
-    return;
-  }
+  if (user.is_banned) { await sendMessage(chatId, botToken, "⛔ Ваш аккаунт заблокирован."); return; }
+  if (user.balance_frozen) { await sendMessage(chatId, botToken, "🧊 Ваш баланс заморожен."); return; }
 
-  // Get exchange rate
-  const { data: settings } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "exchange_rate")
-    .single();
-
+  const { data: settings } = await supabase.from("settings").select("value").eq("key", "exchange_rate").single();
   const rate = parseFloat(settings?.value || "1");
   const balance = user.balance_pt;
   const minWithdraw = 100;
 
   if (balance < minWithdraw) {
-    await sendMessage(chatId, botToken, `⭐ *Вывод Stars*\n\n💎 Баланс: *${balance} PT*\n⭐ Курс: 1 Star = ${rate} PT\n\n❌ Минимум для вывода: ${minWithdraw} PT`);
+    await sendMessage(chatId, botToken, `⭐ *Вывод Stars*\n\n💎 Баланс: *${balance} PT*\n⭐ Курс: 1 Star = ${rate} PT\n\n❌ Минимум: ${minWithdraw} PT`);
     return;
   }
 
   const starsAmount = Math.floor(balance / rate);
+  const text = `⭐ *Вывод Stars*\n\n💎 Баланс: *${balance} PT*\n⭐ Курс: 1 Star = ${rate} PT\n⭐ Получите: *${starsAmount} Stars*\n\nВыберите сумму:`;
 
-  const text = `⭐ *Вывод Stars*\n\n💎 Баланс: *${balance} PT*\n⭐ Курс: 1 Star = ${rate} PT\n⭐ Вы получите: *${starsAmount} Stars*\n\nВыберите сумму:`;
-
-  const buttons = [];
+  const buttons: any[][] = [];
   if (balance >= 100) buttons.push([{ text: `100 PT → ${Math.floor(100/rate)} ⭐`, callback_data: "withdraw_100" }]);
   if (balance >= 500) buttons.push([{ text: `500 PT → ${Math.floor(500/rate)} ⭐`, callback_data: "withdraw_500" }]);
   if (balance >= 1000) buttons.push([{ text: `1000 PT → ${Math.floor(1000/rate)} ⭐`, callback_data: "withdraw_1000" }]);
@@ -305,128 +305,74 @@ async function handleWithdraw(chatId: number, botToken: string, user: any, supab
   await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "Markdown",
-      reply_markup: { inline_keyboard: buttons },
-    }),
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown", reply_markup: { inline_keyboard: buttons } }),
   });
 }
 
 async function processWithdraw(chatId: number, botToken: string, user: any, amountPt: number, supabase: any, groupId: string) {
-  if (user.balance_pt < amountPt) {
-    await sendMessage(chatId, botToken, "❌ Недостаточно средств.");
-    return;
-  }
+  if (user.balance_pt < amountPt) { await sendMessage(chatId, botToken, "❌ Недостаточно средств."); return; }
 
-  const { data: settings } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", "exchange_rate")
-    .single();
+  const { data: settings } = await supabase.from("settings").select("value").eq("key", "exchange_rate").single();
   const rate = parseFloat(settings?.value || "1");
   const amountStars = Math.floor(amountPt / rate);
 
-  // Get user IP
-  const { data: ips } = await supabase
-    .from("user_ips")
-    .select("ip_address")
-    .eq("user_id", user.id)
-    .order("last_seen_at", { ascending: false })
-    .limit(1);
+  const { data: ips } = await supabase.from("user_ips").select("ip_address").eq("user_id", user.id).order("last_seen_at", { ascending: false }).limit(1);
   const userIp = ips?.[0]?.ip_address || "unknown";
 
-  // Create withdrawal
-  const { error } = await supabase.from("withdrawals").insert({
-    user_id: user.id,
-    amount_pt: amountPt,
-    amount_stars: amountStars,
-    ip_address: userIp,
-    status: "pending",
-  });
-  if (error) throw error;
+  await supabase.from("withdrawals").insert({ user_id: user.id, amount_pt: amountPt, amount_stars: amountStars, ip_address: userIp, status: "pending" });
+  await supabase.from("users").update({ balance_pt: user.balance_pt - amountPt }).eq("id", user.id);
+  await supabase.from("logs_activity").insert({ user_id: user.id, action: "withdrawal_request", ip_address: userIp, metadata: { amount_pt: amountPt, amount_stars: amountStars } });
 
-  // Deduct balance
-  await supabase
-    .from("users")
-    .update({ balance_pt: user.balance_pt - amountPt })
-    .eq("id", user.id);
+  await sendMessage(chatId, botToken, `✅ Заявка создана!\n\n💎 ${amountPt} PT → ⭐ ${amountStars} Stars\n\nОжидайте обработки.`);
 
-  // Log
-  await supabase.from("logs_activity").insert({
-    user_id: user.id,
-    action: "withdrawal_request",
-    ip_address: userIp,
-    metadata: { amount_pt: amountPt, amount_stars: amountStars },
-  });
-
-  // Notify user
-  await sendMessage(chatId, botToken, `✅ Заявка на вывод создана!\n\n💎 ${amountPt} PT → ⭐ ${amountStars} Stars\n\nОжидайте обработки.`);
-
-  // Send report to monitoring group
-  const report = `📤 *Новая заявка на вывод*\n\n` +
-    `👤 @${user.username || user.telegram_id} (ID: ${user.telegram_id})\n` +
-    `🌐 IP: ${userIp}\n` +
-    `💎 Сумма: ${amountPt} PT → ⭐ ${amountStars} Stars\n` +
-    `⚠️ Нарушений: ${user.violation_count}\n` +
-    `🔒 Капч: ${user.captcha_count}\n` +
-    `${user.is_suspicious ? "🚨 ПОДОЗРИТЕЛЬНЫЙ АККАУНТ" : ""}`;
-
+  const report = `📤 *Новая заявка на вывод*\n\n👤 @${user.username || user.telegram_id}\n🌐 IP: ${userIp}\n💎 ${amountPt} PT → ⭐ ${amountStars} Stars\n⚠️ Нарушений: ${user.violation_count}\n${user.is_suspicious ? "🚨 ПОДОЗРИТЕЛЬНЫЙ" : ""}`;
   await sendMessage(parseInt(groupId), botToken, report);
 }
 
 async function handleTaskComplete(chatId: number, botToken: string, user: any, taskId: string, supabase: any) {
-  const { data: task } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("id", taskId)
-    .eq("is_active", true)
-    .single();
+  const { data: task } = await supabase.from("tasks").select("*").eq("id", taskId).eq("is_active", true).single();
+  if (!task) { await sendMessage(chatId, botToken, "❌ Задание не найдено."); return; }
 
-  if (!task) {
-    await sendMessage(chatId, botToken, "❌ Задание не найдено или неактивно.");
-    return;
+  const { data: existing } = await supabase.from("task_completions").select("id").eq("user_id", user.id).eq("task_id", taskId).single();
+  if (existing) { await sendMessage(chatId, botToken, "✅ Уже выполнено."); return; }
+
+  // For subscribe tasks, verify membership
+  if (task.type === "subscribe" && task.channel_id) {
+    try {
+      const res = await fetch(`${TELEGRAM_API}${botToken}/getChatMember`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: task.channel_id, user_id: user.telegram_id }),
+      });
+      const memberData = await res.json();
+      const status = memberData?.result?.status;
+      if (!status || status === "left" || status === "kicked") {
+        await sendMessage(chatId, botToken, `❌ Сначала подпишитесь на ${task.channel_username || "канал"}!`);
+        return;
+      }
+    } catch (e) {
+      console.error("getChatMember error:", e);
+    }
   }
 
-  // Check if already completed
-  const { data: existing } = await supabase
-    .from("task_completions")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("task_id", taskId)
-    .single();
+  // For view_post — just trust the click (user sees the post via URL)
+  // For reaction — trust the click (Telegram API doesn't expose reactions check easily)
 
-  if (existing) {
-    await sendMessage(chatId, botToken, "✅ Вы уже выполнили это задание.");
-    return;
+  await supabase.from("task_completions").insert({ user_id: user.id, task_id: taskId });
+  await supabase.from("users").update({ balance_pt: user.balance_pt + task.reward_pt }).eq("id", user.id);
+
+  // Schedule delayed check for subscribe/reaction (72h)
+  if (task.type === "subscribe" || task.type === "reaction") {
+    const checkAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    await supabase.from("delayed_checks").insert({ user_id: user.id, task_id: taskId, check_at: checkAt });
   }
-
-  // TODO: verify subscription via Bot API getChatMember
-  // For now, mark as complete and reward
-
-  await supabase.from("task_completions").insert({
-    user_id: user.id,
-    task_id: taskId,
-  });
-
-  await supabase
-    .from("users")
-    .update({ balance_pt: user.balance_pt + task.reward_pt })
-    .eq("id", user.id);
 
   await sendMessage(chatId, botToken, `✅ Задание выполнено! Начислено *${task.reward_pt} PT*`);
 }
 
 async function sendMessage(chatId: number, botToken: string, text: string, replyMarkup?: any) {
-  const body: any = {
-    chat_id: chatId,
-    text,
-    parse_mode: "Markdown",
-  };
-  if (replyMarkup) {
-    body.reply_markup = replyMarkup;
-  }
+  const body: any = { chat_id: chatId, text, parse_mode: "Markdown" };
+  if (replyMarkup) body.reply_markup = replyMarkup;
   await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
