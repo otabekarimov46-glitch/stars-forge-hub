@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +9,10 @@ import { Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search } from "l
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -33,33 +34,33 @@ export default function UsersPage() {
 
   const handleBan = async (userId: string, currentBanned: boolean) => {
     await adminApi("ban_user", { user_id: userId, is_banned: !currentBanned });
-    toast.success(currentBanned ? "Разбанен" : "Забанен");
+    toast.success(currentBanned ? t("users.unbanned") : t("users.banned"));
     fetchUsers();
   };
 
   const handleFreeze = async (userId: string, currentFrozen: boolean) => {
     await adminApi("freeze_balance", { user_id: userId, frozen: !currentFrozen });
-    toast.success(currentFrozen ? "Баланс разморожен" : "Баланс заморожен");
+    toast.success(currentFrozen ? t("users.unfrozen") : t("users.frozen"));
     fetchUsers();
   };
 
   const handleCaptcha = async (userId: string) => {
-    await adminApi("force_captcha", { user_id: userId });
-    toast.success("Капча назначена");
+    await adminApi("send_captcha", { user_id: userId });
+    toast.success(t("users.captchaAssigned"));
     fetchUsers();
   };
 
   const handleReset = async (userId: string) => {
-    if (!confirm("Сбросить баланс пользователя до 0?")) return;
+    if (!confirm(t("users.confirmReset"))) return;
     await adminApi("reset_balance", { user_id: userId });
-    toast.success("Баланс сброшен");
+    toast.success(t("users.balanceReset"));
     fetchUsers();
   };
 
   const handleMessage = async () => {
     if (!messageText.trim()) return;
-    await adminApi("message_user", { user_id: messageUser.id, message: messageText });
-    toast.success("Сообщение отправлено");
+    await adminApi("send_message", { user_id: messageUser.id, message: messageText });
+    toast.success(t("users.messageSent"));
     setMessageUser(null);
     setMessageText("");
   };
@@ -73,125 +74,117 @@ export default function UsersPage() {
     );
   });
 
-  if (loading) return <div className="text-muted-foreground">Загрузка...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Поиск по ID, Telegram ID, username..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-md"
-        />
-        <span className="text-sm text-muted-foreground">{filtered.length} из {users.length}</span>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t("users.searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 rounded-xl"
+          />
+        </div>
+        <Badge variant="outline" className="rounded-lg">
+          {filtered.length} {t("common.of")} {users.length}
+        </Badge>
       </div>
 
-      <div className="rounded-md border overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Telegram ID</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Баланс</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead>Нарушения</TableHead>
-              <TableHead>Капчи</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((u) => (
-              <TableRow key={u.id} className={u.is_banned ? "opacity-60" : ""}>
-                <TableCell className="font-mono text-xs">{u.telegram_id}</TableCell>
-                <TableCell>{u.username || "—"}</TableCell>
-                <TableCell>
-                  <span className={u.balance_frozen ? "line-through text-muted-foreground" : ""}>
+      <div className="space-y-3">
+        {filtered.map((u) => (
+          <div key={u.id} className={`glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-4 ${u.is_banned ? "opacity-50" : ""}`}>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white ${
+                u.is_banned ? "bg-destructive" : u.is_suspicious ? "bg-yellow-500" : "bg-gradient-to-br from-brand-purple to-brand-blue"
+              }`}>
+                {(u.username || "U")[0].toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">{u.username ? `@${u.username}` : `ID: ${u.telegram_id}`}</span>
+                  {u.is_banned && <Badge variant="destructive" className="rounded-lg text-xs">BAN</Badge>}
+                  {u.is_suspicious && <Badge className="rounded-lg text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/20">⚠️</Badge>}
+                  {u.balance_frozen && <Badge variant="outline" className="rounded-lg text-xs">🧊</Badge>}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                  <span className="font-mono">{u.telegram_id}</span>
+                  <span className={u.balance_frozen ? "line-through" : "font-medium text-foreground"}>
                     {Number(u.balance_pt).toFixed(0)} PT
                   </span>
-                  {u.balance_frozen && <Badge variant="outline" className="ml-1 text-xs">🧊</Badge>}
-                </TableCell>
-                <TableCell className="text-xs font-mono">
-                  {u.user_ips?.map((ip: any) => ip.ip_address).join(", ") || "—"}
-                </TableCell>
-                <TableCell className="space-x-1">
-                  {u.is_banned && <Badge variant="destructive">BAN</Badge>}
-                  {u.is_suspicious && <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">⚠️</Badge>}
-                  {!u.is_banned && !u.is_suspicious && <Badge variant="outline">OK</Badge>}
-                </TableCell>
-                <TableCell>{u.violation_count}</TableCell>
-                <TableCell>{u.captcha_count}</TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => handleBan(u.id, u.is_banned)}>
-                          <Ban className={`h-4 w-4 ${u.is_banned ? "text-destructive" : ""}`} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{u.is_banned ? "Разбанить" : "Забанить"}</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => handleFreeze(u.id, u.balance_frozen)}>
-                          <Snowflake className={`h-4 w-4 ${u.balance_frozen ? "text-primary" : ""}`} />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{u.balance_frozen ? "Разморозить" : "Заморозить баланс"}</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => handleCaptcha(u.id)}>
-                          <ShieldAlert className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Назначить капчу</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => handleReset(u.id)}>
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Сбросить баланс</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => setMessageUser(u)}>
-                          <MessageSquare className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Написать</TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  Пользователи не найдены
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  {u.user_ips?.[0] && <span className="font-mono">{u.user_ips[0].ip_address}</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => handleBan(u.id, u.is_banned)}>
+                    <Ban className={`h-4 w-4 ${u.is_banned ? "text-destructive" : ""}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{u.is_banned ? t("users.unban") : t("users.ban")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => handleFreeze(u.id, u.balance_frozen)}>
+                    <Snowflake className={`h-4 w-4 ${u.balance_frozen ? "text-brand-blue" : ""}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{u.balance_frozen ? t("users.unfreeze") : t("users.freeze")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => handleCaptcha(u.id)}>
+                    <ShieldAlert className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("users.captcha")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => handleReset(u.id)}>
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("users.resetBalance")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => setMessageUser(u)}>
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("users.message")}</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-center text-muted-foreground py-12 glass-card">
+            {t("users.notFound")}
+          </div>
+        )}
       </div>
 
-      {/* Message dialog */}
       <Dialog open={!!messageUser} onOpenChange={(v) => { if (!v) setMessageUser(null); }}>
-        <DialogContent>
+        <DialogContent className="glass-card border-0">
           <DialogHeader>
-            <DialogTitle>Сообщение пользователю {messageUser?.username || messageUser?.telegram_id}</DialogTitle>
+            <DialogTitle>{t("users.messageTitle")} {messageUser?.username ? `@${messageUser.username}` : messageUser?.telegram_id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Текст сообщения</Label>
-              <Textarea value={messageText} onChange={e => setMessageText(e.target.value)} placeholder="Введите сообщение..." rows={4} />
+              <Label>{t("users.messageText")}</Label>
+              <Textarea className="rounded-xl" value={messageText} onChange={e => setMessageText(e.target.value)} placeholder={t("users.messagePlaceholder")} rows={4} />
             </div>
-            <Button onClick={handleMessage} className="w-full">Отправить</Button>
+            <Button onClick={handleMessage} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">{t("common.send")}</Button>
           </div>
         </DialogContent>
       </Dialog>
