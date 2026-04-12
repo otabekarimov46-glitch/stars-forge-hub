@@ -1,13 +1,28 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, AlertTriangle } from "lucide-react";
+import { Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
+const TYPE_ICONS: Record<string, any> = {
+  suspicious_ip: ShieldAlert,
+  force_captcha: ShieldAlert,
+  balance_reset: AlertTriangle,
+  admin_message: MessageSquare,
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  suspicious_ip: "bg-destructive/10 text-destructive",
+  force_captcha: "bg-yellow-500/10 text-yellow-600",
+  balance_reset: "bg-orange-500/10 text-orange-600",
+  admin_message: "bg-brand-blue/10 text-brand-blue",
+};
+
 export default function AlertsPage() {
+  const { t } = useTranslation();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,31 +44,57 @@ export default function AlertsPage() {
     fetchAlerts();
   };
 
-  if (loading) return <div className="text-muted-foreground">Загрузка...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+    </div>
+  );
+
+  const unreadCount = alerts.filter(a => !a.is_read).length;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Алерты ({alerts.filter(a => !a.is_read).length} непрочитанных)</h2>
-      {alerts.length === 0 && <p className="text-muted-foreground">Нет алертов</p>}
-      {alerts.map((a) => (
-        <Card key={a.id} className={a.is_read ? "opacity-60" : ""}>
-          <CardContent className="flex items-start gap-3 pt-4">
-            <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${a.is_read ? "text-muted-foreground" : "text-destructive"}`} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline">{a.type}</Badge>
-                <span className="text-xs text-muted-foreground">{format(parseISO(a.created_at), "dd.MM.yyyy HH:mm")}</span>
+      <div className="flex items-center gap-3">
+        <h2 className="text-xl font-semibold">{t("alerts.title")}</h2>
+        {unreadCount > 0 && (
+          <Badge className="rounded-xl bg-destructive/10 text-destructive border-destructive/20">
+            {unreadCount} {t("alerts.unread")}
+          </Badge>
+        )}
+      </div>
+
+      {alerts.length === 0 && (
+        <div className="glass-card p-12 text-center text-muted-foreground">
+          <Bell className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p>{t("alerts.noAlerts")}</p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {alerts.map((a) => {
+          const Icon = TYPE_ICONS[a.type] || Info;
+          const colorClass = TYPE_COLORS[a.type] || "bg-muted text-muted-foreground";
+          return (
+            <div key={a.id} className={`glass-card p-4 flex items-start gap-4 transition-opacity ${a.is_read ? "opacity-50" : ""}`}>
+              <div className={`p-2.5 rounded-xl shrink-0 ${colorClass}`}>
+                <Icon className="h-5 w-5" />
               </div>
-              <p className="text-sm">{a.message}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="rounded-lg text-xs">{a.type}</Badge>
+                  <span className="text-xs text-muted-foreground">{format(parseISO(a.created_at), "dd.MM.yyyy HH:mm")}</span>
+                </div>
+                <p className="text-sm">{a.message}</p>
+              </div>
+              {!a.is_read && (
+                <Button variant="ghost" size="sm" className="rounded-xl shrink-0" onClick={() => markRead(a.id)}>
+                  <Check className="h-4 w-4 mr-1" /> {t("common.read")}
+                </Button>
+              )}
             </div>
-            {!a.is_read && (
-              <Button variant="ghost" size="sm" onClick={() => markRead(a.id)}>
-                <Check className="h-4 w-4 mr-1" /> Прочитано
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const TELEGRAM_API = "https://api.telegram.org/bot";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -16,6 +18,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
     const { action, ...params } = await req.json();
 
     let data: any;
@@ -51,19 +54,40 @@ Deno.serve(async (req) => {
         error = res.error;
         break;
       }
-      case "force_captcha": {
+      case "send_captcha": {
+        // Generate random math captcha
+        const a = Math.floor(Math.random() * 20) + 1;
+        const b = Math.floor(Math.random() * 20) + 1;
+        const answer = a + b;
+        const captchaText = `${a}+${b}`;
+
+        // Save to user
         const res = await supabase
           .from("users")
-          .update({ captcha_count: params.captcha_count || 1 })
-          .eq("id", params.user_id);
-        data = res.data;
-        error = res.error;
-        // Also create an alert
+          .update({ captcha_pending: captchaText, captcha_answer: answer, captcha_count: params.captcha_count || 1 })
+          .eq("id", params.user_id)
+          .select("telegram_id")
+          .single();
+        if (res.error) { error = res.error; break; }
+
+        // Send captcha message via bot
+        const telegramId = res.data.telegram_id;
+        await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramId,
+            text: `🔒 *Проверка безопасности*\n\nРешите пример: *${a} + ${b} = ?*\n\nОтправьте ответ числом. До верного ответа все функции заблокированы.`,
+            parse_mode: "Markdown",
+          }),
+        });
+
         await supabase.from("admin_alerts").insert({
           type: "force_captcha",
           user_id: params.user_id,
-          message: `Админ принудительно назначил капчу пользователю`,
+          message: `Админ назначил капчу пользователю (${captchaText}=${answer})`,
         });
+        data = { ok: true };
         break;
       }
       case "reset_balance": {
@@ -80,8 +104,35 @@ Deno.serve(async (req) => {
         });
         break;
       }
+      case "send_message": {
+        // Send message to user via Telegram bot
+        const { data: user, error: userErr } = await supabase
+          .from("users")
+          .select("telegram_id")
+          .eq("id", params.user_id)
+          .single();
+        if (userErr || !user) { error = userErr || { message: "User not found" }; break; }
+
+        await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: user.telegram_id,
+            text: `📩 *Сообщение от администрации:*\n\n${params.message}`,
+            parse_mode: "Markdown",
+          }),
+        });
+
+        await supabase.from("admin_alerts").insert({
+          type: "admin_message",
+          user_id: params.user_id,
+          message: `Админ отправил сообщение: ${params.message}`,
+        });
+        data = { ok: true };
+        break;
+      }
+      // Keep old action for backwards compat
       case "message_user": {
-        // Store the message as an alert; the bot will pick it up and send
         const res = await supabase.from("admin_alerts").insert({
           type: "admin_message",
           user_id: params.user_id,
@@ -108,6 +159,8 @@ Deno.serve(async (req) => {
           channel_username: params.channel_username,
           channel_id: params.channel_id,
           reward_pt: params.reward_pt,
+          post_url: params.post_url || null,
+          reaction_emoji: params.reaction_emoji || null,
           is_active: true,
         }).select();
         data = res.data;
