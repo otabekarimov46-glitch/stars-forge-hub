@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-interface VideoAd { id: string; title: string; video_url: string; duration_seconds: number; reward_pt: number; }
+interface VideoAd {
+  id: string;
+  title: string;
+  video_url: string;
+  duration_seconds: number;
+  reward_pt: number;
+  external_link_url?: string;
+  external_link_label?: string;
+}
 
 async function miniAppApi(action: string, params: Record<string, any> = {}) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/miniapp-api`, {
@@ -30,9 +38,10 @@ export default function MiniApp() {
   const telegramId = getTelegramUserId();
   const [video, setVideo] = useState<VideoAd | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "playing" | "completed" | "error" | "no_video">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "playing" | "completed" | "error" | "no_video" | "bonus">("loading");
   const [error, setError] = useState("");
   const [elapsed, setElapsed] = useState(0);
+  const [bonusResult, setBonusResult] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -47,6 +56,15 @@ export default function MiniApp() {
   }, [telegramId]);
 
   useEffect(() => { loadVideo(); }, [loadVideo]);
+
+  const claimDailyBonus = async () => {
+    if (!telegramId) return;
+    try {
+      const result = await miniAppApi("claim_daily_bonus", { telegram_id: telegramId });
+      setBonusResult(result);
+      setStatus("bonus");
+    } catch (e: any) { setError(e.message); setStatus("error"); }
+  };
 
   const startWatching = async () => {
     if (!video || !telegramId) return;
@@ -81,6 +99,14 @@ export default function MiniApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a0533] via-[#0d1b3e] to-[#0a2a1f] text-white flex flex-col items-center justify-center p-4">
       <img src={logoImg} alt="StarBot" className="w-20 h-20 rounded-2xl shadow-2xl mb-6" />
+
+      {/* Daily Bonus Button */}
+      {status !== "playing" && status !== "bonus" && (
+        <Button onClick={claimDailyBonus} className="mb-4 gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+          <Gift className="w-4 h-4" /> Ежедневный бонус
+        </Button>
+      )}
+
       <div className="w-full max-w-lg glass-card p-6 space-y-4 text-white" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}>
         {status === "loading" && (
           <div className="flex flex-col items-center gap-3 py-12">
@@ -93,6 +119,25 @@ export default function MiniApp() {
             <AlertTriangle className="w-10 h-10 text-red-400" />
             <p className="text-red-300">{error}</p>
             <Button variant="outline" onClick={loadVideo} className="rounded-xl border-white/20 text-white">Попробовать снова</Button>
+          </div>
+        )}
+        {status === "bonus" && (
+          <div className="flex flex-col items-center gap-4 py-8">
+            {bonusResult?.claimed ? (
+              <>
+                <Gift className="w-14 h-14 text-yellow-400" />
+                <h2 className="text-xl font-bold">🎁 Бонус получен!</h2>
+                <p className="text-gray-300">+<span className="text-yellow-400 font-bold">{bonusResult.bonus} PT</span></p>
+                <p className="text-sm text-gray-400">Баланс: {bonusResult.new_balance?.toFixed(1)} PT</p>
+              </>
+            ) : (
+              <>
+                <Gift className="w-14 h-14 text-gray-500" />
+                <h2 className="text-xl font-bold">Уже получен</h2>
+                <p className="text-gray-400">Следующий через {bonusResult?.hours_left} ч.</p>
+              </>
+            )}
+            <Button onClick={() => { setBonusResult(null); loadVideo(); }} variant="outline" className="rounded-xl border-white/20 text-white">К видео</Button>
           </div>
         )}
         {status === "no_video" && (
@@ -133,6 +178,11 @@ export default function MiniApp() {
             <CheckCircle className="w-14 h-14 text-green-400" />
             <h2 className="text-xl font-bold">Готово!</h2>
             <p className="text-gray-300 text-center">Вам начислено <span className="text-yellow-400 font-bold">{video.reward_pt} PT</span></p>
+            {video.external_link_url && (
+              <a href={video.external_link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium">
+                <ExternalLink className="w-4 h-4" /> {video.external_link_label || "Перейти"}
+              </a>
+            )}
             <Button onClick={() => { setVideo(null); setViewId(null); setElapsed(0); loadVideo(); }} variant="outline" className="rounded-xl border-white/20 text-white">Следующее видео</Button>
           </div>
         )}
