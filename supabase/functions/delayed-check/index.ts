@@ -19,7 +19,6 @@ Deno.serve(async (req) => {
     );
     const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 
-    // Get all unchecked delayed_checks where check_at <= now
     const { data: checks, error } = await supabase
       .from("delayed_checks")
       .select("*, tasks(*), users(*)")
@@ -59,19 +58,22 @@ Deno.serve(async (req) => {
         }
       }
 
-      // For reaction tasks, we can't easily verify via API, so skip deduction
-      // (Telegram doesn't expose reaction checks for channels easily)
+      // For reaction tasks — can't easily verify via API, so just check subscription status
+      // Telegram doesn't expose reaction info via Bot API
 
       if (shouldDeduct) {
-        // Deduct reward
-        const newBalance = Math.max(0, user.balance_pt - task.reward_pt);
+        const newBalance = Math.max(0, Number(user.balance_pt) - Number(task.reward_pt));
         await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+
+        // Restore +1 slot for advertiser
+        await supabase.from("tasks").update({
+          current_completions: Math.max(0, (task.current_completions || 1) - 1)
+        }).eq("id", task.id);
 
         await supabase.from("delayed_checks")
           .update({ checked: true, reward_deducted: true })
           .eq("id", check.id);
 
-        // Notify user
         await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -82,11 +84,10 @@ Deno.serve(async (req) => {
           }),
         });
 
-        // Create alert
         await supabase.from("admin_alerts").insert({
           type: "subscription_check_fail",
           user_id: user.id,
-          message: `Пользователь отписался от ${task.channel_username}. Списано ${task.reward_pt} PT.`,
+          message: `Пользователь отписался от ${task.channel_username || "канала"}. Списано ${task.reward_pt} PT. Место в лимите восстановлено.`,
         });
 
         deducted++;

@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
-    // Get user's IP from headers
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       || req.headers.get("cf-connecting-ip")
       || "0.0.0.0";
@@ -28,7 +27,6 @@ Deno.serve(async (req) => {
         const { telegram_id } = params;
         if (!telegram_id) throw new Error("telegram_id required");
 
-        // Get or create user
         let { data: user } = await supabase
           .from("users")
           .select("id, is_banned, balance_frozen")
@@ -48,23 +46,7 @@ Deno.serve(async (req) => {
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
 
         // Record IP
-        const { data: existingIp } = await supabase
-          .from("user_ips")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("ip_address", ip)
-          .single();
-
-        if (existingIp) {
-          await supabase
-            .from("user_ips")
-            .update({ last_seen_at: new Date().toISOString() })
-            .eq("id", existingIp.id);
-        } else {
-          await supabase
-            .from("user_ips")
-            .insert({ user_id: user.id, ip_address: ip });
-        }
+        await recordIp(supabase, user.id, ip);
 
         // Log activity
         await supabase.from("logs_activity").insert({
@@ -82,10 +64,9 @@ Deno.serve(async (req) => {
 
         const watchedIds = (watched || []).map((v: any) => v.video_ad_id);
 
-        // Get next active video not yet watched
         let query = supabase
           .from("video_ads")
-          .select("id, title, video_url, duration_seconds, reward_pt")
+          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label")
           .eq("is_active", true)
           .order("created_at", { ascending: true })
           .limit(1);
@@ -113,11 +94,7 @@ Deno.serve(async (req) => {
 
         const { data: view, error } = await supabase
           .from("video_views")
-          .insert({
-            user_id: user.id,
-            video_ad_id,
-            ip_address: ip,
-          })
+          .insert({ user_id: user.id, video_ad_id, ip_address: ip })
           .select("id")
           .single();
         if (error) throw error;
@@ -136,7 +113,6 @@ Deno.serve(async (req) => {
           .single();
         if (!user) throw new Error("User not found");
 
-        // Get view and video info
         const { data: view } = await supabase
           .from("video_views")
           .select("id, video_ad_id, started_at, rewarded")
@@ -153,7 +129,6 @@ Deno.serve(async (req) => {
           .single();
         if (!video) throw new Error("Video not found");
 
-        // Check minimum time elapsed
         const startedAt = new Date(view.started_at).getTime();
         const now = Date.now();
         const elapsedSec = (now - startedAt) / 1000;
@@ -162,7 +137,6 @@ Deno.serve(async (req) => {
           throw new Error("Видео не досмотрено");
         }
 
-        // Mark finished and reward
         await supabase
           .from("video_views")
           .update({ finished_at: new Date().toISOString(), rewarded: true })
@@ -171,11 +145,10 @@ Deno.serve(async (req) => {
         if (!user.balance_frozen) {
           await supabase
             .from("users")
-            .update({ balance_pt: user.balance_pt + video.reward_pt })
+            .update({ balance_pt: Number(user.balance_pt) + Number(video.reward_pt) })
             .eq("id", user.id);
         }
 
-        // Log
         await supabase.from("logs_activity").insert({
           user_id: user.id,
           action: "video_reward",
@@ -184,6 +157,40 @@ Deno.serve(async (req) => {
         });
 
         return jsonResponse({ data: { rewarded: true, amount: video.reward_pt } });
+      }
+
+      case "claim_daily_bonus": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, balance_pt, daily_bonus_at, is_banned, balance_frozen")
+          .eq("telegram_id", telegram_id)
+          .single();
+        if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+
+        const now = new Date();
+        if (user.daily_bonus_at) {
+          const diff = now.getTime() - new Date(user.daily_bonus_at).getTime();
+          if (diff < 24 * 60 * 60 * 1000) {
+            const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 60 * 1000));
+            return jsonResponse({ data: { claimed: false, hours_left: hoursLeft } });
+          }
+        }
+
+        const bonus = Math.round((1.5 + Math.random() * 1.5) * 10) / 10;
+        const newBalance = Number(user.balance_pt) + bonus;
+
+        await supabase.from("users").update({
+          balance_pt: newBalance,
+          daily_bonus_at: now.toISOString(),
+        }).eq("id", user.id);
+
+        await recordIp(supabase, user.id, ip);
+
+        return jsonResponse({ data: { claimed: true, bonus, new_balance: newBalance } });
       }
 
       default:
@@ -199,6 +206,24 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function recordIp(supabase: any, userId: string, ip: string) {
+  const { data: existingIp } = await supabase
+    .from("user_ips")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("ip_address", ip)
+    .single();
+
+  if (existingIp) {
+    await supabase.from("user_ips")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("id", existingIp.id);
+  } else {
+    await supabase.from("user_ips")
+      .insert({ user_id: userId, ip_address: ip });
+  }
+}
 
 function jsonResponse(body: any, status = 200) {
   return new Response(JSON.stringify(body), {

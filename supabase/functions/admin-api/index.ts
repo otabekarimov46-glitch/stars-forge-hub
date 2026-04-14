@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
           .from("users")
           .select("*, user_ips(ip_address)")
           .order("created_at", { ascending: false })
-          .limit(params.limit || 100);
+          .limit(params.limit || 200);
         data = res.data;
         error = res.error;
         break;
@@ -45,6 +45,18 @@ Deno.serve(async (req) => {
         error = res.error;
         break;
       }
+      case "bulk_ban": {
+        // Ban multiple users by IDs
+        const { user_ids } = params;
+        if (!user_ids || !Array.isArray(user_ids)) throw new Error("user_ids array required");
+        const res = await supabase
+          .from("users")
+          .update({ is_banned: true })
+          .in("id", user_ids);
+        data = { banned: user_ids.length };
+        error = res.error;
+        break;
+      }
       case "freeze_balance": {
         const res = await supabase
           .from("users")
@@ -54,14 +66,28 @@ Deno.serve(async (req) => {
         error = res.error;
         break;
       }
+      case "adjust_balance": {
+        const { user_id, amount } = params;
+        if (!user_id || amount === undefined) throw new Error("user_id and amount required");
+        const { data: user, error: ue } = await supabase.from("users").select("balance_pt").eq("id", user_id).single();
+        if (ue) { error = ue; break; }
+        const newBalance = Math.max(0, Number(user.balance_pt) + Number(amount));
+        const res = await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user_id);
+        await supabase.from("admin_alerts").insert({
+          type: "balance_adjust",
+          user_id,
+          message: `Админ изменил баланс на ${amount > 0 ? "+" : ""}${amount} PT. Новый баланс: ${newBalance} PT`,
+        });
+        data = { new_balance: newBalance };
+        error = res.error;
+        break;
+      }
       case "send_captcha": {
-        // Generate random math captcha
         const a = Math.floor(Math.random() * 20) + 1;
         const b = Math.floor(Math.random() * 20) + 1;
         const answer = a + b;
         const captchaText = `${a}+${b}`;
 
-        // Save to user
         const res = await supabase
           .from("users")
           .update({ captcha_pending: captchaText, captcha_answer: answer, captcha_count: params.captcha_count || 1 })
@@ -70,13 +96,11 @@ Deno.serve(async (req) => {
           .single();
         if (res.error) { error = res.error; break; }
 
-        // Send captcha message via bot
-        const telegramId = res.data.telegram_id;
         await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chat_id: telegramId,
+            chat_id: res.data.telegram_id,
             text: `🔒 *Проверка безопасности*\n\nРешите пример: *${a} + ${b} = ?*\n\nОтправьте ответ числом. До верного ответа все функции заблокированы.`,
             parse_mode: "Markdown",
           }),
@@ -105,7 +129,6 @@ Deno.serve(async (req) => {
         break;
       }
       case "send_message": {
-        // Send message to user via Telegram bot
         const { data: user, error: userErr } = await supabase
           .from("users")
           .select("telegram_id")
@@ -131,15 +154,31 @@ Deno.serve(async (req) => {
         data = { ok: true };
         break;
       }
-      // Keep old action for backwards compat
-      case "message_user": {
-        const res = await supabase.from("admin_alerts").insert({
-          type: "admin_message",
-          user_id: params.user_id,
-          message: params.message,
+
+      // ===== FARMS (IP grouping) =====
+      case "get_farms": {
+        // Get IPs shared by multiple users
+        const { data: ips, error: ipErr } = await supabase
+          .from("user_ips")
+          .select("ip_address, user_id, users(id, telegram_id, username, is_banned, balance_pt)")
+          .order("last_seen_at", { ascending: false });
+        if (ipErr) { error = ipErr; break; }
+
+        // Group by IP
+        const ipMap: Record<string, any[]> = {};
+        (ips || []).forEach((row: any) => {
+          const ip = row.ip_address;
+          if (!ipMap[ip]) ipMap[ip] = [];
+          if (row.users) ipMap[ip].push(row.users);
         });
-        data = res.data;
-        error = res.error;
+
+        // Only return IPs with 2+ users
+        const farms = Object.entries(ipMap)
+          .filter(([_, users]) => users.length >= 2)
+          .map(([ip, users]) => ({ ip, users, count: users.length }))
+          .sort((a, b) => b.count - a.count);
+
+        data = farms;
         break;
       }
 
@@ -156,12 +195,14 @@ Deno.serve(async (req) => {
       case "create_task": {
         const res = await supabase.from("tasks").insert({
           type: params.type,
-          channel_username: params.channel_username,
-          channel_id: params.channel_id,
+          channel_username: params.channel_username || null,
+          channel_id: params.channel_id ? Number(params.channel_id) : null,
           reward_pt: params.reward_pt,
           post_url: params.post_url || null,
-          reaction_emoji: params.reaction_emoji || null,
+          reaction_emoji: null, // no longer used — check any emoji
           is_active: true,
+          max_completions: params.max_completions || 0,
+          hold_days: params.hold_days || 5,
         }).select();
         data = res.data;
         error = res.error;
@@ -202,6 +243,8 @@ Deno.serve(async (req) => {
           video_url: params.video_url,
           duration_seconds: params.duration_seconds,
           reward_pt: params.reward_pt,
+          external_link_url: params.external_link_url || null,
+          external_link_label: params.external_link_label || "Перейти",
           is_active: true,
         }).select();
         data = res.data;
@@ -245,16 +288,16 @@ Deno.serve(async (req) => {
 
       // ===== STATISTICS =====
       case "get_stats": {
-        const [users, withdrawals, videoViews, alerts] = await Promise.all([
+        const [users, withdrawals, videoViewsCount, alerts] = await Promise.all([
           supabase.from("users").select("id, balance_pt, is_banned, is_suspicious, created_at"),
-          supabase.from("withdrawals").select("*").order("created_at", { ascending: false }),
-          supabase.from("video_views").select("id, rewarded, started_at"),
+          supabase.from("withdrawals").select("id, status, amount_pt, amount_stars, created_at"),
+          supabase.from("video_views").select("id", { count: "exact", head: true }).eq("rewarded", true),
           supabase.from("admin_alerts").select("*").eq("is_read", false).order("created_at", { ascending: false }).limit(20),
         ]);
         data = {
           users: users.data,
           withdrawals: withdrawals.data,
-          videoViews: videoViews.data,
+          rewardedVideoViews: videoViewsCount.count || 0,
           alerts: alerts.data,
         };
         break;
