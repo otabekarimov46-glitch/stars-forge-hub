@@ -188,8 +188,11 @@ export type Database = {
           channel_id: number | null
           channel_username: string | null
           created_at: string
+          current_completions: number | null
+          hold_days: number | null
           id: string
           is_active: boolean
+          max_completions: number | null
           post_url: string | null
           reaction_emoji: string | null
           reward_pt: number
@@ -199,8 +202,11 @@ export type Database = {
           channel_id?: number | null
           channel_username?: string | null
           created_at?: string
+          current_completions?: number | null
+          hold_days?: number | null
           id?: string
           is_active?: boolean
+          max_completions?: number | null
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
@@ -210,8 +216,11 @@ export type Database = {
           channel_id?: number | null
           channel_username?: string | null
           created_at?: string
+          current_completions?: number | null
+          hold_days?: number | null
           id?: string
           is_active?: boolean
+          max_completions?: number | null
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
@@ -259,6 +268,7 @@ export type Database = {
           captcha_count: number
           captcha_pending: string | null
           created_at: string
+          daily_bonus_at: string | null
           id: string
           is_banned: boolean
           is_suspicious: boolean
@@ -274,6 +284,7 @@ export type Database = {
           captcha_count?: number
           captcha_pending?: string | null
           created_at?: string
+          daily_bonus_at?: string | null
           id?: string
           is_banned?: boolean
           is_suspicious?: boolean
@@ -289,6 +300,7 @@ export type Database = {
           captcha_count?: number
           captcha_pending?: string | null
           created_at?: string
+          daily_bonus_at?: string | null
           id?: string
           is_banned?: boolean
           is_suspicious?: boolean
@@ -311,6 +323,8 @@ export type Database = {
         Row: {
           created_at: string
           duration_seconds: number
+          external_link_label: string | null
+          external_link_url: string | null
           id: string
           is_active: boolean
           reward_pt: number
@@ -320,6 +334,8 @@ export type Database = {
         Insert: {
           created_at?: string
           duration_seconds: number
+          external_link_label?: string | null
+          external_link_url?: string | null
           id?: string
           is_active?: boolean
           reward_pt?: number
@@ -329,6 +345,8 @@ export type Database = {
         Update: {
           created_at?: string
           duration_seconds?: number
+          external_link_label?: string | null
+          external_link_url?: string | null
           id?: string
           is_active?: boolean
           reward_pt?: number
