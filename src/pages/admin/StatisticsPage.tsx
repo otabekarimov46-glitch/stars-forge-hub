@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Users, DollarSign, Eye, AlertTriangle, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Area, AreaChart } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { format, subDays, parseISO } from "date-fns";
 
 export default function StatisticsPage() {
@@ -29,7 +28,9 @@ export default function StatisticsPage() {
   const totalUsers = stats.users?.length || 0;
   const suspiciousUsers = stats.users?.filter((u: any) => u.is_suspicious).length || 0;
   const totalBalance = stats.users?.reduce((s: number, u: any) => s + Number(u.balance_pt), 0) || 0;
-  const totalViews = stats.videoViews?.length || 0;
+  // Real video views count from DB
+  const totalViews = stats.rewardedVideoViews || 0;
+  // Real pending withdrawals from DB
   const pendingWithdrawals = stats.withdrawals?.filter((w: any) => w.status === "pending").length || 0;
 
   const regChart: Record<string, number> = {};
