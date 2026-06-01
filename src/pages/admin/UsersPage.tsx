@@ -144,14 +144,6 @@ export default function UsersPage() {
                 <div className="flex items-center gap-1 shrink-0">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => setAdjustUser(u)}>
-                        <Plus className="h-4 w-4 text-brand-green" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t("users.adjustBalance")}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => handleBan(u.id, u.is_banned)}>
                         <Ban className={`h-4 w-4 ${u.is_banned ? "text-destructive" : ""}`} />
                       </Button>
