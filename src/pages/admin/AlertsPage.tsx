@@ -81,16 +81,16 @@ export default function AlertsPage() {
           const Icon = TYPE_ICONS[a.type] || Info;
           const colorClass = TYPE_COLORS[a.type] || "bg-muted text-muted-foreground";
           return (
-            <div key={a.id} className={`glass-card p-4 flex items-start gap-4 transition-all ${a.is_read ? "bg-muted/20" : ""}`}>
-              <div className={`p-2.5 rounded-xl shrink-0 ${a.is_read ? "bg-muted text-muted-foreground" : colorClass}`}>
+            <div key={a.id} className={`glass-card p-4 flex items-start gap-4 transition-all ${a.is_read ? "bg-slate-500/5" : ""}`}>
+              <div className={`p-2.5 rounded-xl shrink-0 ${a.is_read ? "bg-slate-500/15 text-slate-500 dark:text-slate-400" : colorClass}`}>
                 <Icon className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="rounded-lg text-xs">{a.type}</Badge>
-                  <span className="text-xs text-muted-foreground">{format(parseISO(a.created_at), "dd.MM.yyyy HH:mm")}</span>
+                  <Badge variant="outline" className={`rounded-lg text-xs ${a.is_read ? "text-slate-500 dark:text-slate-400" : ""}`}>{a.type}</Badge>
+                  <span className={`text-xs ${a.is_read ? "text-slate-500 dark:text-slate-400" : "text-muted-foreground"}`}>{format(parseISO(a.created_at), "dd.MM.yyyy HH:mm")}</span>
                 </div>
-                <p className={`text-sm ${a.is_read ? "text-muted-foreground" : ""}`}>{a.message}</p>
+                <p className={`text-sm ${a.is_read ? "text-slate-600 dark:text-slate-400" : ""}`}>{a.message}</p>
               </div>
               {!a.is_read && (
                 <Button variant="ghost" size="sm" className="rounded-xl shrink-0" onClick={() => markRead(a.id)}>
