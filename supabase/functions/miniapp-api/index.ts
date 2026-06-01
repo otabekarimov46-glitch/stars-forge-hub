@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, balance_pt, balance_frozen")
+          .select("id, balance_pt, balance_frozen, violation_count, is_suspicious, username, telegram_id")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
@@ -130,10 +130,21 @@ Deno.serve(async (req) => {
         if (!video) throw new Error("Video not found");
 
         const startedAt = new Date(view.started_at).getTime();
-        const now = Date.now();
-        const elapsedSec = (now - startedAt) / 1000;
+        const elapsedSec = (Date.now() - startedAt) / 1000;
 
+        // Antifraud: finished faster than minimum allowed
         if (elapsedSec < video.duration_seconds * 0.8) {
+          const newViolations = (user.violation_count || 0) + 1;
+          await supabase.from("users").update({
+            violation_count: newViolations,
+            is_suspicious: newViolations >= 3 ? true : user.is_suspicious,
+            is_banned: newViolations >= 6,
+          }).eq("id", user.id);
+          await supabase.from("admin_alerts").insert({
+            type: "fraud",
+            user_id: user.id,
+            message: `🚨 Накрутка просмотра: @${user.username || user.telegram_id} досмотрел ${elapsedSec.toFixed(1)}с / ${video.duration_seconds}с (нарушений: ${newViolations})`,
+          });
           throw new Error("Видео не досмотрено");
         }
 
@@ -158,6 +169,7 @@ Deno.serve(async (req) => {
 
         return jsonResponse({ data: { rewarded: true, amount: video.reward_pt } });
       }
+
 
       case "claim_daily_bonus": {
         const { telegram_id } = params;
