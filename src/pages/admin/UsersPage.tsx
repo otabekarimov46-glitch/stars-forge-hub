@@ -256,29 +256,6 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Adjust Balance Dialog */}
-      <Dialog open={!!adjustUser} onOpenChange={(v) => { if (!v) { setAdjustUser(null); setAdjustAmount(""); } }}>
-        <DialogContent className="glass-card border-0">
-          <DialogHeader>
-            <DialogTitle>{t("users.adjustBalance")}: {adjustUser?.username ? `@${adjustUser.username}` : adjustUser?.telegram_id}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{t("users.currentBalance")}: <span className="font-bold text-foreground">{Number(adjustUser?.balance_pt || 0).toFixed(1)} PT</span></p>
-            <div>
-              <Label>{t("users.amount")} (PT)</Label>
-              <Input className="rounded-xl" type="number" step="0.1" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="10" />
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={() => handleAdjust(Number(adjustAmount))} className="flex-1 rounded-xl gap-2 bg-brand-green text-white">
-                <Plus className="h-4 w-4" /> {t("users.add")}
-              </Button>
-              <Button onClick={() => handleAdjust(-Number(adjustAmount))} variant="destructive" className="flex-1 rounded-xl gap-2">
-                <Minus className="h-4 w-4" /> {t("users.subtract")}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
