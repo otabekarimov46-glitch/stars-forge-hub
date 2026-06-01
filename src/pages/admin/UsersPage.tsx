@@ -68,14 +68,6 @@ export default function UsersPage() {
     setMessageText("");
   };
 
-  const handleAdjust = async (amount: number) => {
-    if (!adjustUser) return;
-    await adminApi("adjust_balance", { user_id: adjustUser.id, amount });
-    toast.success(t("users.balanceAdjusted"));
-    setAdjustUser(null);
-    setAdjustAmount("");
-    fetchData();
-  };
 
   const handleBulkBan = async (userIds: string[]) => {
     if (!confirm(t("users.confirmBulkBan"))) return;
