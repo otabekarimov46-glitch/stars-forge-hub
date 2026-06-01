@@ -11,18 +11,20 @@ const TYPE_ICONS: Record<string, any> = {
   suspicious_ip: ShieldAlert,
   force_captcha: ShieldAlert,
   balance_reset: AlertTriangle,
-  balance_adjust: AlertTriangle,
   admin_message: MessageSquare,
   subscription_check_fail: AlertTriangle,
+  fraud: ShieldAlert,
+  flood: AlertTriangle,
 };
 
 const TYPE_COLORS: Record<string, string> = {
   suspicious_ip: "bg-destructive/10 text-destructive",
   force_captcha: "bg-yellow-500/10 text-yellow-600",
   balance_reset: "bg-orange-500/10 text-orange-600",
-  balance_adjust: "bg-brand-blue/10 text-brand-blue",
   admin_message: "bg-brand-blue/10 text-brand-blue",
   subscription_check_fail: "bg-destructive/10 text-destructive",
+  fraud: "bg-destructive/15 text-destructive",
+  flood: "bg-orange-500/10 text-orange-600",
 };
 
 export default function AlertsPage() {
