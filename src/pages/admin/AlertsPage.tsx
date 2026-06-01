@@ -11,18 +11,20 @@ const TYPE_ICONS: Record<string, any> = {
   suspicious_ip: ShieldAlert,
   force_captcha: ShieldAlert,
   balance_reset: AlertTriangle,
-  balance_adjust: AlertTriangle,
   admin_message: MessageSquare,
   subscription_check_fail: AlertTriangle,
+  fraud: ShieldAlert,
+  flood: AlertTriangle,
 };
 
 const TYPE_COLORS: Record<string, string> = {
   suspicious_ip: "bg-destructive/10 text-destructive",
   force_captcha: "bg-yellow-500/10 text-yellow-600",
   balance_reset: "bg-orange-500/10 text-orange-600",
-  balance_adjust: "bg-brand-blue/10 text-brand-blue",
   admin_message: "bg-brand-blue/10 text-brand-blue",
   subscription_check_fail: "bg-destructive/10 text-destructive",
+  fraud: "bg-destructive/15 text-destructive",
+  flood: "bg-orange-500/10 text-orange-600",
 };
 
 export default function AlertsPage() {
@@ -79,16 +81,16 @@ export default function AlertsPage() {
           const Icon = TYPE_ICONS[a.type] || Info;
           const colorClass = TYPE_COLORS[a.type] || "bg-muted text-muted-foreground";
           return (
-            <div key={a.id} className={`glass-card p-4 flex items-start gap-4 transition-all ${a.is_read ? "bg-muted/20" : ""}`}>
-              <div className={`p-2.5 rounded-xl shrink-0 ${a.is_read ? "bg-muted text-muted-foreground" : colorClass}`}>
+            <div key={a.id} className={`glass-card p-4 flex items-start gap-4 transition-all ${a.is_read ? "bg-slate-500/5" : ""}`}>
+              <div className={`p-2.5 rounded-xl shrink-0 ${a.is_read ? "bg-slate-500/15 text-slate-500 dark:text-slate-400" : colorClass}`}>
                 <Icon className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="rounded-lg text-xs">{a.type}</Badge>
-                  <span className="text-xs text-muted-foreground">{format(parseISO(a.created_at), "dd.MM.yyyy HH:mm")}</span>
+                  <Badge variant="outline" className={`rounded-lg text-xs ${a.is_read ? "text-slate-500 dark:text-slate-400" : ""}`}>{a.type}</Badge>
+                  <span className={`text-xs ${a.is_read ? "text-slate-500 dark:text-slate-400" : "text-muted-foreground"}`}>{format(parseISO(a.created_at), "dd.MM.yyyy HH:mm")}</span>
                 </div>
-                <p className={`text-sm ${a.is_read ? "text-muted-foreground" : ""}`}>{a.message}</p>
+                <p className={`text-sm ${a.is_read ? "text-slate-600 dark:text-slate-400" : ""}`}>{a.message}</p>
               </div>
               {!a.is_read && (
                 <Button variant="ghost" size="sm" className="rounded-xl shrink-0" onClick={() => markRead(a.id)}>

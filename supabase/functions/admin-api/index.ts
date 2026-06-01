@@ -66,22 +66,6 @@ Deno.serve(async (req) => {
         error = res.error;
         break;
       }
-      case "adjust_balance": {
-        const { user_id, amount } = params;
-        if (!user_id || amount === undefined) throw new Error("user_id and amount required");
-        const { data: user, error: ue } = await supabase.from("users").select("balance_pt").eq("id", user_id).single();
-        if (ue) { error = ue; break; }
-        const newBalance = Math.max(0, Number(user.balance_pt) + Number(amount));
-        const res = await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user_id);
-        await supabase.from("admin_alerts").insert({
-          type: "balance_adjust",
-          user_id,
-          message: `Админ изменил баланс на ${amount > 0 ? "+" : ""}${amount} PT. Новый баланс: ${newBalance} PT`,
-        });
-        data = { new_balance: newBalance };
-        error = res.error;
-        break;
-      }
       case "send_captcha": {
         const a = Math.floor(Math.random() * 20) + 1;
         const b = Math.floor(Math.random() * 20) + 1;

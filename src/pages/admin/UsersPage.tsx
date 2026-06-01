@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Plus, Minus, Network, Skull } from "lucide-react";
+import { Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Network, Skull } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,8 +20,6 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [messageUser, setMessageUser] = useState<any>(null);
   const [messageText, setMessageText] = useState("");
-  const [adjustUser, setAdjustUser] = useState<any>(null);
-  const [adjustAmount, setAdjustAmount] = useState("");
 
   const fetchData = async () => {
     try {
@@ -70,14 +68,6 @@ export default function UsersPage() {
     setMessageText("");
   };
 
-  const handleAdjust = async (amount: number) => {
-    if (!adjustUser) return;
-    await adminApi("adjust_balance", { user_id: adjustUser.id, amount });
-    toast.success(t("users.balanceAdjusted"));
-    setAdjustUser(null);
-    setAdjustAmount("");
-    fetchData();
-  };
 
   const handleBulkBan = async (userIds: string[]) => {
     if (!confirm(t("users.confirmBulkBan"))) return;
@@ -152,14 +142,6 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => setAdjustUser(u)}>
-                        <Plus className="h-4 w-4 text-brand-green" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t("users.adjustBalance")}</TooltipContent>
-                  </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9" onClick={() => handleBan(u.id, u.is_banned)}>
@@ -274,29 +256,6 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Adjust Balance Dialog */}
-      <Dialog open={!!adjustUser} onOpenChange={(v) => { if (!v) { setAdjustUser(null); setAdjustAmount(""); } }}>
-        <DialogContent className="glass-card border-0">
-          <DialogHeader>
-            <DialogTitle>{t("users.adjustBalance")}: {adjustUser?.username ? `@${adjustUser.username}` : adjustUser?.telegram_id}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{t("users.currentBalance")}: <span className="font-bold text-foreground">{Number(adjustUser?.balance_pt || 0).toFixed(1)} PT</span></p>
-            <div>
-              <Label>{t("users.amount")} (PT)</Label>
-              <Input className="rounded-xl" type="number" step="0.1" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="10" />
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={() => handleAdjust(Number(adjustAmount))} className="flex-1 rounded-xl gap-2 bg-brand-green text-white">
-                <Plus className="h-4 w-4" /> {t("users.add")}
-              </Button>
-              <Button onClick={() => handleAdjust(-Number(adjustAmount))} variant="destructive" className="flex-1 rounded-xl gap-2">
-                <Minus className="h-4 w-4" /> {t("users.subtract")}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
