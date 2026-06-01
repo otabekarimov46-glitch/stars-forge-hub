@@ -20,8 +20,6 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [messageUser, setMessageUser] = useState<any>(null);
   const [messageText, setMessageText] = useState("");
-  const [adjustUser, setAdjustUser] = useState<any>(null);
-  const [adjustAmount, setAdjustAmount] = useState("");
 
   const fetchData = async () => {
     try {
