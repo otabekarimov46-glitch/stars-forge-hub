@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Plus, Minus, Network, Skull } from "lucide-react";
+import { Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Network, Skull } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
