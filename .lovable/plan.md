@@ -1,126 +1,68 @@
+# План работ
 
+Большая часть пунктов из ТЗ уже реализована в предыдущих итерациях (Inline-меню, скрытый холд, фермы, ежедневный бонус, IP-логирование, разделение Видео/Ручные задания и т.д.). Фокусируюсь на **новых требованиях** этого сообщения.
 
-## Шаг 1: Проектирование базы данных Supabase
+## 1. Смена Telegram Bot Token
 
-Создаём следующие таблицы:
+Текущий токен скомпрометирован — Telegram активно банит бота. Нужно:
+- Обновить секрет `TELEGRAM_BOT_TOKEN` на новый: `8737006372:AAFuGug7dePWiE0q8xyOI0wnl5LSzZYLEkI` (через secrets--update_secret, потребует подтверждения).
+- После обновления — заново вызвать `setWebhook` на edge-функцию `telegram-bot`, чтобы новый бот получал апдейты.
+- Сбросить webhook старого бота через `deleteWebhook` (если есть доступ к старому токену — иначе он сам отвалится).
 
-### 1. `users` — Пользователи бота
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | Внутренний ID |
-| telegram_id | bigint UNIQUE | Telegram User ID |
-| username | text | @username |
-| balance_pt | numeric(12,2) | Баланс в поинтах |
-| balance_frozen | boolean | Заморожен ли баланс |
-| is_banned | boolean | Забанен ли |
-| is_suspicious | boolean | Подозрительный актив |
-| referrer_id | uuid FK → users | Кто пригласил |
-| captcha_count | int | Сколько капч получал |
-| violation_count | int | Кол-во нарушений |
-| created_at | timestamptz | Дата регистрации |
+## 2. Причины блокировок Telegram и защита
 
-### 2. `user_ips` — Привязка IP к пользователям
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| user_id | uuid FK → users | |
-| ip_address | inet | IP адрес |
-| first_seen_at | timestamptz | Первый вход с этого IP |
-| last_seen_at | timestamptz | Последний вход |
+Telegram банит ботов в основном за:
+- **Массовые рассылки и spam-flood** — превышение лимитов (30 msg/s глобально, 1 msg/s на чат, 20 msg/min в группу).
+- **Одинаковый текст массово** — антиспам-фильтр.
+- **Жалобы пользователей** (кнопка "Report spam").
+- **Подозрительные ссылки / приглашения в каналы**.
+- **Слишком частые getChatMember / getUpdates** к одним и тем же чатам.
 
-UNIQUE constraint на (user_id, ip_address). Триггер: если по одному IP > 2 разных user_id → ставить `is_suspicious = true` всем и создавать алерт.
+Меры защиты в коде:
+- **Rate limiter** в `telegram-bot` и `admin-api` (sendMessage): очередь с задержкой ≥35ms между отправками, ≥1с на один chat_id, retry с exponential backoff при ошибке 429 (`retry_after`).
+- **Анти-флуд per user**: не больше N сообщений боту в минуту с одного `telegram_id` — выше → молчаливый игнор + запись в alerts.
+- **Убрать инвайт-ссылки и UTM-метки** из автосообщений, не слать одинаковый шаблонный текст подряд (добавить лёгкую вариативность).
+- **Кешировать `getChatMember`** в `delayed-check` (раз в сутки на пользователя, не чаще), и батчить с задержками.
+- **Валидация входа**: жёсткая фильтрация webhook updates (отбрасывать всё, что не от Telegram — проверка `X-Telegram-Bot-Api-Secret-Token`).
+- **CORS** на edge-функциях оставить только для своих доменов (а не `*`) где возможно.
 
-### 3. `tasks` — Задания на подписку
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| type | enum('subscribe', 'video') | Тип задания |
-| channel_username | text | @канал для подписки (nullable) |
-| channel_id | bigint | ID канала для проверки через Bot API |
-| reward_pt | numeric(8,2) | Награда в PT |
-| is_active | boolean | Активно ли |
-| created_at | timestamptz | |
+## 3. Удалить ручную правку баланса (+/- PT)
 
-### 4. `task_completions` — Выполненные задания
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| user_id | uuid FK → users | |
-| task_id | uuid FK → tasks | |
-| completed_at | timestamptz | |
+Пользователь передумал — убираем кнопки `Plus`/`Minus`, диалог `adjustUser`, обработчик `handleAdjust` из `UsersPage.tsx` и action `adjust_balance` из `admin-api`.
 
-UNIQUE на (user_id, task_id) — одно задание = один раз.
+## 4. Антифрод-алерты в реальном времени
 
-### 5. `video_ads` — Видеоролики для просмотра
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| title | text | Название |
-| video_url | text | URL видео |
-| duration_seconds | int | Обязательная длительность просмотра |
-| reward_pt | numeric(8,2) | Награда за досмотр |
-| is_active | boolean | |
-| created_at | timestamptz | |
+Добавить автоматическое создание `admin_alerts` (тип `fraud`) и параллельную отправку в группу мониторинга `TELEGRAM_GROUP_ID` при срабатывании любого из триггеров:
+- ≥3 аккаунта на один IP (уже есть пометка suspicious — добавить алерт + сообщение в группу).
+- Попытка вывода при `is_suspicious = true` или `balance_frozen = true`.
+- Провал капчи ≥3 раз подряд (`captcha_count`).
+- Аномалия по просмотрам: пользователь завершает видео быстрее `duration_seconds` или начинает новое видео <2с после предыдущего.
+- Юзер с >5 нарушениями (`violation_count`) — автоматический бан + алерт.
 
-### 6. `video_views` — Просмотры видео (антифрод)
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| user_id | uuid FK → users | |
-| video_ad_id | uuid FK → video_ads | |
-| ip_address | inet | IP при просмотре |
-| started_at | timestamptz | Время открытия Mini App |
-| finished_at | timestamptz nullable | Время завершения (null = не досмотрел) |
-| rewarded | boolean | Начислена ли награда |
+Все алерты с типом `fraud` подсвечиваются красным в `AlertsPage`.
 
-### 7. `withdrawals` — Выводы Stars
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| user_id | uuid FK → users | |
-| amount_pt | numeric(12,2) | Сумма в PT |
-| amount_stars | numeric(12,2) | Сумма в Stars (по курсу) |
-| status | enum('pending','approved','rejected') | Статус |
-| ip_address | inet | IP при запросе |
-| created_at | timestamptz | |
-| processed_at | timestamptz nullable | |
+## 5. Защита кода
 
-### 8. `admin_alerts` — Алерты в админку
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| type | text | Тип алерта (suspicious_ip, withdrawal и т.д.) |
-| user_id | uuid FK → users nullable | |
-| message | text | Текст алерта |
-| is_read | boolean | Прочитан ли |
-| created_at | timestamptz | |
+- Edge-функции: жёсткая Zod-валидация всех body, отказ при невалидных полях с 400.
+- `admin-api`: добавить проверку `Authorization` header против `ADMIN_SECRET` (новый секрет) — сейчас функция открыта.
+- `miniapp-api`: валидировать `initData` от Telegram WebApp (HMAC по bot token) — отбрасывать запросы без валидной подписи. Это закроет вызовы напрямую, минуя Mini App.
+- Не логировать токены и chat_id в edge-function-логах.
+- Убрать любые `console.log` с секретами.
 
-### 9. `settings` — Глобальные настройки
-| Поле | Тип | Описание |
-|------|------|----------|
-| key | text PK | Ключ (например 'exchange_rate') |
-| value | text | Значение |
-| updated_at | timestamptz | |
+## Файлы под изменения
 
-### 10. `logs_activity` — Логи активности
-| Поле | Тип | Описание |
-|------|------|----------|
-| id | uuid PK | |
-| user_id | uuid FK → users | |
-| action | text | Действие (login, task_complete, withdraw и т.д.) |
-| ip_address | inet | |
-| metadata | jsonb | Доп. данные |
-| created_at | timestamptz | |
+- `supabase/functions/telegram-bot/index.ts` — rate limiter, анти-флуд, варьируемые тексты, секрет webhook.
+- `supabase/functions/admin-api/index.ts` — убрать `adjust_balance`, добавить auth-проверку, антифрод-алерты в `send_message`/`process_withdrawal`.
+- `supabase/functions/miniapp-api/index.ts` — валидация `initData`, антифрод-детектор по таймингу просмотров, создание fraud-алертов.
+- `supabase/functions/delayed-check/index.ts` — батчинг + задержки в `getChatMember`.
+- `src/pages/admin/UsersPage.tsx` — убрать UI ручной правки баланса (+/-).
+- `src/pages/admin/AlertsPage.tsx` — отдельный стиль для типа `fraud` (красная подсветка).
+- Секрет `TELEGRAM_BOT_TOKEN` → обновить на новый.
+- Новый секрет `ADMIN_API_SECRET` для защиты admin-api (фронт будет слать его в header).
 
-### Безопасность
-- RLS включён на всех таблицах
-- Триггерная функция на `user_ips`: при INSERT проверяет кол-во уникальных user_id по этому IP, если > 2 — помечает всех как suspicious и создаёт запись в `admin_alerts`
-- API-токен бота и ID группы мониторинга будут храниться в Supabase Secrets
+## Что НЕ делаю в этой итерации (по просьбе "сделай ровно то, что сможешь")
 
-### Реализация
-1. Создать все таблицы через миграции Supabase
-2. Создать enum-типы для task_type и withdrawal_status
-3. Создать триггер антифрода на user_ips
-4. Включить RLS и настроить политики
-5. Засеять settings с начальным exchange_rate = 1
+- Не трогаю уже работающие фичи (счётчики, фермы, холд, бонус, inline-меню) — они на месте.
+- Можно отдельной итерацией: миграция вызовов admin-api на supabase Auth вместо самописного секрета.
 
+Подтвердите план — после approve запрошу новый токен через update_secret и приступлю к реализации.
