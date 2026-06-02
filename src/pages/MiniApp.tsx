@@ -15,6 +15,7 @@ interface VideoAd {
   reward_pt: number;
   external_link_url?: string;
   external_link_label?: string;
+  media_type?: "video" | "image";
 }
 
 async function miniAppApi(action: string, params: Record<string, any> = {}) {
@@ -44,6 +45,39 @@ export default function MiniApp() {
   const [bonusResult, setBonusResult] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const finishedRef = useRef(false);
+
+  // Telegram WebApp init: expand, fullscreen, disable swipes
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg) return;
+    try {
+      tg.ready();
+      tg.expand();
+      tg.disableVerticalSwipes?.();
+      tg.requestFullscreen?.();
+      tg.setHeaderColor?.("#000000");
+      tg.setBackgroundColor?.("#000000");
+    } catch {}
+  }, []);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) return;
+    timerRef.current = setInterval(() => {
+      setElapsed((prev) => {
+        const next = prev + 1;
+        if (video && next >= video.duration_seconds && timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        return next;
+      });
+    }, 1000);
+  }, [video]);
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  }, []);
 
   const loadVideo = useCallback(async () => {
     if (!telegramId) { setError("Откройте через Telegram"); setStatus("error"); return; }
@@ -56,6 +90,40 @@ export default function MiniApp() {
   }, [telegramId]);
 
   useEffect(() => { loadVideo(); }, [loadVideo]);
+
+  // Pause/resume when Telegram is minimized / tab hidden / out of focus
+  useEffect(() => {
+    if (status !== "playing") return;
+    const onVisibility = () => {
+      if (document.hidden) {
+        videoRef.current?.pause();
+        stopTimer();
+      } else {
+        if (video && elapsed < video.duration_seconds) {
+          videoRef.current?.play().catch(() => {});
+          startTimer();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", () => { videoRef.current?.pause(); stopTimer(); });
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [status, video, elapsed, startTimer, stopTimer]);
+
+  // Warn / block close before reward
+  useEffect(() => {
+    if (status !== "playing") return;
+    const onBefore = (e: BeforeUnloadEvent) => {
+      if (!finishedRef.current) {
+        e.preventDefault();
+        e.returnValue = "Просмотр не засчитан, если закрыть сейчас";
+      }
+    };
+    window.addEventListener("beforeunload", onBefore);
+    return () => window.removeEventListener("beforeunload", onBefore);
+  }, [status]);
 
   const claimDailyBonus = async () => {
     if (!telegramId) return;
@@ -70,38 +138,78 @@ export default function MiniApp() {
     if (!video || !telegramId) return;
     try {
       const data = await miniAppApi("start_view", { telegram_id: telegramId, video_ad_id: video.id });
-      setViewId(data.view_id); setStatus("playing"); setElapsed(0);
-      videoRef.current?.play();
-      timerRef.current = setInterval(() => {
-        setElapsed((prev) => {
-          const next = prev + 1;
-          if (next >= video.duration_seconds && timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-          return next;
-        });
-      }, 1000);
+      setViewId(data.view_id); setStatus("playing"); setElapsed(0); finishedRef.current = false;
+      if (video.media_type !== "image") {
+        videoRef.current?.play().catch(() => {});
+      }
+      startTimer();
     } catch (e: any) { setError(e.message); setStatus("error"); }
   };
 
   const finishWatching = async () => {
     if (!viewId || !telegramId || !video || elapsed < video.duration_seconds) return;
     try {
+      finishedRef.current = true;
       await miniAppApi("finish_view", { telegram_id: telegramId, view_id: viewId });
       setStatus("completed");
-      if (timerRef.current) clearInterval(timerRef.current);
+      stopTimer();
     } catch (e: any) { setError(e.message); setStatus("error"); }
   };
 
-  useEffect(() => { return () => { if (timerRef.current) clearInterval(timerRef.current); }; }, []);
+  // Auto-finish when timer completes
+  useEffect(() => {
+    if (status === "playing" && video && elapsed >= video.duration_seconds && !finishedRef.current) {
+      finishWatching();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed, status, video]);
 
-  const canClose = video ? elapsed >= video.duration_seconds : false;
+  useEffect(() => { return () => stopTimer(); }, [stopTimer]);
+
+  const closeApp = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    try { tg?.close?.(); } catch {}
+  };
+
   const progressPercent = video ? Math.min(100, (elapsed / video.duration_seconds) * 100) : 0;
+
+  // Fullscreen player view
+  if (status === "playing" && video) {
+    return (
+      <div className="fixed inset-0 bg-black flex flex-col z-50">
+        <div className="flex-1 flex items-center justify-center overflow-hidden">
+          {video.media_type === "image" ? (
+            <img src={video.video_url} alt={video.title} className="max-w-full max-h-full object-contain" />
+          ) : (
+            <video
+              ref={videoRef}
+              src={video.video_url}
+              className="max-w-full max-h-full"
+              playsInline
+              autoPlay
+              controls={false}
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          )}
+        </div>
+        <div className="p-4 bg-black/80 backdrop-blur space-y-2">
+          <div className="flex justify-between text-xs text-white/80">
+            <span>{elapsed}с / {video.duration_seconds}с</span>
+            <span className="text-yellow-400">+{video.reward_pt} PT</span>
+          </div>
+          <Progress value={progressPercent} className="h-1.5" />
+          <p className="text-center text-xs text-white/60">Не закрывайте, иначе просмотр не засчитается</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a0533] via-[#0d1b3e] to-[#0a2a1f] text-white flex flex-col items-center justify-center p-4">
-      <img src={logoImg} alt="StarBot" className="w-20 h-20 rounded-2xl shadow-2xl mb-6" />
+      <img src={logoImg} alt="Starment" className="w-20 h-20 rounded-2xl shadow-2xl mb-6" />
 
-      {/* Daily Bonus Button */}
-      {status !== "playing" && status !== "bonus" && (
+      {status !== "bonus" && (
         <Button onClick={claimDailyBonus} className="mb-4 gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
           <Gift className="w-4 h-4" /> Ежедневный бонус
         </Button>
@@ -111,7 +219,7 @@ export default function MiniApp() {
         {status === "loading" && (
           <div className="flex flex-col items-center gap-3 py-12">
             <Loader2 className="w-10 h-10 animate-spin text-purple-400" />
-            <p className="text-gray-300">Загрузка видео...</p>
+            <p className="text-gray-300">Загрузка...</p>
           </div>
         )}
         {status === "error" && (
@@ -150,40 +258,27 @@ export default function MiniApp() {
           <div className="flex flex-col items-center gap-4 py-6">
             <h2 className="text-xl font-bold text-center">{video.title}</h2>
             <p className="text-gray-400 text-sm text-center">
-              Посмотрите видео ({video.duration_seconds} сек.) и получите <span className="text-yellow-400 font-bold">{video.reward_pt} PT</span>
+              {video.media_type === "image" ? "Посмотрите" : "Посмотрите видео"} ({video.duration_seconds} сек.) и получите <span className="text-yellow-400 font-bold">{video.reward_pt} PT</span>
             </p>
             <Button onClick={startWatching} className="gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0">
               <Play className="w-4 h-4" /> Смотреть
             </Button>
           </div>
         )}
-        {status === "playing" && video && (
-          <div className="space-y-4">
-            <video ref={videoRef} src={video.video_url} className="w-full rounded-xl aspect-video bg-black" playsInline autoPlay />
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-400"><span>{elapsed}с</span><span>{video.duration_seconds}с</span></div>
-              <Progress value={progressPercent} className="h-2" />
-            </div>
-            {canClose ? (
-              <Button onClick={finishWatching} className="w-full gap-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0">
-                <CheckCircle className="w-4 h-4" /> Получить {video.reward_pt} PT
-              </Button>
-            ) : (
-              <Button disabled className="w-full gap-2 rounded-xl" variant="outline">Досмотрите видео</Button>
-            )}
-          </div>
-        )}
         {status === "completed" && video && (
           <div className="flex flex-col items-center gap-4 py-8">
             <CheckCircle className="w-14 h-14 text-green-400" />
-            <h2 className="text-xl font-bold">Готово!</h2>
-            <p className="text-gray-300 text-center">Вам начислено <span className="text-yellow-400 font-bold">{video.reward_pt} PT</span></p>
+            <h2 className="text-xl font-bold">Видео просмотрено!</h2>
+            <p className="text-gray-300 text-center">Вам начислено <span className="text-yellow-400 font-bold">+{video.reward_pt} PT</span></p>
             {video.external_link_url && (
               <a href={video.external_link_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium">
                 <ExternalLink className="w-4 h-4" /> {video.external_link_label || "Перейти"}
               </a>
             )}
-            <Button onClick={() => { setVideo(null); setViewId(null); setElapsed(0); loadVideo(); }} variant="outline" className="rounded-xl border-white/20 text-white">Следующее видео</Button>
+            <div className="flex gap-2 flex-wrap justify-center">
+              <Button onClick={() => { setVideo(null); setViewId(null); setElapsed(0); loadVideo(); }} variant="outline" className="rounded-xl border-white/20 text-white">Следующее</Button>
+              <Button onClick={closeApp} className="rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0">Вернуться в чат</Button>
+            </div>
           </div>
         )}
       </div>
