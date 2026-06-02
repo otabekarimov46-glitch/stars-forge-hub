@@ -154,10 +154,12 @@ Deno.serve(async (req) => {
           .update({ finished_at: new Date().toISOString(), rewarded: true })
           .eq("id", view_id);
 
+        let newBalance = Number(user.balance_pt);
         if (!user.balance_frozen) {
+          newBalance = Number(user.balance_pt) + Number(video.reward_pt);
           await supabase
             .from("users")
-            .update({ balance_pt: Number(user.balance_pt) + Number(video.reward_pt) })
+            .update({ balance_pt: newBalance })
             .eq("id", user.id);
         }
 
@@ -168,7 +170,22 @@ Deno.serve(async (req) => {
           metadata: { video_ad_id: view.video_ad_id, reward_pt: video.reward_pt },
         });
 
-        return jsonResponse({ data: { rewarded: true, amount: video.reward_pt } });
+        // Notify user in Telegram chat
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (botToken) {
+          try {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: user.telegram_id,
+                text: `🎉 Видео просмотрено!\n+${video.reward_pt} PT\n💎 Баланс: ${newBalance.toFixed(1)} PT`,
+              }),
+            });
+          } catch {}
+        }
+
+        return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance } });
       }
 
 
