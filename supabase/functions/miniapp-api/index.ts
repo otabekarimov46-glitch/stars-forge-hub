@@ -55,28 +55,29 @@ Deno.serve(async (req) => {
           ip_address: ip,
         });
 
-        // Get watched video IDs
+        // Watched (rewarded) ids
         const { data: watched } = await supabase
           .from("video_views")
           .select("video_ad_id")
           .eq("user_id", user.id)
           .eq("rewarded", true);
+        const watchedIds = new Set((watched || []).map((v: any) => v.video_ad_id));
 
-        const watchedIds = (watched || []).map((v: any) => v.video_ad_id);
-
-        let query = supabase
+        const { data: allVideos } = await supabase
           .from("video_ads")
-          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label")
-          .eq("is_active", true)
-          .order("created_at", { ascending: true })
-          .limit(1);
+          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type")
+          .eq("is_active", true);
 
-        if (watchedIds.length > 0) {
-          query = query.not("id", "in", `(${watchedIds.join(",")})`);
-        }
+        const list = allVideos || [];
+        if (list.length === 0) return jsonResponse({ data: null });
 
-        const { data: videos } = await query;
-        const video = videos && videos.length > 0 ? videos[0] : null;
+        const unwatched = list.filter((v: any) => !watchedIds.has(v.id));
+        const watchedAgain = list.filter((v: any) => watchedIds.has(v.id));
+        // shuffle helper
+        const shuffle = <T,>(arr: T[]) => arr.map(a => [Math.random(), a] as const).sort((a, b) => a[0] - b[0]).map(([, a]) => a);
+        // Queue: random unwatched first, then random watched at the end
+        const queue = [...shuffle(unwatched), ...shuffle(watchedAgain)];
+        const video = queue[0] || null;
 
         return jsonResponse({ data: video });
       }
