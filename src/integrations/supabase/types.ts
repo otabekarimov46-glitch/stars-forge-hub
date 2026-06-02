@@ -327,6 +327,7 @@ export type Database = {
           external_link_url: string | null
           id: string
           is_active: boolean
+          media_type: string
           reward_pt: number
           title: string
           video_url: string
@@ -338,6 +339,7 @@ export type Database = {
           external_link_url?: string | null
           id?: string
           is_active?: boolean
+          media_type?: string
           reward_pt?: number
           title: string
           video_url: string
@@ -349,6 +351,7 @@ export type Database = {
           external_link_url?: string | null
           id?: string
           is_active?: boolean
+          media_type?: string
           reward_pt?: number
           title?: string
           video_url?: string
