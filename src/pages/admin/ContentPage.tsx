@@ -213,12 +213,17 @@ export default function ContentPage() {
                       <Label>{t("content.videoUrl")}</Label>
                       <div className="flex gap-2">
                         <Input className="rounded-xl flex-1" value={videoForm.video_url} onChange={e => setVideoForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://..." />
-                        <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleVideoUpload(file); }} />
+                        <input ref={fileInputRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleVideoUpload(file); }} />
                         <Button variant="outline" className="rounded-xl gap-1" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                           <Upload className="h-4 w-4" />
                           {uploading ? "..." : t("content.uploadVideo")}
                         </Button>
                       </div>
+                      {videoForm.video_url && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {videoForm.media_type === "image" ? "📷 Фото" : "🎬 Видео"} · {videoForm.duration_seconds}с
+                        </p>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
