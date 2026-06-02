@@ -45,6 +45,7 @@ export default function ContentPage() {
     reward_pt: "5",
     external_link_url: "",
     external_link_label: "Перейти",
+    media_type: "video" as "video" | "image",
   });
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
 
@@ -80,14 +81,36 @@ export default function ContentPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const detectDuration = (file: File): Promise<number | null> =>
+    new Promise((resolve) => {
+      if (!file.type.startsWith("video/")) return resolve(null);
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(Number.isFinite(v.duration) ? Math.round(v.duration) : null);
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      v.src = url;
+    });
+
   const handleVideoUpload = async (file: File) => {
     setUploading(true);
     try {
-      const fileName = `${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from("video-ads").upload(fileName, file);
+      const isImage = file.type.startsWith("image/");
+      const mediaType: "video" | "image" = isImage ? "image" : "video";
+      const fileName = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
+      const { error } = await supabase.storage.from("video-ads").upload(fileName, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("video-ads").getPublicUrl(fileName);
-      setVideoForm((f) => ({ ...f, video_url: urlData.publicUrl }));
+      const dur = isImage ? 30 : (await detectDuration(file)) ?? 30;
+      setVideoForm((f) => ({
+        ...f,
+        video_url: urlData.publicUrl,
+        duration_seconds: String(dur),
+        media_type: mediaType,
+      }));
       toast.success(t("content.videoUploaded"));
     } catch (e: any) {
       toast.error(e.message);
@@ -105,10 +128,11 @@ export default function ContentPage() {
         reward_pt: Number(videoForm.reward_pt),
         external_link_url: videoForm.external_link_url || null,
         external_link_label: videoForm.external_link_label || "Перейти",
+        media_type: videoForm.media_type,
       });
       toast.success(t("content.videoAdded"));
       setVideoDialogOpen(false);
-      setVideoForm({ title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти" });
+      setVideoForm({ title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" });
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
