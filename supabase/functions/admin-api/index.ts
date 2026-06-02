@@ -229,6 +229,7 @@ Deno.serve(async (req) => {
           reward_pt: params.reward_pt,
           external_link_url: params.external_link_url || null,
           external_link_label: params.external_link_label || "Перейти",
+          media_type: params.media_type === "image" ? "image" : "video",
           is_active: true,
         }).select();
         data = res.data;

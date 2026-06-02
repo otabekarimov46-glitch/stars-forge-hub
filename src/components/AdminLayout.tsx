@@ -37,7 +37,7 @@ function AdminSidebar() {
           <img src={logoImg} alt="Logo" className="w-10 h-10 rounded-xl shadow-lg" />
           {!collapsed && (
             <span className="text-lg font-bold bg-gradient-to-r from-brand-purple to-brand-blue bg-clip-text text-transparent">
-              StarBot
+              Starment
             </span>
           )}
         </div>
