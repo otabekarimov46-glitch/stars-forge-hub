@@ -91,10 +91,12 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id")
+          .select("id, captcha_pending, is_banned")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
         const { data: view, error } = await supabase
           .from("video_views")
@@ -112,10 +114,12 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, balance_pt, balance_frozen, violation_count, is_suspicious, username, telegram_id")
+          .select("id, balance_pt, balance_frozen, violation_count, is_suspicious, username, telegram_id, captcha_pending, is_banned")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
         const { data: view } = await supabase
           .from("video_views")
@@ -198,11 +202,12 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, balance_pt, daily_bonus_at, is_banned, balance_frozen")
+          .select("id, balance_pt, daily_bonus_at, is_banned, balance_frozen, captcha_pending")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
         const now = new Date();
         if (user.daily_bonus_at) {
