@@ -100,8 +100,16 @@ export default function ContentPage() {
     try {
       const isImage = file.type.startsWith("image/");
       const mediaType: "video" | "image" = isImage ? "image" : "video";
+      // Soft limit warning: keep videos light for fast Mini App load
+      const sizeMb = file.size / (1024 * 1024);
+      if (!isImage && sizeMb > 6) {
+        toast.warning(`Видео ${sizeMb.toFixed(1)} МБ. Рекомендуем 720p и 3–5 МБ для мгновенной загрузки в Mini App.`);
+      }
       const fileName = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
-      const { error } = await supabase.storage.from("video-ads").upload(fileName, file, { contentType: file.type });
+      const { error } = await supabase.storage.from("video-ads").upload(fileName, file, {
+        contentType: file.type,
+        cacheControl: "31536000", // aggressive CDN cache (1 year)
+      });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("video-ads").getPublicUrl(fileName);
       const dur = isImage ? 30 : (await detectDuration(file)) ?? 30;

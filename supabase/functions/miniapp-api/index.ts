@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
         let { data: user } = await supabase
           .from("users")
-          .select("id, is_banned, balance_frozen")
+          .select("id, is_banned, balance_frozen, captcha_pending")
           .eq("telegram_id", telegram_id)
           .single();
 
@@ -37,13 +37,16 @@ Deno.serve(async (req) => {
           const { data: newUser, error } = await supabase
             .from("users")
             .insert({ telegram_id })
-            .select("id, is_banned, balance_frozen")
+            .select("id, is_banned, balance_frozen, captcha_pending")
             .single();
           if (error) throw error;
           user = newUser;
         }
 
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) {
+          return jsonResponse({ data: { locked: true } });
+        }
 
         // Record IP
         await recordIp(supabase, user.id, ip);
@@ -88,10 +91,12 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id")
+          .select("id, captcha_pending, is_banned")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
         const { data: view, error } = await supabase
           .from("video_views")
@@ -109,10 +114,12 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, balance_pt, balance_frozen, violation_count, is_suspicious, username, telegram_id")
+          .select("id, balance_pt, balance_frozen, violation_count, is_suspicious, username, telegram_id, captcha_pending, is_banned")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
         const { data: view } = await supabase
           .from("video_views")
@@ -195,11 +202,12 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, balance_pt, daily_bonus_at, is_banned, balance_frozen")
+          .select("id, balance_pt, daily_bonus_at, is_banned, balance_frozen, captcha_pending")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
         const now = new Date();
         if (user.daily_bonus_at) {
@@ -221,6 +229,61 @@ Deno.serve(async (req) => {
         await recordIp(supabase, user.id, ip);
 
         return jsonResponse({ data: { claimed: true, bonus, new_balance: newBalance } });
+      }
+
+      case "report_suspicious_click": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, username, telegram_id, captcha_pending, violation_count, is_suspicious")
+          .eq("telegram_id", telegram_id)
+          .single();
+        if (!user) throw new Error("User not found");
+
+        // Generate captcha if not yet pending
+        let captchaA: number, captchaB: number;
+        if (!user.captcha_pending) {
+          captchaA = 2 + Math.floor(Math.random() * 8);
+          captchaB = 2 + Math.floor(Math.random() * 8);
+          await supabase.from("users").update({
+            captcha_pending: `${captchaA}+${captchaB}`,
+            captcha_answer: captchaA + captchaB,
+            is_suspicious: true,
+            violation_count: (user.violation_count || 0) + 1,
+          }).eq("id", user.id);
+
+          await supabase.from("admin_alerts").insert({
+            type: "fraud",
+            user_id: user.id,
+            message: `🤖 Автокликер: @${user.username || user.telegram_id} — серия одинаковых кликов. Mini App заблокирован, отправлена капча.`,
+          });
+
+          // Send captcha to user in Telegram chat
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+          if (botToken) {
+            try {
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: user.telegram_id,
+                  text: `🔒 Подтвердите, что вы человек.\nРешите пример: *${captchaA} + ${captchaB} = ?*\nОтправьте число в этот чат.`,
+                  parse_mode: "Markdown",
+                }),
+              });
+            } catch {}
+          }
+        }
+
+        await supabase.from("logs_activity").insert({
+          user_id: user.id,
+          action: "autoclicker_detected",
+          ip_address: ip,
+        });
+
+        return jsonResponse({ data: { locked: true } });
       }
 
       default:
