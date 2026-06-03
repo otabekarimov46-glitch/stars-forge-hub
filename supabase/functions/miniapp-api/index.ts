@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
         let { data: user } = await supabase
           .from("users")
-          .select("id, is_banned, balance_frozen")
+          .select("id, is_banned, balance_frozen, captcha_pending")
           .eq("telegram_id", telegram_id)
           .single();
 
@@ -37,13 +37,16 @@ Deno.serve(async (req) => {
           const { data: newUser, error } = await supabase
             .from("users")
             .insert({ telegram_id })
-            .select("id, is_banned, balance_frozen")
+            .select("id, is_banned, balance_frozen, captcha_pending")
             .single();
           if (error) throw error;
           user = newUser;
         }
 
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) {
+          return jsonResponse({ data: { locked: true } });
+        }
 
         // Record IP
         await recordIp(supabase, user.id, ip);
