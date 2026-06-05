@@ -8,7 +8,7 @@ const corsHeaders = {
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const VARIATION_EMOJI = ["✨", "💫", "⭐", "🌟", "💎", "🎯"];
 
-const FIXED_WEBHOOK_SECRET = "12345678901234567890";
+
 
 function vary(text: string) {
   const e = VARIATION_EMOJI[Math.floor(Math.random() * VARIATION_EMOJI.length)];
@@ -66,11 +66,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
 
     if (body.update_id !== undefined) {
-      // Webhook secret check — drop anything not from Telegram
-      const got = req.headers.get("x-telegram-bot-api-secret-token");
-      if (got !== FIXED_WEBHOOK_SECRET) {
-        return jsonResponse({ error: "unauthorized" }, 401);
-      }
+      // Webhook без secret_token — принимаем любые апдейты от Telegram
       return await handleUpdate(body, supabase, BOT_TOKEN, GROUP_ID, SUPABASE_URL);
     }
 
@@ -81,7 +77,6 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: webhookUrl,
-          secret_token: FIXED_WEBHOOK_SECRET,
           allowed_updates: ["message", "callback_query"],
           drop_pending_updates: true,
           max_connections: 40,
