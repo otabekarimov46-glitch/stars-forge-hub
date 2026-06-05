@@ -77,7 +77,6 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: webhookUrl,
-          secret_token: FIXED_WEBHOOK_SECRET,
           allowed_updates: ["message", "callback_query"],
           drop_pending_updates: true,
           max_connections: 40,
