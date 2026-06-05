@@ -8,12 +8,7 @@ const corsHeaders = {
 const TELEGRAM_API = "https://api.telegram.org/bot";
 const VARIATION_EMOJI = ["✨", "💫", "⭐", "🌟", "💎", "🎯"];
 
-async function deriveWebhookSecret(token: string): Promise<string> {
-  const data = new TextEncoder().encode(`webhook:${token}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
+const FIXED_WEBHOOK_SECRET = "12345678901234567890";
 
 function vary(text: string) {
   const e = VARIATION_EMOJI[Math.floor(Math.random() * VARIATION_EMOJI.length)];
