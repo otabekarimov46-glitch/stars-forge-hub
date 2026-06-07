@@ -98,14 +98,57 @@ Deno.serve(async (req) => {
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
         if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
+        const { data: video } = await supabase
+          .from("video_ads")
+          .select("duration_seconds")
+          .eq("id", video_ad_id)
+          .single();
+        if (!video) throw new Error("Video not found");
+
+        // Dynamic-hash session: 5 checkpoints evenly spaced through the video
+        const sessionSecret = crypto.randomUUID() + "." + crypto.randomUUID();
+        const dur = Number(video.duration_seconds);
+        const checkpointTimes = [1, 2, 3, 4, 5].map((i) => +(dur * i / 5).toFixed(2));
+
         const { data: view, error } = await supabase
           .from("video_views")
-          .insert({ user_id: user.id, video_ad_id, ip_address: ip })
+          .insert({ user_id: user.id, video_ad_id, ip_address: ip, session_secret: sessionSecret, checkpoints: [] })
           .select("id")
           .single();
         if (error) throw error;
 
-        return jsonResponse({ data: { view_id: view.id } });
+        return jsonResponse({ data: { view_id: view.id, session_secret: sessionSecret, checkpoint_times: checkpointTimes } });
+      }
+
+      case "checkpoint": {
+        const { telegram_id, view_id, session_secret, index } = params;
+        if (!telegram_id || !view_id || !session_secret || typeof index !== "number") {
+          throw new Error("invalid checkpoint payload");
+        }
+        const { data: user } = await supabase
+          .from("users").select("id, username, telegram_id, captcha_pending, is_banned")
+          .eq("telegram_id", telegram_id).single();
+        if (!user) throw new Error("User not found");
+        if (user.is_banned || user.captcha_pending) return jsonResponse({ data: { locked: true } });
+
+        const { data: view } = await supabase
+          .from("video_views")
+          .select("id, started_at, session_secret, checkpoints, video_ad_id, rewarded")
+          .eq("id", view_id).eq("user_id", user.id).single();
+        if (!view) throw new Error("View not found");
+        if (view.rewarded) return jsonResponse({ data: { ok: false } });
+        if (view.session_secret !== session_secret) {
+          await issueCaptcha(supabase, user, "недействительный ключ сессии видео");
+          return jsonResponse({ data: { locked: true } });
+        }
+        const list: number[] = Array.isArray(view.checkpoints) ? view.checkpoints : [];
+        if (index !== list.length || index < 0 || index > 4) {
+          return jsonResponse({ data: { ok: false } });
+        }
+        const elapsedSec = (Date.now() - new Date(view.started_at).getTime()) / 1000;
+        list.push(+elapsedSec.toFixed(2));
+        await supabase.from("video_views").update({ checkpoints: list }).eq("id", view_id);
+        return jsonResponse({ data: { ok: true } });
       }
 
       case "finish_view": {
