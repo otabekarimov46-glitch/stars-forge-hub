@@ -481,9 +481,15 @@ export default function MiniApp() {
       {/* ===== Main content ===== */}
       <main className="flex-1 px-4 pt-5 pb-8 flex flex-col">
         {status === "loading" && (
-          <div className="m-auto flex flex-col items-center gap-3 py-12">
-            <Loader2 className="w-9 h-9 animate-spin text-purple-300" />
-            <p className="text-white/80 text-sm">Загрузка...</p>
+          <div className="w-full max-w-md mx-auto fade-in">
+            <div className="rounded-3xl overflow-hidden"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+              <div className="relative aspect-video skeleton-shimmer" />
+              <div className="p-4 space-y-3.5">
+                <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
+                <div className="h-12 rounded-2xl skeleton-shimmer" />
+              </div>
+            </div>
           </div>
         )}
 
