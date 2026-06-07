@@ -279,21 +279,112 @@ export default function MiniApp() {
 
   const progressPercent = video ? Math.min(100, (elapsed / video.duration_seconds) * 100) : 0;
 
-  // ===== Locked screen (no chat-open button — it never worked) =====
+  // ===== Locked screen with invisible Turnstile =====
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (status !== "locked" || !telegramId) return;
+    let cancelled = false;
+    setTurnstileState("running");
+
+    const ensureScript = () =>
+      new Promise<void>((resolve, reject) => {
+        if ((window as any).turnstile) return resolve();
+        const existing = document.querySelector<HTMLScriptElement>('script[data-turnstile]');
+        if (existing) { existing.addEventListener("load", () => resolve()); return; }
+        const s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        s.async = true; s.defer = true; s.setAttribute("data-turnstile", "1");
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error("turnstile_load_failed"));
+        document.head.appendChild(s);
+      });
+
+    (async () => {
+      try {
+        const cfg = await miniAppApi("get_config").catch(() => null);
+        const siteKey = cfg?.turnstile_site_key;
+        if (!siteKey) { if (!cancelled) setTurnstileState("failed"); return; }
+        await ensureScript();
+        if (cancelled || !turnstileRef.current) return;
+        // @ts-ignore
+        const ts = (window as any).turnstile;
+        turnstileWidgetRef.current = ts.render(turnstileRef.current, {
+          sitekey: siteKey,
+          size: "invisible",
+          callback: async (token: string) => {
+            try {
+              const res = await miniAppApi("verify_turnstile", { telegram_id: telegramId, token });
+              if (!cancelled) setTurnstileState(res?.ok ? "passed" : "failed");
+            } catch { if (!cancelled) setTurnstileState("failed"); }
+          },
+          "error-callback": () => { if (!cancelled) setTurnstileState("failed"); },
+          "timeout-callback": () => { if (!cancelled) setTurnstileState("failed"); },
+        });
+      } catch {
+        if (!cancelled) setTurnstileState("failed");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      try {
+        // @ts-ignore
+        if (turnstileWidgetRef.current && (window as any).turnstile) {
+          // @ts-ignore
+          (window as any).turnstile.remove(turnstileWidgetRef.current);
+        }
+      } catch {}
+      turnstileWidgetRef.current = null;
+    };
+  }, [status, telegramId]);
+
   if (status === "locked") {
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-[#1a0533] via-[#0d1b3e] to-[#0a2a1f] text-white flex items-center justify-center p-6 z-50 fade-in">
-        <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-3 screen-enter"
+        <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-4 screen-enter"
              style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}>
           <ShieldAlert className="w-14 h-14 mx-auto text-yellow-400" />
-          <h2 className="text-xl font-bold">Подтвердите, что вы человек</h2>
+          <h2 className="text-xl font-bold">Необычная активность</h2>
           <p className="text-sm text-white/85">
-            Откройте чат с ботом и решите простой пример, чтобы продолжить.
+            {turnstileState === "running" && "Проверяем устройство, подождите несколько секунд…"}
+            {turnstileState === "passed" && "Устройство проверено. Откройте чат с ботом, решите простой пример и перезапустите приложение."}
+            {turnstileState === "failed" && "Откройте чат с ботом и решите простой пример, чтобы продолжить."}
+            {turnstileState === "idle" && "Подготовка проверки…"}
+          </p>
+          {turnstileState === "running" && (
+            <Loader2 className="w-6 h-6 mx-auto animate-spin text-white/60" />
+          )}
+          {/* Invisible Turnstile mount */}
+          <div ref={turnstileRef} style={{ position: "absolute", left: -9999, top: -9999 }} />
+        </div>
+      </div>
+    );
+  }
+
+  // ===== Daily limit reached =====
+  if (status === "limit" && limitInfo) {
+    return (
+      <div className="min-h-screen text-white flex items-center justify-center p-6 fade-in"
+           style={{ background: "radial-gradient(120% 80% at 50% 0%, #1a0a3a 0%, #0b0820 55%, #050314 100%)" }}>
+        <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-3 screen-enter"
+             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
+            <CheckCircle className="w-7 h-7 text-emerald-300" />
+          </div>
+          <h2 className="text-xl font-bold">Дневной лимит достигнут</h2>
+          <p className="text-2xl font-bold tabular-nums text-yellow-300">
+            {limitInfo.watched}/{limitInfo.limit}
+          </p>
+          <p className="text-sm text-white/80">
+            Вы посмотрели все доступные на сегодня видео. Возвращайтесь завтра — лимит сбрасывается в 00:00 UTC.
           </p>
         </div>
       </div>
     );
   }
+
 
   // ===== Fullscreen player =====
   if (status === "playing" && video) {
