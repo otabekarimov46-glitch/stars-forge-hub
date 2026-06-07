@@ -324,20 +324,38 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, username, telegram_id, captcha_pending")
+          .select("id, username, telegram_id, captcha_pending, captcha_count")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
 
-        if (!user.captcha_pending) {
-          await issueCaptcha(supabase, user, "паттерн действий похож на автокликер");
-        }
+        // Сколько раз антикликер срабатывал на этого юзера за последние 24ч.
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count: recentReports } = await supabase
+          .from("logs_activity")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("action", "autoclicker_detected")
+          .gte("created_at", dayAgo);
 
         await supabase.from("logs_activity").insert({
           user_id: user.id,
           action: "autoclicker_detected",
           ip_address: ip,
         });
+
+        // 1-е срабатывание за сутки → просто лог, без капчи и без заморозки
+        // (живой человек мог случайно быстро понажимать).
+        if ((recentReports || 0) < 1) {
+          return jsonResponse({ data: { locked: false, warned: true } });
+        }
+
+        // 2-е срабатывание → мягкая капча, БЕЗ заморозки баланса.
+        // 3-е и далее → капча + заморозка (устойчивый паттерн).
+        const freeze = (recentReports || 0) >= 2;
+        if (!user.captcha_pending) {
+          await issueCaptcha(supabase, user, "повторный паттерн действий, похожий на автокликер", freeze);
+        }
 
         return jsonResponse({ data: { locked: true } });
       }
