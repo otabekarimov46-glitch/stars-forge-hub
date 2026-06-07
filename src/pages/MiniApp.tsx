@@ -544,8 +544,7 @@ export default function MiniApp() {
 
                 <button
                   onClick={startWatching}
-                  style={{ transform: `translate(${ctaOffset.x}px, ${ctaOffset.y}px)` }}
-                  className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                  className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                     bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
                     shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
                 >
