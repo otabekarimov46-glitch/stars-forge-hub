@@ -102,6 +102,19 @@ Deno.serve(async (req) => {
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
         if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
+        // ===== Daily limit: 100 rewarded videos per UTC calendar day =====
+        const utcDayStart = new Date();
+        utcDayStart.setUTCHours(0, 0, 0, 0);
+        const { count: todayCount } = await supabase
+          .from("video_views")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("rewarded", true)
+          .gte("started_at", utcDayStart.toISOString());
+        if ((todayCount || 0) >= DAILY_VIDEO_LIMIT) {
+          return jsonResponse({ data: { limit_reached: true, watched_today: todayCount, limit: DAILY_VIDEO_LIMIT } });
+        }
+
         const { data: video } = await supabase
           .from("video_ads")
           .select("duration_seconds")
