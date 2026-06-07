@@ -105,10 +105,12 @@ Deno.serve(async (req) => {
           .single();
         if (!video) throw new Error("Video not found");
 
-        // Dynamic-hash session: 5 checkpoints evenly spaced through the video
+        // Dynamic-hash session: 4 checkpoints at 20/40/60/80% (not 100% to avoid
+        // racing with finish_view). Frontend reports them with the secret;
+        // server verifies sequence + reasonable timing — but soft, not strict.
         const sessionSecret = crypto.randomUUID() + "." + crypto.randomUUID();
         const dur = Number(video.duration_seconds);
-        const checkpointTimes = [1, 2, 3, 4, 5].map((i) => +(dur * i / 5).toFixed(2));
+        const checkpointTimes = [1, 2, 3, 4].map((i) => +(dur * i / 5).toFixed(2));
 
         const { data: view, error } = await supabase
           .from("video_views")
