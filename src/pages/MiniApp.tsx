@@ -224,11 +224,7 @@ export default function MiniApp() {
       if (typeof res?.new_balance === "number") {
         setUser((u) => u ? { ...u, balance_pt: res.new_balance } : u);
       }
-      // Jitter CTA position so autoclickers can't memorise coords
-      setCtaOffset({
-        x: Math.round((Math.random() - 0.5) * 24),
-        y: Math.round((Math.random() - 0.5) * 14),
-      });
+      // Buttons stay fixed in place — no position jitter
       // Remember just-finished ad (for "Перейти" link) and pre-load next
       setLastFinished({ video, reward: res?.amount ?? video.reward_pt });
       setNextVideo(res?.next_video || null);
