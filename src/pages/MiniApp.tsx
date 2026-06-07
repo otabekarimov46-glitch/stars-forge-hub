@@ -193,6 +193,11 @@ export default function MiniApp() {
     if (!video || !telegramId) return;
     try {
       const data = await miniAppApi("start_view", { telegram_id: telegramId, video_ad_id: video.id });
+      if (data?.limit_reached) {
+        setLimitInfo({ watched: data.watched_today ?? data.limit, limit: data.limit });
+        setStatus("limit");
+        return;
+      }
       setViewId(data.view_id);
       sessionSecretRef.current = data.session_secret || null;
       checkpointTimesRef.current = Array.isArray(data.checkpoint_times) ? data.checkpoint_times : [];
