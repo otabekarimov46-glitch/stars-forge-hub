@@ -317,3 +317,34 @@ function jsonResponse(body: any, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+
+async function issueCaptcha(supabase: any, user: any, reason: string) {
+  const captchaA = 2 + Math.floor(Math.random() * 8);
+  const captchaB = 2 + Math.floor(Math.random() * 8);
+  await supabase.from("users").update({
+    captcha_pending: `${captchaA}+${captchaB}`,
+    captcha_answer: captchaA + captchaB,
+    balance_frozen: true,
+  }).eq("id", user.id);
+
+  await supabase.from("admin_alerts").insert({
+    type: "fraud",
+    user_id: user.id,
+    message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}. Mini App заблокирован, отправлена капча.`,
+  });
+
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  if (botToken) {
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: user.telegram_id,
+          text: `🔒 Подтвердите, что вы человек.\nРешите пример: *${captchaA} + ${captchaB} = ?*\nОтправьте число в этот чат.`,
+          parse_mode: "Markdown",
+        }),
+      });
+    } catch {}
+  }
+}
