@@ -18,6 +18,8 @@ Deno.serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
+    const DAILY_VIDEO_LIMIT = 100;
+
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       || req.headers.get("cf-connecting-ip")
       || "0.0.0.0";
@@ -99,6 +101,19 @@ Deno.serve(async (req) => {
         if (!user) throw new Error("User not found");
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
         if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
+
+        // ===== Daily limit: 100 rewarded videos per UTC calendar day =====
+        const utcDayStart = new Date();
+        utcDayStart.setUTCHours(0, 0, 0, 0);
+        const { count: todayCount } = await supabase
+          .from("video_views")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("rewarded", true)
+          .gte("started_at", utcDayStart.toISOString());
+        if ((todayCount || 0) >= DAILY_VIDEO_LIMIT) {
+          return jsonResponse({ data: { limit_reached: true, watched_today: todayCount, limit: DAILY_VIDEO_LIMIT } });
+        }
 
         const { data: video } = await supabase
           .from("video_ads")
@@ -374,6 +389,39 @@ Deno.serve(async (req) => {
         }
 
         return jsonResponse({ data: { locked: true } });
+      }
+
+      case "get_config": {
+        return jsonResponse({ data: { turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null } });
+      }
+
+      case "verify_turnstile": {
+        const { telegram_id, token } = params;
+        if (!telegram_id || !token) throw new Error("telegram_id and token required");
+        const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+        if (!secret) return jsonResponse({ data: { ok: false, reason: "not_configured" } });
+
+        const form = new URLSearchParams();
+        form.append("secret", secret);
+        form.append("response", token);
+        form.append("remoteip", ip);
+
+        const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+          method: "POST", body: form,
+        });
+        const result = await r.json().catch(() => ({ success: false }));
+
+        const { data: user } = await supabase
+          .from("users").select("id").eq("telegram_id", telegram_id).single();
+        if (user) {
+          await supabase.from("logs_activity").insert({
+            user_id: user.id,
+            action: result.success ? "turnstile_pass" : "turnstile_fail",
+            ip_address: ip,
+            metadata: { codes: result["error-codes"] || [] },
+          });
+        }
+        return jsonResponse({ data: { ok: !!result.success } });
       }
 
 
