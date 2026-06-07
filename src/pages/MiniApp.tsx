@@ -240,11 +240,6 @@ export default function MiniApp() {
     setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
     setViewId(null); setElapsed(0); finishedRef.current = false;
     setLastFinished(null);
-    // small extra jitter every cycle
-    setCtaOffset({
-      x: Math.round((Math.random() - 0.5) * 24),
-      y: Math.round((Math.random() - 0.5) * 14),
-    });
     setStatus("ready");
   };
 
