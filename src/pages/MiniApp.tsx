@@ -48,6 +48,9 @@ export default function MiniApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishedRef = useRef(false);
+  const sessionSecretRef = useRef<string | null>(null);
+  const checkpointTimesRef = useRef<number[]>([]);
+  const checkpointSentRef = useRef<number>(0);
 
   // ===== Telegram WebApp init =====
   useEffect(() => {
