@@ -465,7 +465,7 @@ export default function MiniApp() {
             (bonusClaimed
               ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
               : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black")}>
-            {bonusClaimed ? "CLAIMED" : "ПОЛУЧИТЬ"}
+            {bonusClaimed ? "Получено" : "Получить"}
           </span>
         </button>
 
