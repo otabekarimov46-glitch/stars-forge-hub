@@ -400,19 +400,20 @@ function jsonResponse(body: any, status = 200) {
   });
 }
 
-async function issueCaptcha(supabase: any, user: any, reason: string) {
+async function issueCaptcha(supabase: any, user: any, reason: string, freeze: boolean = true) {
   const captchaA = 2 + Math.floor(Math.random() * 8);
   const captchaB = 2 + Math.floor(Math.random() * 8);
-  await supabase.from("users").update({
+  const update: any = {
     captcha_pending: `${captchaA}+${captchaB}`,
     captcha_answer: captchaA + captchaB,
-    balance_frozen: true,
-  }).eq("id", user.id);
+  };
+  if (freeze) update.balance_frozen = true;
+  await supabase.from("users").update(update).eq("id", user.id);
 
   await supabase.from("admin_alerts").insert({
     type: "fraud",
     user_id: user.id,
-    message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}. Mini App заблокирован, отправлена капча.`,
+    message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}.${freeze ? " Баланс заморожен," : ""} отправлена капча.`,
   });
 
   const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
