@@ -18,6 +18,8 @@ Deno.serve(async (req) => {
 
     const { action, ...params } = await req.json();
 
+    const DAILY_VIDEO_LIMIT = 100;
+
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       || req.headers.get("cf-connecting-ip")
       || "0.0.0.0";
