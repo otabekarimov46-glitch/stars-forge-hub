@@ -391,6 +391,39 @@ Deno.serve(async (req) => {
         return jsonResponse({ data: { locked: true } });
       }
 
+      case "get_config": {
+        return jsonResponse({ data: { turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null } });
+      }
+
+      case "verify_turnstile": {
+        const { telegram_id, token } = params;
+        if (!telegram_id || !token) throw new Error("telegram_id and token required");
+        const secret = Deno.env.get("TURNSTILE_SECRET_KEY");
+        if (!secret) return jsonResponse({ data: { ok: false, reason: "not_configured" } });
+
+        const form = new URLSearchParams();
+        form.append("secret", secret);
+        form.append("response", token);
+        form.append("remoteip", ip);
+
+        const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+          method: "POST", body: form,
+        });
+        const result = await r.json().catch(() => ({ success: false }));
+
+        const { data: user } = await supabase
+          .from("users").select("id").eq("telegram_id", telegram_id).single();
+        if (user) {
+          await supabase.from("logs_activity").insert({
+            user_id: user.id,
+            action: result.success ? "turnstile_pass" : "turnstile_fail",
+            ip_address: ip,
+            metadata: { codes: result["error-codes"] || [] },
+          });
+        }
+        return jsonResponse({ data: { ok: !!result.success } });
+      }
+
 
       default:
         return new Response(
