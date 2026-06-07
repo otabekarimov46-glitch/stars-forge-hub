@@ -186,31 +186,38 @@ Deno.serve(async (req) => {
         const elapsedSec = (Date.now() - startedAt) / 1000;
         const dur = Number(video.duration_seconds);
 
-        // 1) Dynamic-hash session secret must match (anti-userbot: direct API hit)
-        if (!session_secret || view.session_secret !== session_secret) {
-          await issueCaptcha(supabase, user, "запрос награды без действительного ключа сессии (возможен userbot)");
-          return jsonResponse({ data: { locked: true } });
-        }
-
-        // 2) All 5 checkpoints must be present with correct cadence (±25%)
+        // ====== Anti-userbot validation (тонкая, не мешает живым) ======
+        // Тиры:
+        //  HARD fraud → freeze balance + captcha (только явный userbot):
+        //    - нет/неверный session_secret
+        //    - elapsed < 50% длины видео
+        //    - 0 чекпоинтов (вообще ни одного отчёта от Mini App)
+        //  SOFT fail → отказать в награде БЕЗ заморозки и БЕЗ капчи
+        //  (вкладка свернулась, плеер прервался и т.п.)
+        //    - elapsed < 85% длины
+        //    - чекпоинтов меньше 2
+        //  Каденс между чекпоинтами специально НЕ проверяем строго —
+        //  фронтовый таймер останавливается при потере фокуса, а
+        //  серверное wall-time от этого расходится — это ложные срабатывания.
         const cps: number[] = Array.isArray(view.checkpoints) ? view.checkpoints : [];
-        const expected = [1, 2, 3, 4, 5].map((i) => dur * i / 5);
-        let cadenceOk = cps.length === 5;
-        if (cadenceOk) {
-          const tol = Math.max(1.5, dur * 0.25);
-          for (let i = 0; i < 5; i++) {
-            if (Math.abs(cps[i] - expected[i]) > tol) { cadenceOk = false; break; }
-          }
-        }
-        if (!cadenceOk) {
-          await issueCaptcha(supabase, user, `пропущены контрольные точки просмотра (${cps.length}/5)`);
+
+        const hardBadSecret = !session_secret || view.session_secret !== session_secret;
+        const hardTooFast = elapsedSec < dur * 0.5;
+        const hardNoCheckpoints = cps.length === 0 && dur >= 5;
+
+        if (hardBadSecret || hardTooFast || hardNoCheckpoints) {
+          const reason = hardBadSecret
+            ? "запрос награды без действительного ключа сессии (возможен userbot)"
+            : hardTooFast
+            ? `просмотр завершён слишком быстро (${elapsedSec.toFixed(1)}с / ${dur}с)`
+            : `ни одного чекпоинта Mini App за ${dur}с просмотра`;
+          await issueCaptcha(supabase, user, reason, /*freeze*/ true);
           return jsonResponse({ data: { locked: true } });
         }
 
-        // 3) Real elapsed time must be close to video duration
-        if (elapsedSec < dur * 0.9) {
-          await issueCaptcha(supabase, user, `просмотр завершён слишком быстро (${elapsedSec.toFixed(1)}с / ${dur}с)`);
-          return jsonResponse({ data: { locked: true } });
+        // Soft fail — просто не выдаём награду, без капчи/заморозки.
+        if (elapsedSec < dur * 0.85 || (dur >= 10 && cps.length < 2)) {
+          return jsonResponse({ data: { rewarded: false, reason: "incomplete" } });
         }
 
         await supabase
