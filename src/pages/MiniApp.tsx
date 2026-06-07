@@ -222,18 +222,27 @@ export default function MiniApp() {
         x: Math.round((Math.random() - 0.5) * 24),
         y: Math.round((Math.random() - 0.5) * 14),
       });
-      // Swap to next video right away — no intermediate screen
-      if (res?.next_video) {
-        setVideo(res.next_video); setPosterUrl(null);
-        setViewId(null); setElapsed(0); finishedRef.current = false;
-        setStatus("ready");
-      } else {
-        setStatus("no_video");
-      }
+      // Remember just-finished ad (for "Перейти" link) and pre-load next
+      setLastFinished({ video, reward: res?.amount ?? video.reward_pt });
+      setNextVideo(res?.next_video || null);
+      setStatus("completed");
     } catch (e: any) {
       if (/captcha|заблокир/i.test(e.message)) { setStatus("locked"); return; }
       setError(e.message); setStatus("error");
     }
+  };
+
+  const watchNext = async () => {
+    if (!nextVideo) { loadVideo(); return; }
+    setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
+    setViewId(null); setElapsed(0); finishedRef.current = false;
+    setLastFinished(null);
+    // small extra jitter every cycle
+    setCtaOffset({
+      x: Math.round((Math.random() - 0.5) * 24),
+      y: Math.round((Math.random() - 0.5) * 14),
+    });
+    setStatus("ready");
   };
 
   // Fire dynamic checkpoints
