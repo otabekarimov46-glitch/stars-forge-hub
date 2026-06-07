@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
         let { data: user } = await supabase
           .from("users")
-          .select("id, is_banned, balance_frozen, captcha_pending")
+          .select("id, is_banned, balance_frozen, captcha_pending, balance_pt, daily_bonus_at")
           .eq("telegram_id", telegram_id)
           .single();
 
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
           const { data: newUser, error } = await supabase
             .from("users")
             .insert({ telegram_id })
-            .select("id, is_banned, balance_frozen, captcha_pending")
+            .select("id, is_banned, balance_frozen, captcha_pending, balance_pt, daily_bonus_at")
             .single();
           if (error) throw error;
           user = newUser;
@@ -72,17 +72,19 @@ Deno.serve(async (req) => {
           .eq("is_active", true);
 
         const list = allVideos || [];
-        if (list.length === 0) return jsonResponse({ data: null });
+        const userPayload = {
+          balance_pt: Number(user.balance_pt),
+          daily_bonus_at: user.daily_bonus_at,
+        };
+        if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload } });
 
         const unwatched = list.filter((v: any) => !watchedIds.has(v.id));
         const watchedAgain = list.filter((v: any) => watchedIds.has(v.id));
-        // shuffle helper
         const shuffle = <T,>(arr: T[]) => arr.map(a => [Math.random(), a] as const).sort((a, b) => a[0] - b[0]).map(([, a]) => a);
-        // Queue: random unwatched first, then random watched at the end
         const queue = [...shuffle(unwatched), ...shuffle(watchedAgain)];
         const video = queue[0] || null;
 
-        return jsonResponse({ data: video });
+        return jsonResponse({ data: { video, user: userPayload } });
       }
 
       case "start_view": {
@@ -278,7 +280,21 @@ Deno.serve(async (req) => {
           }
         }
 
-        return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance } });
+        // Pick next video so the frontend can show it immediately
+        const { data: watchedAfter } = await supabase
+          .from("video_views").select("video_ad_id").eq("user_id", user.id).eq("rewarded", true);
+        const watchedSet = new Set((watchedAfter || []).map((v: any) => v.video_ad_id));
+        const { data: allVids } = await supabase
+          .from("video_ads")
+          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type")
+          .eq("is_active", true);
+        const pool = (allVids || []).filter((v: any) => v.id !== view.video_ad_id);
+        const fresh = pool.filter((v: any) => !watchedSet.has(v.id));
+        const rest = pool.filter((v: any) => watchedSet.has(v.id));
+        const shuffle2 = <T,>(arr: T[]) => arr.map(a => [Math.random(), a] as const).sort((a, b) => a[0] - b[0]).map(([, a]) => a);
+        const nextVideo = [...shuffle2(fresh), ...shuffle2(rest)][0] || null;
+
+        return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance, next_video: nextVideo } });
       }
 
 
