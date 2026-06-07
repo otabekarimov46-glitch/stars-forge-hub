@@ -568,10 +568,6 @@ export default function MiniApp() {
                 <div className="text-2xl font-bold tabular-nums">
                   +<span className="text-yellow-300">{lastFinished.reward} PT</span>
                 </div>
-                {user && (
-                  <div className="text-[12px] text-white/55 tabular-nums opacity-0 h-0">
-                  </div>
-                )}
               </div>
 
               <div className="p-4 space-y-3">
