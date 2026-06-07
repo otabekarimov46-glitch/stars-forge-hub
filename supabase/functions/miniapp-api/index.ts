@@ -192,8 +192,31 @@ Deno.serve(async (req) => {
           } catch {}
         }
 
+        // Sustained activity check: too many rewards in the last hour
+        // without a ≥ 3-minute pause → soft captcha lock (no ban talk).
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { data: recent } = await supabase
+          .from("logs_activity")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .eq("action", "video_reward")
+          .gte("created_at", oneHourAgo)
+          .order("created_at", { ascending: true });
+        if (recent && recent.length >= 60) {
+          let maxPauseMs = 0;
+          for (let i = 1; i < recent.length; i++) {
+            const d = new Date(recent[i].created_at).getTime() - new Date(recent[i - 1].created_at).getTime();
+            if (d > maxPauseMs) maxPauseMs = d;
+          }
+          if (maxPauseMs < 3 * 60 * 1000) {
+            await issueCaptcha(supabase, user, "длительная непрерывная активность без пауз");
+            return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance, locked: true } });
+          }
+        }
+
         return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance } });
       }
+
 
 
       case "claim_daily_bonus": {
@@ -237,44 +260,13 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, username, telegram_id, captcha_pending, violation_count, is_suspicious")
+          .select("id, username, telegram_id, captcha_pending")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
 
-        // Generate captcha if not yet pending
-        let captchaA: number, captchaB: number;
         if (!user.captcha_pending) {
-          captchaA = 2 + Math.floor(Math.random() * 8);
-          captchaB = 2 + Math.floor(Math.random() * 8);
-          await supabase.from("users").update({
-            captcha_pending: `${captchaA}+${captchaB}`,
-            captcha_answer: captchaA + captchaB,
-            is_suspicious: true,
-            violation_count: (user.violation_count || 0) + 1,
-          }).eq("id", user.id);
-
-          await supabase.from("admin_alerts").insert({
-            type: "fraud",
-            user_id: user.id,
-            message: `🤖 Автокликер: @${user.username || user.telegram_id} — серия одинаковых кликов. Mini App заблокирован, отправлена капча.`,
-          });
-
-          // Send captcha to user in Telegram chat
-          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-          if (botToken) {
-            try {
-              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  chat_id: user.telegram_id,
-                  text: `🔒 Подтвердите, что вы человек.\nРешите пример: *${captchaA} + ${captchaB} = ?*\nОтправьте число в этот чат.`,
-                  parse_mode: "Markdown",
-                }),
-              });
-            } catch {}
-          }
+          await issueCaptcha(supabase, user, "паттерн действий похож на автокликер");
         }
 
         await supabase.from("logs_activity").insert({
@@ -285,6 +277,7 @@ Deno.serve(async (req) => {
 
         return jsonResponse({ data: { locked: true } });
       }
+
 
       default:
         return new Response(
@@ -323,4 +316,35 @@ function jsonResponse(body: any, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function issueCaptcha(supabase: any, user: any, reason: string) {
+  const captchaA = 2 + Math.floor(Math.random() * 8);
+  const captchaB = 2 + Math.floor(Math.random() * 8);
+  await supabase.from("users").update({
+    captcha_pending: `${captchaA}+${captchaB}`,
+    captcha_answer: captchaA + captchaB,
+    balance_frozen: true,
+  }).eq("id", user.id);
+
+  await supabase.from("admin_alerts").insert({
+    type: "fraud",
+    user_id: user.id,
+    message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}. Mini App заблокирован, отправлена капча.`,
+  });
+
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  if (botToken) {
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: user.telegram_id,
+          text: `🔒 Подтвердите, что вы человек.\nРешите пример: *${captchaA} + ${captchaB} = ?*\nОтправьте число в этот чат.`,
+          parse_mode: "Markdown",
+        }),
+      });
+    } catch {}
+  }
 }

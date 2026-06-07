@@ -223,9 +223,9 @@ export default function MiniApp() {
         <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-4 screen-enter"
              style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}>
           <ShieldAlert className="w-14 h-14 mx-auto text-yellow-400" />
-          <h2 className="text-xl font-bold text-readable">Временно недоступно</h2>
+          <h2 className="text-xl font-bold text-readable">Подтвердите, что вы человек</h2>
           <p className="text-sm text-white/90 text-readable-soft">
-            Мы заметили необычную активность. Откройте чат с ботом и решите простой пример — после этого приложение разблокируется автоматически.
+            Перейдите в чат бота и решите простой пример, чтобы продолжить.
           </p>
           <Button onClick={closeApp} className="rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">Открыть чат</Button>
         </div>
