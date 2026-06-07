@@ -20,10 +20,14 @@ import { useEffect, useRef } from "react";
 type Ev = { x: number; y: number; t: number };
 
 const WINDOW = 30;
-const SCORE_THRESHOLD = 8;
+// Высокий порог: живой человек его почти никогда не достигнет.
+// Чтобы добраться до 16, нужно несколько ДЕСЯТКОВ секунд устойчиво
+// роботизированных кликов подряд — реальный автокликер/userbot, а не
+// случайная быстрая серия нажатий.
+const SCORE_THRESHOLD = 16;
 const TICK_MS = 1000;
 const NATURAL_PAUSE_MS = 2000;
-const DECAY_EVERY_MS = 30_000;
+const DECAY_EVERY_MS = 15_000;
 const NO_PAUSE_LIMIT_MS = 90 * 60 * 1000;
 const LONG_PAUSE_MS = 3 * 60 * 1000;
 

@@ -105,10 +105,12 @@ Deno.serve(async (req) => {
           .single();
         if (!video) throw new Error("Video not found");
 
-        // Dynamic-hash session: 5 checkpoints evenly spaced through the video
+        // Dynamic-hash session: 4 checkpoints at 20/40/60/80% (not 100% to avoid
+        // racing with finish_view). Frontend reports them with the secret;
+        // server verifies sequence + reasonable timing — but soft, not strict.
         const sessionSecret = crypto.randomUUID() + "." + crypto.randomUUID();
         const dur = Number(video.duration_seconds);
-        const checkpointTimes = [1, 2, 3, 4, 5].map((i) => +(dur * i / 5).toFixed(2));
+        const checkpointTimes = [1, 2, 3, 4].map((i) => +(dur * i / 5).toFixed(2));
 
         const { data: view, error } = await supabase
           .from("video_views")
@@ -184,31 +186,38 @@ Deno.serve(async (req) => {
         const elapsedSec = (Date.now() - startedAt) / 1000;
         const dur = Number(video.duration_seconds);
 
-        // 1) Dynamic-hash session secret must match (anti-userbot: direct API hit)
-        if (!session_secret || view.session_secret !== session_secret) {
-          await issueCaptcha(supabase, user, "запрос награды без действительного ключа сессии (возможен userbot)");
-          return jsonResponse({ data: { locked: true } });
-        }
-
-        // 2) All 5 checkpoints must be present with correct cadence (±25%)
+        // ====== Anti-userbot validation (тонкая, не мешает живым) ======
+        // Тиры:
+        //  HARD fraud → freeze balance + captcha (только явный userbot):
+        //    - нет/неверный session_secret
+        //    - elapsed < 50% длины видео
+        //    - 0 чекпоинтов (вообще ни одного отчёта от Mini App)
+        //  SOFT fail → отказать в награде БЕЗ заморозки и БЕЗ капчи
+        //  (вкладка свернулась, плеер прервался и т.п.)
+        //    - elapsed < 85% длины
+        //    - чекпоинтов меньше 2
+        //  Каденс между чекпоинтами специально НЕ проверяем строго —
+        //  фронтовый таймер останавливается при потере фокуса, а
+        //  серверное wall-time от этого расходится — это ложные срабатывания.
         const cps: number[] = Array.isArray(view.checkpoints) ? view.checkpoints : [];
-        const expected = [1, 2, 3, 4, 5].map((i) => dur * i / 5);
-        let cadenceOk = cps.length === 5;
-        if (cadenceOk) {
-          const tol = Math.max(1.5, dur * 0.25);
-          for (let i = 0; i < 5; i++) {
-            if (Math.abs(cps[i] - expected[i]) > tol) { cadenceOk = false; break; }
-          }
-        }
-        if (!cadenceOk) {
-          await issueCaptcha(supabase, user, `пропущены контрольные точки просмотра (${cps.length}/5)`);
+
+        const hardBadSecret = !session_secret || view.session_secret !== session_secret;
+        const hardTooFast = elapsedSec < dur * 0.5;
+        const hardNoCheckpoints = cps.length === 0 && dur >= 5;
+
+        if (hardBadSecret || hardTooFast || hardNoCheckpoints) {
+          const reason = hardBadSecret
+            ? "запрос награды без действительного ключа сессии (возможен userbot)"
+            : hardTooFast
+            ? `просмотр завершён слишком быстро (${elapsedSec.toFixed(1)}с / ${dur}с)`
+            : `ни одного чекпоинта Mini App за ${dur}с просмотра`;
+          await issueCaptcha(supabase, user, reason, /*freeze*/ true);
           return jsonResponse({ data: { locked: true } });
         }
 
-        // 3) Real elapsed time must be close to video duration
-        if (elapsedSec < dur * 0.9) {
-          await issueCaptcha(supabase, user, `просмотр завершён слишком быстро (${elapsedSec.toFixed(1)}с / ${dur}с)`);
-          return jsonResponse({ data: { locked: true } });
+        // Soft fail — просто не выдаём награду, без капчи/заморозки.
+        if (elapsedSec < dur * 0.85 || (dur >= 10 && cps.length < 2)) {
+          return jsonResponse({ data: { rewarded: false, reason: "incomplete" } });
         }
 
         await supabase
@@ -247,8 +256,8 @@ Deno.serve(async (req) => {
           } catch {}
         }
 
-        // Sustained activity check: too many rewards in the last hour
-        // without a ≥ 3-minute pause → soft captcha lock (no ban talk).
+        // Sustained activity check — мягкая, срабатывает только на явный фарм:
+        // 200+ наград/час БЕЗ единой паузы ≥ 5 минут → капча без заморозки.
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { data: recent } = await supabase
           .from("logs_activity")
@@ -257,14 +266,14 @@ Deno.serve(async (req) => {
           .eq("action", "video_reward")
           .gte("created_at", oneHourAgo)
           .order("created_at", { ascending: true });
-        if (recent && recent.length >= 60) {
+        if (recent && recent.length >= 200) {
           let maxPauseMs = 0;
           for (let i = 1; i < recent.length; i++) {
             const d = new Date(recent[i].created_at).getTime() - new Date(recent[i - 1].created_at).getTime();
             if (d > maxPauseMs) maxPauseMs = d;
           }
-          if (maxPauseMs < 3 * 60 * 1000) {
-            await issueCaptcha(supabase, user, "длительная непрерывная активность без пауз");
+          if (maxPauseMs < 5 * 60 * 1000) {
+            await issueCaptcha(supabase, user, "длительная непрерывная активность без пауз", /*freeze*/ false);
             return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance, locked: true } });
           }
         }
@@ -315,20 +324,38 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, username, telegram_id, captcha_pending")
+          .select("id, username, telegram_id, captcha_pending, captcha_count")
           .eq("telegram_id", telegram_id)
           .single();
         if (!user) throw new Error("User not found");
 
-        if (!user.captcha_pending) {
-          await issueCaptcha(supabase, user, "паттерн действий похож на автокликер");
-        }
+        // Сколько раз антикликер срабатывал на этого юзера за последние 24ч.
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count: recentReports } = await supabase
+          .from("logs_activity")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("action", "autoclicker_detected")
+          .gte("created_at", dayAgo);
 
         await supabase.from("logs_activity").insert({
           user_id: user.id,
           action: "autoclicker_detected",
           ip_address: ip,
         });
+
+        // 1-е срабатывание за сутки → просто лог, без капчи и без заморозки
+        // (живой человек мог случайно быстро понажимать).
+        if ((recentReports || 0) < 1) {
+          return jsonResponse({ data: { locked: false, warned: true } });
+        }
+
+        // 2-е срабатывание → мягкая капча, БЕЗ заморозки баланса.
+        // 3-е и далее → капча + заморозка (устойчивый паттерн).
+        const freeze = (recentReports || 0) >= 2;
+        if (!user.captcha_pending) {
+          await issueCaptcha(supabase, user, "повторный паттерн действий, похожий на автокликер", freeze);
+        }
 
         return jsonResponse({ data: { locked: true } });
       }
@@ -373,19 +400,20 @@ function jsonResponse(body: any, status = 200) {
   });
 }
 
-async function issueCaptcha(supabase: any, user: any, reason: string) {
+async function issueCaptcha(supabase: any, user: any, reason: string, freeze: boolean = true) {
   const captchaA = 2 + Math.floor(Math.random() * 8);
   const captchaB = 2 + Math.floor(Math.random() * 8);
-  await supabase.from("users").update({
+  const update: any = {
     captcha_pending: `${captchaA}+${captchaB}`,
     captcha_answer: captchaA + captchaB,
-    balance_frozen: true,
-  }).eq("id", user.id);
+  };
+  if (freeze) update.balance_frozen = true;
+  await supabase.from("users").update(update).eq("id", user.id);
 
   await supabase.from("admin_alerts").insert({
     type: "fraud",
     user_id: user.id,
-    message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}. Mini App заблокирован, отправлена капча.`,
+    message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}.${freeze ? " Баланс заморожен," : ""} отправлена капча.`,
   });
 
   const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
