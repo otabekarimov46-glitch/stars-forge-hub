@@ -57,8 +57,10 @@ export default function MiniApp() {
 
   const [video, setVideo] = useState<VideoAd | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "playing" | "completed" | "error" | "no_video" | "locked">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "playing" | "completed" | "error" | "no_video" | "locked" | "limit">("loading");
   const [error, setError] = useState("");
+  const [limitInfo, setLimitInfo] = useState<{ watched: number; limit: number } | null>(null);
+  const [turnstileState, setTurnstileState] = useState<"idle" | "running" | "passed" | "failed">("idle");
   const [elapsed, setElapsed] = useState(0);
   const [user, setUser] = useState<UserSnap | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
