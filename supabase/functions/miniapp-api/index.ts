@@ -98,18 +98,61 @@ Deno.serve(async (req) => {
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
         if (user.captcha_pending) throw new Error("Требуется решить капчу в чате");
 
+        const { data: video } = await supabase
+          .from("video_ads")
+          .select("duration_seconds")
+          .eq("id", video_ad_id)
+          .single();
+        if (!video) throw new Error("Video not found");
+
+        // Dynamic-hash session: 5 checkpoints evenly spaced through the video
+        const sessionSecret = crypto.randomUUID() + "." + crypto.randomUUID();
+        const dur = Number(video.duration_seconds);
+        const checkpointTimes = [1, 2, 3, 4, 5].map((i) => +(dur * i / 5).toFixed(2));
+
         const { data: view, error } = await supabase
           .from("video_views")
-          .insert({ user_id: user.id, video_ad_id, ip_address: ip })
+          .insert({ user_id: user.id, video_ad_id, ip_address: ip, session_secret: sessionSecret, checkpoints: [] })
           .select("id")
           .single();
         if (error) throw error;
 
-        return jsonResponse({ data: { view_id: view.id } });
+        return jsonResponse({ data: { view_id: view.id, session_secret: sessionSecret, checkpoint_times: checkpointTimes } });
+      }
+
+      case "checkpoint": {
+        const { telegram_id, view_id, session_secret, index } = params;
+        if (!telegram_id || !view_id || !session_secret || typeof index !== "number") {
+          throw new Error("invalid checkpoint payload");
+        }
+        const { data: user } = await supabase
+          .from("users").select("id, username, telegram_id, captcha_pending, is_banned")
+          .eq("telegram_id", telegram_id).single();
+        if (!user) throw new Error("User not found");
+        if (user.is_banned || user.captcha_pending) return jsonResponse({ data: { locked: true } });
+
+        const { data: view } = await supabase
+          .from("video_views")
+          .select("id, started_at, session_secret, checkpoints, video_ad_id, rewarded")
+          .eq("id", view_id).eq("user_id", user.id).single();
+        if (!view) throw new Error("View not found");
+        if (view.rewarded) return jsonResponse({ data: { ok: false } });
+        if (view.session_secret !== session_secret) {
+          await issueCaptcha(supabase, user, "недействительный ключ сессии видео");
+          return jsonResponse({ data: { locked: true } });
+        }
+        const list: number[] = Array.isArray(view.checkpoints) ? view.checkpoints : [];
+        if (index !== list.length || index < 0 || index > 4) {
+          return jsonResponse({ data: { ok: false } });
+        }
+        const elapsedSec = (Date.now() - new Date(view.started_at).getTime()) / 1000;
+        list.push(+elapsedSec.toFixed(2));
+        await supabase.from("video_views").update({ checkpoints: list }).eq("id", view_id);
+        return jsonResponse({ data: { ok: true } });
       }
 
       case "finish_view": {
-        const { telegram_id, view_id } = params;
+        const { telegram_id, view_id, session_secret } = params;
         if (!telegram_id || !view_id) throw new Error("telegram_id and view_id required");
 
         const { data: user } = await supabase
@@ -123,7 +166,7 @@ Deno.serve(async (req) => {
 
         const { data: view } = await supabase
           .from("video_views")
-          .select("id, video_ad_id, started_at, rewarded")
+          .select("id, video_ad_id, started_at, rewarded, session_secret, checkpoints")
           .eq("id", view_id)
           .eq("user_id", user.id)
           .single();
@@ -139,21 +182,33 @@ Deno.serve(async (req) => {
 
         const startedAt = new Date(view.started_at).getTime();
         const elapsedSec = (Date.now() - startedAt) / 1000;
+        const dur = Number(video.duration_seconds);
 
-        // Antifraud: finished faster than minimum allowed
-        if (elapsedSec < video.duration_seconds * 0.8) {
-          const newViolations = (user.violation_count || 0) + 1;
-          await supabase.from("users").update({
-            violation_count: newViolations,
-            is_suspicious: newViolations >= 3 ? true : user.is_suspicious,
-            is_banned: newViolations >= 6,
-          }).eq("id", user.id);
-          await supabase.from("admin_alerts").insert({
-            type: "fraud",
-            user_id: user.id,
-            message: `🚨 Накрутка просмотра: @${user.username || user.telegram_id} досмотрел ${elapsedSec.toFixed(1)}с / ${video.duration_seconds}с (нарушений: ${newViolations})`,
-          });
-          throw new Error("Видео не досмотрено");
+        // 1) Dynamic-hash session secret must match (anti-userbot: direct API hit)
+        if (!session_secret || view.session_secret !== session_secret) {
+          await issueCaptcha(supabase, user, "запрос награды без действительного ключа сессии (возможен userbot)");
+          return jsonResponse({ data: { locked: true } });
+        }
+
+        // 2) All 5 checkpoints must be present with correct cadence (±25%)
+        const cps: number[] = Array.isArray(view.checkpoints) ? view.checkpoints : [];
+        const expected = [1, 2, 3, 4, 5].map((i) => dur * i / 5);
+        let cadenceOk = cps.length === 5;
+        if (cadenceOk) {
+          const tol = Math.max(1.5, dur * 0.25);
+          for (let i = 0; i < 5; i++) {
+            if (Math.abs(cps[i] - expected[i]) > tol) { cadenceOk = false; break; }
+          }
+        }
+        if (!cadenceOk) {
+          await issueCaptcha(supabase, user, `пропущены контрольные точки просмотра (${cps.length}/5)`);
+          return jsonResponse({ data: { locked: true } });
+        }
+
+        // 3) Real elapsed time must be close to video duration
+        if (elapsedSec < dur * 0.9) {
+          await issueCaptcha(supabase, user, `просмотр завершён слишком быстро (${elapsedSec.toFixed(1)}с / ${dur}с)`);
+          return jsonResponse({ data: { locked: true } });
         }
 
         await supabase

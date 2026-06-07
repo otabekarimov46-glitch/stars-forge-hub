@@ -48,6 +48,9 @@ export default function MiniApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishedRef = useRef(false);
+  const sessionSecretRef = useRef<string | null>(null);
+  const checkpointTimesRef = useRef<number[]>([]);
+  const checkpointSentRef = useRef<number>(0);
 
   // ===== Telegram WebApp init =====
   useEffect(() => {
@@ -182,7 +185,11 @@ export default function MiniApp() {
     if (!video || !telegramId) return;
     try {
       const data = await miniAppApi("start_view", { telegram_id: telegramId, video_ad_id: video.id });
-      setViewId(data.view_id); setStatus("playing"); setElapsed(0); finishedRef.current = false;
+      setViewId(data.view_id);
+      sessionSecretRef.current = data.session_secret || null;
+      checkpointTimesRef.current = Array.isArray(data.checkpoint_times) ? data.checkpoint_times : [];
+      checkpointSentRef.current = 0;
+      setStatus("playing"); setElapsed(0); finishedRef.current = false;
       if (video.media_type !== "image") {
         videoRef.current?.play().catch(() => {});
       }
@@ -197,13 +204,34 @@ export default function MiniApp() {
     if (!viewId || !telegramId || !video || elapsed < video.duration_seconds) return;
     try {
       finishedRef.current = true;
-      await miniAppApi("finish_view", { telegram_id: telegramId, view_id: viewId });
+      const res = await miniAppApi("finish_view", {
+        telegram_id: telegramId,
+        view_id: viewId,
+        session_secret: sessionSecretRef.current,
+      });
+      if (res?.locked) { setStatus("locked"); return; }
       setStatus("completed"); stopTimer();
     } catch (e: any) {
       if (/captcha|заблокир/i.test(e.message)) { setStatus("locked"); return; }
       setError(e.message); setStatus("error");
     }
   };
+
+  // Fire dynamic-hash checkpoints to the server at the right moments
+  useEffect(() => {
+    if (status !== "playing" || !viewId || !telegramId) return;
+    const times = checkpointTimesRef.current;
+    while (checkpointSentRef.current < times.length && elapsed >= times[checkpointSentRef.current]) {
+      const index = checkpointSentRef.current;
+      checkpointSentRef.current += 1;
+      miniAppApi("checkpoint", {
+        telegram_id: telegramId,
+        view_id: viewId,
+        session_secret: sessionSecretRef.current,
+        index,
+      }).catch(() => {});
+    }
+  }, [elapsed, status, viewId, telegramId]);
 
   useEffect(() => {
     if (status === "playing" && video && elapsed >= video.duration_seconds && !finishedRef.current) finishWatching();

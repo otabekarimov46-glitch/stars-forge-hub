@@ -360,28 +360,34 @@ export type Database = {
       }
       video_views: {
         Row: {
+          checkpoints: Json
           finished_at: string | null
           id: string
           ip_address: unknown
           rewarded: boolean
+          session_secret: string | null
           started_at: string
           user_id: string
           video_ad_id: string
         }
         Insert: {
+          checkpoints?: Json
           finished_at?: string | null
           id?: string
           ip_address: unknown
           rewarded?: boolean
+          session_secret?: string | null
           started_at?: string
           user_id: string
           video_ad_id: string
         }
         Update: {
+          checkpoints?: Json
           finished_at?: string | null
           id?: string
           ip_address?: unknown
           rewarded?: boolean
+          session_secret?: string | null
           started_at?: string
           user_id?: string
           video_ad_id?: string
