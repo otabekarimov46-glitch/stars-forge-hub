@@ -66,7 +66,7 @@ export default function MiniApp() {
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [bonusToast, setBonusToast] = useState<{ kind: "got" | "wait"; bonus?: number; hours?: number } | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [ctaOffset, setCtaOffset] = useState({ x: 0, y: 0 });
+  
   // Set right after a video finishes — shown in the completed screen
   const [lastFinished, setLastFinished] = useState<{ video: VideoAd; reward: number } | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoAd | null>(null);
@@ -224,11 +224,7 @@ export default function MiniApp() {
       if (typeof res?.new_balance === "number") {
         setUser((u) => u ? { ...u, balance_pt: res.new_balance } : u);
       }
-      // Jitter CTA position so autoclickers can't memorise coords
-      setCtaOffset({
-        x: Math.round((Math.random() - 0.5) * 24),
-        y: Math.round((Math.random() - 0.5) * 14),
-      });
+      // Buttons stay fixed in place — no position jitter
       // Remember just-finished ad (for "Перейти" link) and pre-load next
       setLastFinished({ video, reward: res?.amount ?? video.reward_pt });
       setNextVideo(res?.next_video || null);
@@ -244,11 +240,6 @@ export default function MiniApp() {
     setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
     setViewId(null); setElapsed(0); finishedRef.current = false;
     setLastFinished(null);
-    // small extra jitter every cycle
-    setCtaOffset({
-      x: Math.round((Math.random() - 0.5) * 24),
-      y: Math.round((Math.random() - 0.5) * 14),
-    });
     setStatus("ready");
   };
 
@@ -465,7 +456,7 @@ export default function MiniApp() {
             (bonusClaimed
               ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
               : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black")}>
-            {bonusClaimed ? "CLAIMED" : "ПОЛУЧИТЬ"}
+            {bonusClaimed ? "Получено" : "Получить"}
           </span>
         </button>
 
@@ -481,9 +472,15 @@ export default function MiniApp() {
       {/* ===== Main content ===== */}
       <main className="flex-1 px-4 pt-5 pb-8 flex flex-col">
         {status === "loading" && (
-          <div className="m-auto flex flex-col items-center gap-3 py-12">
-            <Loader2 className="w-9 h-9 animate-spin text-purple-300" />
-            <p className="text-white/80 text-sm">Загрузка...</p>
+          <div className="w-full max-w-md mx-auto fade-in">
+            <div className="rounded-3xl overflow-hidden"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+              <div className="relative aspect-video skeleton-shimmer" />
+              <div className="p-4 space-y-3.5">
+                <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
+                <div className="h-12 rounded-2xl skeleton-shimmer" />
+              </div>
+            </div>
           </div>
         )}
 
@@ -538,8 +535,7 @@ export default function MiniApp() {
 
                 <button
                   onClick={startWatching}
-                  style={{ transform: `translate(${ctaOffset.x}px, ${ctaOffset.y}px)` }}
-                  className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                  className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                     bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
                     shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
                 >
@@ -563,18 +559,12 @@ export default function MiniApp() {
                 <div className="text-2xl font-bold tabular-nums">
                   +<span className="text-yellow-300">{lastFinished.reward} PT</span>
                 </div>
-                {user && (
-                  <div className="text-[12px] text-white/55 tabular-nums">
-                    Баланс: {user.balance_pt.toFixed(1)} PT
-                  </div>
-                )}
               </div>
 
               <div className="p-4 space-y-3">
                 <button
                   onClick={watchNext}
-                  style={{ transform: `translate(${ctaOffset.x}px, ${ctaOffset.y}px)` }}
-                  className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                  className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                     bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
                     shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
                 >
