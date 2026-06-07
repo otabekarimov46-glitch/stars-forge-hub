@@ -192,8 +192,31 @@ Deno.serve(async (req) => {
           } catch {}
         }
 
+        // Sustained activity check: too many rewards in the last hour
+        // without a ≥ 3-minute pause → soft captcha lock (no ban talk).
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { data: recent } = await supabase
+          .from("logs_activity")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .eq("action", "video_reward")
+          .gte("created_at", oneHourAgo)
+          .order("created_at", { ascending: true });
+        if (recent && recent.length >= 60) {
+          let maxPauseMs = 0;
+          for (let i = 1; i < recent.length; i++) {
+            const d = new Date(recent[i].created_at).getTime() - new Date(recent[i - 1].created_at).getTime();
+            if (d > maxPauseMs) maxPauseMs = d;
+          }
+          if (maxPauseMs < 3 * 60 * 1000) {
+            await issueCaptcha(supabase, user, "длительная непрерывная активность без пауз");
+            return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance, locked: true } });
+          }
+        }
+
         return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance } });
       }
+
 
 
       case "claim_daily_bonus": {
