@@ -448,11 +448,47 @@ export default function MiniApp() {
                   <Play className="w-4 h-4" /> СМОТРЕТЬ
                 </button>
 
-                {video.external_link_url && (
-                  <a href={video.external_link_url} target="_blank" rel="noopener noreferrer"
-                     className="press-soft mt-1 mx-auto inline-flex items-center gap-1.5 px-3.5 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5">
+              </div>
+            </div>
+          </div>
+        )}
+
+        {status === "completed" && lastFinished && (
+          <div className="w-full max-w-md mx-auto screen-enter">
+            <div className="rounded-3xl overflow-hidden text-center"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+              <div className="px-6 pt-6 pb-2 flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
+                  <CheckCircle className="w-7 h-7 text-emerald-300" />
+                </div>
+                <div className="text-[15px] text-white/90">Видео просмотрено</div>
+                <div className="text-2xl font-bold tabular-nums">
+                  +<span className="text-yellow-300">{lastFinished.reward} PT</span>
+                </div>
+                {user && (
+                  <div className="text-[12px] text-white/55 tabular-nums">
+                    Баланс: {user.balance_pt.toFixed(1)} PT
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 space-y-3">
+                <button
+                  onClick={watchNext}
+                  style={{ transform: `translate(${ctaOffset.x}px, ${ctaOffset.y}px)` }}
+                  className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                    bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
+                    shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4" />
+                  {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
+                </button>
+
+                {lastFinished.video.external_link_url && (
+                  <a href={lastFinished.video.external_link_url} target="_blank" rel="noopener noreferrer"
+                     className="press-soft mx-auto inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5">
                     <ExternalLink className="w-3.5 h-3.5" />
-                    {video.external_link_label || "Перейти к рекламодателю"}
+                    {lastFinished.video.external_link_label || "Перейти к рекламодателю"}
                   </a>
                 )}
               </div>
