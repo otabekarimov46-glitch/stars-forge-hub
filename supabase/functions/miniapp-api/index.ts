@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
         let { data: user } = await supabase
           .from("users")
-          .select("id, is_banned, balance_frozen, captcha_pending")
+          .select("id, is_banned, balance_frozen, captcha_pending, balance_pt, daily_bonus_at")
           .eq("telegram_id", telegram_id)
           .single();
 
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
           const { data: newUser, error } = await supabase
             .from("users")
             .insert({ telegram_id })
-            .select("id, is_banned, balance_frozen, captcha_pending")
+            .select("id, is_banned, balance_frozen, captcha_pending, balance_pt, daily_bonus_at")
             .single();
           if (error) throw error;
           user = newUser;
@@ -72,17 +72,19 @@ Deno.serve(async (req) => {
           .eq("is_active", true);
 
         const list = allVideos || [];
-        if (list.length === 0) return jsonResponse({ data: null });
+        const userPayload = {
+          balance_pt: Number(user.balance_pt),
+          daily_bonus_at: user.daily_bonus_at,
+        };
+        if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload } });
 
         const unwatched = list.filter((v: any) => !watchedIds.has(v.id));
         const watchedAgain = list.filter((v: any) => watchedIds.has(v.id));
-        // shuffle helper
         const shuffle = <T,>(arr: T[]) => arr.map(a => [Math.random(), a] as const).sort((a, b) => a[0] - b[0]).map(([, a]) => a);
-        // Queue: random unwatched first, then random watched at the end
         const queue = [...shuffle(unwatched), ...shuffle(watchedAgain)];
         const video = queue[0] || null;
 
-        return jsonResponse({ data: video });
+        return jsonResponse({ data: { video, user: userPayload } });
       }
 
       case "start_view": {
