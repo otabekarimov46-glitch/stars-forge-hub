@@ -65,6 +65,9 @@ export default function MiniApp() {
   const [bonusToast, setBonusToast] = useState<{ kind: "got" | "wait"; bonus?: number; hours?: number } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [ctaOffset, setCtaOffset] = useState({ x: 0, y: 0 });
+  // Set right after a video finishes — shown in the completed screen
+  const [lastFinished, setLastFinished] = useState<{ video: VideoAd; reward: number } | null>(null);
+  const [nextVideo, setNextVideo] = useState<VideoAd | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
