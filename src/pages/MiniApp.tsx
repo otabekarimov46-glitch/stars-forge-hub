@@ -39,9 +39,7 @@ function getTelegramUser(): { id: number | null; photo: string | null; name: str
     const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
     if (u?.id) return { id: u.id, photo: u.photo_url || null, name: u.first_name || u.username || null };
   } catch {}
-  const uid = new URLSearchParams(window.location.search).get("user_id")
-    || (typeof localStorage !== "undefined" ? localStorage.getItem("dev_user_id") : null);
-  return { id: uid ? parseInt(uid, 10) : null, photo: null, name: null };
+  return { id: null, photo: null, name: null };
 }
 
 function formatCountdown(ms: number) {
