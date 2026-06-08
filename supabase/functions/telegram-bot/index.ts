@@ -197,12 +197,16 @@ return jsonResponse({ ok: true });
 }
 }
 
-if (text === "/start" || text.startsWith("/start ")) {
+if (text === "/start" || text.startsWith("/start ") || text === "/menu" || text === "/help") {
 await sendMainInline(chatId, botToken, user, supabaseUrl);
 return jsonResponse({ ok: true });
 }
 
-await sendMainInline(chatId, botToken, user, supabaseUrl);
+// IMPORTANT: do NOT auto-reply to arbitrary user messages.
+// Telegram's anti-spam system flags bots that send unsolicited replies to every
+// message — that was the cause of the previous freezes. The Mini App opens via
+// inline button + WebApp; the chat is read-only for command-driven UX.
+return jsonResponse({ ok: true });
 }
 
 if (callback) {
