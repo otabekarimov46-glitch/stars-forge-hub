@@ -350,41 +350,18 @@ export default function MiniApp() {
     return (
       <div className="min-h-screen text-white flex items-center justify-center p-6 fade-in"
            style={{ background: "radial-gradient(120% 80% at 50% 0%, #1a0a3a 0%, #0b0820 55%, #050314 100%)" }}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            const id = (fd.get("tid") as string).trim();
-            if (!/^\d{4,12}$/.test(id)) return;
-            try { localStorage.setItem("dev_user_id", id); } catch {}
-            window.location.search = `?user_id=${id}`;
-          }}
-          className="w-full max-w-sm rounded-3xl p-6 space-y-4 screen-enter"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}
-        >
-          <div className="text-center space-y-1.5">
-            <img src={logoImg} alt="" className="w-12 h-12 rounded-2xl mx-auto shadow-lg" />
-            <h2 className="text-lg font-semibold">Starment</h2>
-            <p className="text-[12px] text-white/65">Введите ваш Telegram ID для тестового входа</p>
-          </div>
-          <input
-            name="tid"
-            type="tel"
-            placeholder="123456789"
-            autoFocus
-            className="w-full h-11 px-4 rounded-xl bg-white/8 border border-white/15 outline-none focus:border-white/30 text-center tabular-nums"
-          />
-          <button type="submit"
-            className="press-cta w-full h-11 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500">
-            Войти
-          </button>
-          <p className="text-[11px] text-white/45 text-center">
-            Узнать свой ID можно у @userinfobot или открыв этот URL из бота
+        <div className="w-full max-w-sm rounded-3xl p-8 space-y-4 text-center screen-enter"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+          <img src={logoImg} alt="" className="w-14 h-14 rounded-2xl mx-auto shadow-lg" />
+          <h2 className="text-lg font-semibold">Откройте через Telegram</h2>
+          <p className="text-[13px] text-white/70">
+            Это приложение работает только внутри Telegram. Откройте бота и нажмите «🎬 Смотреть видео».
           </p>
-        </form>
+        </div>
       </div>
     );
   }
+
 
   if (status === "locked") {
     return (
