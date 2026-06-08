@@ -258,20 +258,9 @@ Deno.serve(async (req) => {
           metadata: { video_ad_id: view.video_ad_id, reward_pt: video.reward_pt },
         });
 
-        // Notify user in Telegram chat
-        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-        if (botToken) {
-          try {
-            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: user.telegram_id,
-                text: `🎉 Видео просмотрено!\n+${video.reward_pt} PT\n💎 Баланс: ${newBalance.toFixed(1)} PT`,
-              }),
-            });
-          } catch {}
-        }
+        // NOTE: We intentionally do NOT send a Telegram message on every reward.
+        // Per-view chat spam caused the bot to be rate-limited / temporarily restricted
+        // by Telegram's anti-spam system. Balance is shown live in the Mini App header.
 
         // Sustained activity check — мягкая, срабатывает только на явный фарм:
         // 200+ наград/час БЕЗ единой паузы ≥ 5 минут → капча без заморозки.
