@@ -459,7 +459,73 @@ export default function MiniApp() {
 
   // ===== Home =====
   const initial = (tgUser.name || "U").slice(0, 1).toUpperCase();
-  const drawerOpen = status === "ready" || status === "completed" || status === "loading" || status === "no_video" || status === "error";
+
+  const tasksByType = useMemo(() => {
+    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
+    for (const t of botTasks) {
+      if (m[t.type]) m[t.type].push(t);
+    }
+    return m;
+  }, [botTasks]);
+
+  const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
+    subscribe: { title: "Подписаться на канал", icon: Send, empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
+    survey:    { title: "Пройти опрос",         icon: ClipboardList, empty: "Пока нет доступных опросов", ctaLabel: "Пройти" },
+    view_post: { title: "Посмотреть публикацию", icon: Eye, empty: "Пока нет публикаций", ctaLabel: "Открыть" },
+  };
+
+  const taskLink = (t: BotTask) => {
+    if (t.post_url) return t.post_url;
+    if (t.channel_username) {
+      const u = t.channel_username.replace(/^@/, "");
+      return `https://t.me/${u}`;
+    }
+    return null;
+  };
+
+  const taskTitle = (t: BotTask) => {
+    if (t.channel_username) return t.channel_username.startsWith("@") ? t.channel_username : `@${t.channel_username}`;
+    if (t.post_url) {
+      try { return new URL(t.post_url).hostname.replace(/^www\./, ""); } catch { return t.post_url; }
+    }
+    return "Задание";
+  };
+
+  const categoryTile = (kind: "subscribe" | "survey" | "view_post") => {
+    const cfg = SHEET_CONFIG[kind];
+    const Icon = cfg.icon;
+    const list = tasksByType[kind] || [];
+    const disabled = list.length === 0;
+    return (
+      <button
+        key={kind}
+        disabled={disabled}
+        onClick={() => !disabled && setActiveSheet(kind)}
+        className={
+          "press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 " +
+          (disabled
+            ? "opacity-45 cursor-not-allowed"
+            : "hover:bg-white/[0.09] active:scale-[0.985]")
+        }
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          backdropFilter: "blur(14px)",
+        }}
+      >
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
+          <Icon className="w-5 h-5 text-sky-200" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[14.5px] font-medium text-white/95 leading-tight">{cfg.title}</div>
+          <div className="text-[11.5px] text-white/50 mt-0.5">
+            {disabled ? "нет заданий" : `${list.length} ${list.length === 1 ? "задание" : list.length < 5 ? "задания" : "заданий"}`}
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+      </button>
+    );
+  };
 
   return (
     <div className="min-h-screen text-white flex flex-col fade-in"
@@ -492,7 +558,7 @@ export default function MiniApp() {
       <section className="px-4 mt-2">
         <button
           onClick={() => { if (!bonusClaimed) claimDailyBonus(); else setBonusToast({ kind: "wait", hours: Math.ceil(bonusCountdownMs / 3600000) }); }}
-          className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left"
+          className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
           style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}
         >
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
@@ -522,158 +588,216 @@ export default function MiniApp() {
         )}
       </section>
 
-      {/* Spacer so header content isn't hidden behind the bottom drawer */}
-      <div style={{ height: "30vh" }} />
+      {/* ===== Watch ad card (always visible, no grabber) ===== */}
+      <section className="px-4 mt-4">
+        <div className="max-w-md mx-auto">
+          {status === "loading" && (
+            <div className="rounded-3xl overflow-hidden"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+              <div className="relative aspect-video skeleton-shimmer" />
+              <div className="p-4 space-y-3.5">
+                <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
+                <div className="h-12 rounded-2xl skeleton-shimmer" />
+              </div>
+            </div>
+          )}
 
-      {/* ===== Bottom drawer with watch panel ===== */}
+          {status === "error" && (
+            <div className="rounded-3xl flex flex-col items-center gap-3 py-10 text-center"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+              <AlertTriangle className="w-10 h-10 text-red-400" />
+              <p className="text-red-200 text-sm px-4">{error}</p>
+              <button onClick={loadVideo}
+                className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm transition-all hover:bg-white/10 active:scale-95">
+                Попробовать снова
+              </button>
+            </div>
+          )}
+
+          {status === "no_video" && (
+            <div className="rounded-3xl flex flex-col items-center gap-3 py-10 text-center"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+              <CheckCircle className="w-10 h-10 text-emerald-300" />
+              <p className="text-white/80 text-sm">Новых видео пока нет. Загляните чуть позже.</p>
+              <button onClick={loadVideo}
+                className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm transition-all hover:bg-white/10 active:scale-95">
+                Обновить
+              </button>
+            </div>
+          )}
+
+          {status === "ready" && video && (
+            <div key={video.id} className="screen-enter">
+              <div className="rounded-3xl overflow-hidden"
+                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                <div className="relative aspect-video bg-black/40 overflow-hidden">
+                  {posterUrl || video.media_type === "image" ? (
+                    <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
+                  )}
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-2xl shadow-purple-900/40 font-bold text-lg tabular-nums">
+                    +{video.reward_pt} PT
+                  </div>
+                  <div className="absolute right-2 bottom-2 px-2.5 py-1 rounded-full text-[11px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> {video.duration_seconds}с
+                  </div>
+                </div>
+                <div className="p-4 space-y-3.5">
+                  <h2 className="text-[15px] font-medium text-center text-white/95 leading-snug">{video.title}</h2>
+                  <button
+                    onClick={startWatching}
+                    className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
+                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
+                      transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
+                  >
+                    <Play className="w-4 h-4" /> СМОТРЕТЬ
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {status === "completed" && lastFinished && (
+            <div className="screen-enter">
+              <div className="rounded-3xl overflow-hidden text-center"
+                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                <div className="px-6 pt-6 pb-2 flex flex-col items-center gap-2">
+                  {lastFinished.rewarded ? (
+                    <>
+                      <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
+                        <CheckCircle className="w-7 h-7 text-emerald-300" />
+                      </div>
+                      <div className="text-[15px] text-white/90">Видео просмотрено</div>
+                      <div className="text-2xl font-bold tabular-nums">
+                        +<span className="text-yellow-300">{lastFinished.reward} PT</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-14 h-14 rounded-full bg-red-400/15 border border-red-400/30 flex items-center justify-center">
+                        <XCircle className="w-7 h-7 text-red-300" />
+                      </div>
+                      <div className="text-[15px] text-white/90">Просмотр не засчитан</div>
+                      <div className="text-[12px] text-white/60 max-w-xs">
+                        Видео было прервано или закрыто слишком рано. Попробуйте ещё раз — досмотрите до конца.
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="p-4 space-y-3">
+                  <button
+                    onClick={watchNext}
+                    className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
+                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
+                      transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
+                  >
+                    <Play className="w-4 h-4" />
+                    {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
+                  </button>
+
+                  {lastFinished.video.external_link_url && (
+                    <a href={lastFinished.video.external_link_url} target="_blank" rel="noopener noreferrer"
+                       className="press-soft mx-auto inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5 transition-all hover:bg-white/10">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {lastFinished.video.external_link_label || "Перейти к рекламодателю"}
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ===== Category tiles (scrollable list under watch card) ===== */}
+      <section className="px-4 mt-3 pb-8 space-y-2.5">
+        <div className="max-w-md mx-auto space-y-2.5">
+          {categoryTile("subscribe")}
+          {categoryTile("survey")}
+          {categoryTile("view_post")}
+        </div>
+      </section>
+
+      {/* ===== Category bottom sheet (full-screen w/ grabber) ===== */}
       <Vaul.Root
-        open={drawerOpen}
-        modal={false}
-        dismissible={false}
-        snapPoints={SNAP_POINTS}
-        activeSnapPoint={snap}
-        setActiveSnapPoint={setSnap}
-        fadeFromIndex={SNAP_POINTS.length - 1}
+        open={activeSheet !== null}
+        onOpenChange={(o) => { if (!o) setActiveSheet(null); }}
+        snapPoints={[0.7, 0.97]}
+        defaultActiveSnapPoint={0.97}
+        dismissible
       >
         <Vaul.Portal>
+          <Vaul.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
           <Vaul.Content
-            className="fixed bottom-0 inset-x-0 z-40 rounded-t-[28px] outline-none flex flex-col"
+            className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
             style={{
-              background: "rgba(15,8,40,0.92)",
+              background: "rgba(15,8,40,0.96)",
               borderTop: "1px solid rgba(255,255,255,0.10)",
               backdropFilter: "blur(28px)",
               maxHeight: "97vh",
+              height: "97vh",
             }}
           >
-            {/* Grabber — intentional gesture (vaul resists snap changes) */}
-            <div className="pt-2 pb-1 flex flex-col items-center cursor-grab touch-none select-none">
+            {/* Grabber */}
+            <div className="pt-2.5 pb-2 flex items-center justify-center">
               <div className="h-1.5 w-12 rounded-full bg-white/35" />
-              <div className="mt-1.5 text-[10px] uppercase tracking-[0.18em] text-white/45">
-                Смотреть рекламу
-              </div>
             </div>
 
-            <Vaul.Title className="sr-only">Смотреть рекламу</Vaul.Title>
+            {/* Header */}
+            <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
+              <Vaul.Title className="text-[17px] font-semibold tracking-tight">
+                {activeSheet ? SHEET_CONFIG[activeSheet].title : ""}
+              </Vaul.Title>
+              <button
+                onClick={() => setActiveSheet(null)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4 text-white/80" />
+              </button>
+            </div>
 
-            <div className="px-4 pb-8 pt-2 overflow-y-auto">
-              <div className="max-w-md mx-auto">
-
-                {status === "loading" && (
-                  <div className="rounded-3xl overflow-hidden"
-                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                    <div className="relative aspect-video skeleton-shimmer" />
-                    <div className="p-4 space-y-3.5">
-                      <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
-                      <div className="h-12 rounded-2xl skeleton-shimmer" />
+            {/* List */}
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10">
+              <div className="max-w-md mx-auto space-y-2.5">
+                {activeSheet && tasksByType[activeSheet].length === 0 && (
+                  <div className="text-center text-white/55 text-sm py-16">
+                    {SHEET_CONFIG[activeSheet].empty}
+                  </div>
+                )}
+                {activeSheet && tasksByType[activeSheet].map((t) => {
+                  const link = taskLink(t);
+                  const cfg = SHEET_CONFIG[activeSheet];
+                  const Icon = cfg.icon;
+                  const content = (
+                    <div
+                      className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-5 h-5 text-sky-200" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
+                        <div className="text-[12px] text-yellow-300/90 mt-0.5 tabular-nums">+{t.reward_pt} PT</div>
+                      </div>
+                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
+                        {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
+                      </span>
                     </div>
-                  </div>
-                )}
-
-                {status === "error" && (
-                  <div className="flex flex-col items-center gap-3 py-10 text-center">
-                    <AlertTriangle className="w-10 h-10 text-red-400" />
-                    <p className="text-red-200 text-sm">{error}</p>
-                    <button onClick={loadVideo}
-                      className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm">
-                      Попробовать снова
-                    </button>
-                  </div>
-                )}
-
-                {status === "no_video" && (
-                  <div className="flex flex-col items-center gap-3 py-10 text-center">
-                    <CheckCircle className="w-10 h-10 text-emerald-300" />
-                    <p className="text-white/80 text-sm">Новых видео пока нет. Загляните чуть позже.</p>
-                    <button onClick={loadVideo}
-                      className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm">
-                      Обновить
-                    </button>
-                  </div>
-                )}
-
-                {status === "ready" && video && (
-                  <div key={video.id} className="screen-enter">
-                    <div className="rounded-3xl overflow-hidden"
-                         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                      <div className="relative aspect-video bg-black/40 overflow-hidden">
-                        {posterUrl || video.media_type === "image" ? (
-                          <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
-                        )}
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-2xl shadow-purple-900/40 font-bold text-lg tabular-nums">
-                          +{video.reward_pt} PT
-                        </div>
-                        <div className="absolute right-2 bottom-2 px-2.5 py-1 rounded-full text-[11px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {video.duration_seconds}с
-                        </div>
-                      </div>
-                      <div className="p-4 space-y-3.5">
-                        <h2 className="text-[15px] font-medium text-center text-white/95 leading-snug">{video.title}</h2>
-                        <button
-                          onClick={startWatching}
-                          className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                            bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                            shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
-                        >
-                          <Play className="w-4 h-4" /> СМОТРЕТЬ
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {status === "completed" && lastFinished && (
-                  <div className="screen-enter">
-                    <div className="rounded-3xl overflow-hidden text-center"
-                         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                      <div className="px-6 pt-6 pb-2 flex flex-col items-center gap-2">
-                        {lastFinished.rewarded ? (
-                          <>
-                            <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
-                              <CheckCircle className="w-7 h-7 text-emerald-300" />
-                            </div>
-                            <div className="text-[15px] text-white/90">Видео просмотрено</div>
-                            <div className="text-2xl font-bold tabular-nums">
-                              +<span className="text-yellow-300">{lastFinished.reward} PT</span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-14 h-14 rounded-full bg-red-400/15 border border-red-400/30 flex items-center justify-center">
-                              <XCircle className="w-7 h-7 text-red-300" />
-                            </div>
-                            <div className="text-[15px] text-white/90">Просмотр не засчитан</div>
-                            <div className="text-[12px] text-white/60 max-w-xs">
-                              Видео было прервано или закрыто слишком рано. Попробуйте ещё раз — досмотрите до конца.
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="p-4 space-y-3">
-                        <button
-                          onClick={watchNext}
-                          className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                            bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                            shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
-                        >
-                          <Play className="w-4 h-4" />
-                          {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
-                        </button>
-
-                        {lastFinished.video.external_link_url && (
-                          <a href={lastFinished.video.external_link_url} target="_blank" rel="noopener noreferrer"
-                             className="press-soft mx-auto inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            {lastFinished.video.external_link_label || "Перейти к рекламодателю"}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+                  );
+                  return link ? (
+                    <a key={t.id} href={link} target="_blank" rel="noopener noreferrer" className="block">
+                      {content}
+                    </a>
+                  ) : (
+                    <div key={t.id}>{content}</div>
+                  );
+                })}
               </div>
             </div>
           </Vaul.Content>
@@ -682,3 +806,4 @@ export default function MiniApp() {
     </div>
   );
 }
+
