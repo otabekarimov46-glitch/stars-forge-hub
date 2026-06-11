@@ -1,12 +1,20 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Eye, ChevronRight, X } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+interface BotTask {
+  id: string;
+  type: string;
+  channel_username?: string | null;
+  post_url?: string | null;
+  reward_pt: number;
+}
 
 interface VideoAd {
   id: string;
