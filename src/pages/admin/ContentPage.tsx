@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
   view_post: { icon: Eye, color: "bg-brand-green/10 text-brand-green" },
-  reaction: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
+  survey: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
 };
 
 export default function ContentPage() {
@@ -171,13 +171,13 @@ export default function ContentPage() {
     const map: Record<string, string> = {
       subscribe: t("task.subscribe"),
       view_post: t("task.view_post"),
-      reaction: t("task.reaction"),
+      survey: t("task.survey"),
     };
     return map[type] || type;
   };
 
-  const showChannelFields = taskForm.type === "subscribe" || taskForm.type === "reaction";
-  const showPostUrl = taskForm.type === "view_post" || taskForm.type === "reaction";
+  const showChannelFields = taskForm.type === "subscribe";
+  const showPostUrl = taskForm.type === "view_post" || taskForm.type === "survey";
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -313,7 +313,7 @@ export default function ContentPage() {
                         <SelectContent>
                           <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
                           <SelectItem value="view_post">{t("task.view_post")}</SelectItem>
-                          <SelectItem value="reaction">{t("task.reaction")}</SelectItem>
+                          <SelectItem value="survey">{t("task.survey")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
