@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
   view_post: { icon: Eye, color: "bg-brand-green/10 text-brand-green" },
-  reaction: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
+  survey: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
 };
 
 export default function ContentPage() {
