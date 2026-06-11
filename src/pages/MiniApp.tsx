@@ -725,9 +725,10 @@ export default function MiniApp() {
       {/* ===== Category bottom sheet (full-screen w/ grabber) ===== */}
       <Vaul.Root
         open={activeSheet !== null}
-        onOpenChange={(o) => { if (!o) setActiveSheet(null); }}
+        onOpenChange={(o) => { if (!o) setActiveSheet(null); else setSnap(0.97); }}
         snapPoints={[0.7, 0.97]}
-        defaultActiveSnapPoint={0.97}
+        activeSnapPoint={snap}
+        setActiveSnapPoint={setSnap}
         dismissible
       >
         <Vaul.Portal>
