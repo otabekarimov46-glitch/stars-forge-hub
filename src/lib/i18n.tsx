@@ -37,6 +37,7 @@ const translations = {
   "task.video": { ru: "Видео", en: "Video" },
   "task.view_post": { ru: "Просмотр поста", en: "View Post" },
   "task.reaction": { ru: "Реакция", en: "Reaction" },
+  "task.survey": { ru: "Пройти опрос", en: "Take Survey" },
 
   // Content page
   "content.tasks": { ru: "Задания", en: "Tasks" },
