@@ -171,7 +171,7 @@ export default function ContentPage() {
     const map: Record<string, string> = {
       subscribe: t("task.subscribe"),
       view_post: t("task.view_post"),
-      reaction: t("task.reaction"),
+      survey: t("task.survey"),
     };
     return map[type] || type;
   };
