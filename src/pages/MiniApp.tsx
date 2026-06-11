@@ -147,7 +147,7 @@ export default function MiniApp() {
       setVideo(data.video);
       setPosterUrl(null);
       setStatus("ready");
-      setSnap(0.62);
+
     } catch (e: any) {
       if (/заблокирован/i.test(e.message) || /captcha/i.test(e.message)) { setStatus("locked"); return; }
       setError(e.message); setStatus("error");
@@ -260,7 +260,7 @@ export default function MiniApp() {
       });
       setNextVideo(res?.next_video || null);
       setStatus("completed");
-      setSnap(0.62);
+
     } catch (e: any) {
       if (/captcha|заблокир/i.test(e.message)) { setStatus("locked"); return; }
       setError(e.message); setStatus("error");
@@ -273,7 +273,7 @@ export default function MiniApp() {
     setViewId(null); setElapsed(0); finishedRef.current = false;
     setLastFinished(null);
     setStatus("ready");
-    setSnap(0.62);
+
   };
 
   // Fire dynamic checkpoints
