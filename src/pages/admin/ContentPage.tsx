@@ -313,7 +313,7 @@ export default function ContentPage() {
                         <SelectContent>
                           <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
                           <SelectItem value="view_post">{t("task.view_post")}</SelectItem>
-                          <SelectItem value="reaction">{t("task.reaction")}</SelectItem>
+                          <SelectItem value="survey">{t("task.survey")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
