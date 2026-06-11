@@ -413,6 +413,15 @@ Deno.serve(async (req) => {
         return jsonResponse({ data: { ok: !!result.success } });
       }
 
+      case "list_tasks": {
+        const { data: tasks } = await supabase
+          .from("tasks")
+          .select("id, type, channel_username, post_url, reward_pt, max_completions, current_completions")
+          .eq("is_active", true)
+          .neq("type", "video")
+          .order("created_at", { ascending: false });
+        return jsonResponse({ data: { tasks: tasks || [] } });
+      }
 
       default:
         return new Response(
