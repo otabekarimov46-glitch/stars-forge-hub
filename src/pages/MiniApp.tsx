@@ -79,9 +79,8 @@ export default function MiniApp() {
   const [lastFinished, setLastFinished] = useState<{ video: VideoAd; reward: number; rewarded: boolean } | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoAd | null>(null);
 
-  // Drawer snap points: peek, half, full
-  const SNAP_POINTS: (string | number)[] = [0.22, 0.62, 0.95];
-  const [snap, setSnap] = useState<string | number | null>(0.62);
+  // Category sheet snap points (collapses below ~70%)
+  const [snap, setSnap] = useState<string | number | null>(0.97);
 
   // Bot tasks for category sheets
   const [botTasks, setBotTasks] = useState<BotTask[]>([]);
