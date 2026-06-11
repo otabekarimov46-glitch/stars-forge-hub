@@ -83,6 +83,10 @@ export default function MiniApp() {
   const SNAP_POINTS: (string | number)[] = [0.22, 0.62, 0.95];
   const [snap, setSnap] = useState<string | number | null>(0.62);
 
+  // Bot tasks for category sheets
+  const [botTasks, setBotTasks] = useState<BotTask[]>([]);
+  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post">(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishedRef = useRef(false);
