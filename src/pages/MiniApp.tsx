@@ -156,6 +156,14 @@ export default function MiniApp() {
   }, [telegramId]);
   useEffect(() => { loadVideo(); }, [loadVideo]);
 
+  // Load bot tasks (subscribe / survey / view_post)
+  useEffect(() => {
+    if (!telegramId) return;
+    miniAppApi("list_tasks", { telegram_id: telegramId })
+      .then((d) => setBotTasks(Array.isArray(d?.tasks) ? d.tasks : []))
+      .catch(() => {});
+  }, [telegramId]);
+
   // First-frame poster
   useEffect(() => {
     if (!video || video.media_type === "image") { setPosterUrl(null); return; }
