@@ -176,8 +176,8 @@ export default function ContentPage() {
     return map[type] || type;
   };
 
-  const showChannelFields = taskForm.type === "subscribe" || taskForm.type === "reaction";
-  const showPostUrl = taskForm.type === "view_post" || taskForm.type === "reaction";
+  const showChannelFields = taskForm.type === "subscribe";
+  const showPostUrl = taskForm.type === "view_post" || taskForm.type === "survey";
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
