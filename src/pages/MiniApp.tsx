@@ -170,12 +170,12 @@ export default function MiniApp() {
   // Tasks the user has clicked to subscribe — need verification on return
   const pendingVerifyRef = useRef<Set<string>>(new Set());
 
-  const verifySubscribeTask = useCallback(async (taskId: string) => {
+  const verifyTask = useCallback(async (taskId: string) => {
     if (!telegramId) return;
     setTaskState((s) => ({ ...s, [taskId]: "checking" }));
     try {
       const r = await miniAppApi("verify_task", { telegram_id: telegramId, task_id: taskId });
-      if (r?.subscribed) {
+      if (r?.completed || r?.subscribed) {
         setTaskState((s) => ({ ...s, [taskId]: "done" }));
         if (typeof r.new_balance === "number") {
           setUser((u) => u ? { ...u, balance_pt: r.new_balance } : u);
@@ -191,12 +191,12 @@ export default function MiniApp() {
     }
   }, [telegramId]);
 
-  // When app regains focus, verify any pending subscribe tasks
+  // When app regains focus, verify any pending tasks (subscribe / view_post / survey)
   useEffect(() => {
     const onFocus = () => {
       if (document.hidden) return;
       const pending = Array.from(pendingVerifyRef.current);
-      pending.forEach((id) => verifySubscribeTask(id));
+      pending.forEach((id) => verifyTask(id));
     };
     document.addEventListener("visibilitychange", onFocus);
     window.addEventListener("focus", onFocus);
@@ -204,20 +204,18 @@ export default function MiniApp() {
       document.removeEventListener("visibilitychange", onFocus);
       window.removeEventListener("focus", onFocus);
     };
-  }, [verifySubscribeTask]);
+  }, [verifyTask]);
 
   // Group bot tasks by type — must be defined before any conditional return
-  // to keep hook order stable across renders.
+  // to keep hook order stable across renders. Tasks completed in this session
+  // stay visible (with a check) until the sheet closes and the list refreshes.
   const tasksByType = useMemo(() => {
     const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
     for (const t of botTasks) {
       if (m[t.type]) m[t.type].push(t);
     }
-    // Hide tasks marked 'done' locally (server also hides completed on reload)
-    return Object.fromEntries(
-      Object.entries(m).map(([k, arr]) => [k, arr.filter((t) => taskState[t.id] !== "done")])
-    ) as Record<string, BotTask[]>;
-  }, [botTasks, taskState]);
+    return m;
+  }, [botTasks]);
 
   // First-frame poster
   useEffect(() => {
