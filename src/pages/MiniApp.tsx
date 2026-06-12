@@ -515,13 +515,8 @@ export default function MiniApp() {
   // ===== Home =====
   const initial = (tgUser.name || "U").slice(0, 1).toUpperCase();
 
-  const tasksByType = useMemo(() => {
-    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
-    for (const t of botTasks) {
-      if (m[t.type]) m[t.type].push(t);
-    }
-    return m;
-  }, [botTasks]);
+
+
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
     subscribe: { title: "Подписаться на канал", icon: Send, empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
