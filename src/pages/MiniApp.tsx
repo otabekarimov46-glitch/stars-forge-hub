@@ -156,12 +156,68 @@ export default function MiniApp() {
   useEffect(() => { loadVideo(); }, [loadVideo]);
 
   // Load bot tasks (subscribe / survey / view_post)
-  useEffect(() => {
+  const loadBotTasks = useCallback(() => {
     if (!telegramId) return;
     miniAppApi("list_tasks", { telegram_id: telegramId })
       .then((d) => setBotTasks(Array.isArray(d?.tasks) ? d.tasks : []))
       .catch(() => {});
   }, [telegramId]);
+  useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
+
+  // Per-task UI state for subscribe verification
+  // 'idle' | 'checking' | 'done' | 'failed'
+  const [taskState, setTaskState] = useState<Record<string, "idle" | "checking" | "done" | "failed">>({});
+  // Tasks the user has clicked to subscribe — need verification on return
+  const pendingVerifyRef = useRef<Set<string>>(new Set());
+
+  const verifySubscribeTask = useCallback(async (taskId: string) => {
+    if (!telegramId) return;
+    setTaskState((s) => ({ ...s, [taskId]: "checking" }));
+    try {
+      const r = await miniAppApi("verify_task", { telegram_id: telegramId, task_id: taskId });
+      if (r?.subscribed) {
+        setTaskState((s) => ({ ...s, [taskId]: "done" }));
+        if (typeof r.new_balance === "number") {
+          setUser((u) => u ? { ...u, balance_pt: r.new_balance } : u);
+        }
+        pendingVerifyRef.current.delete(taskId);
+      } else {
+        setTaskState((s) => ({ ...s, [taskId]: "idle" }));
+        pendingVerifyRef.current.delete(taskId);
+      }
+    } catch {
+      setTaskState((s) => ({ ...s, [taskId]: "idle" }));
+      pendingVerifyRef.current.delete(taskId);
+    }
+  }, [telegramId]);
+
+  // When app regains focus, verify any pending subscribe tasks
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.hidden) return;
+      const pending = Array.from(pendingVerifyRef.current);
+      pending.forEach((id) => verifySubscribeTask(id));
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [verifySubscribeTask]);
+
+  // Group bot tasks by type — must be defined before any conditional return
+  // to keep hook order stable across renders.
+  const tasksByType = useMemo(() => {
+    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
+    for (const t of botTasks) {
+      if (m[t.type]) m[t.type].push(t);
+    }
+    // Hide tasks marked 'done' locally (server also hides completed on reload)
+    return Object.fromEntries(
+      Object.entries(m).map(([k, arr]) => [k, arr.filter((t) => taskState[t.id] !== "done")])
+    ) as Record<string, BotTask[]>;
+  }, [botTasks, taskState]);
 
   // First-frame poster
   useEffect(() => {
@@ -459,13 +515,8 @@ export default function MiniApp() {
   // ===== Home =====
   const initial = (tgUser.name || "U").slice(0, 1).toUpperCase();
 
-  const tasksByType = useMemo(() => {
-    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
-    for (const t of botTasks) {
-      if (m[t.type]) m[t.type].push(t);
-    }
-    return m;
-  }, [botTasks]);
+
+
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
     subscribe: { title: "Подписаться на канал", icon: Send, empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
@@ -773,9 +824,54 @@ export default function MiniApp() {
                   const link = taskLink(t);
                   const cfg = SHEET_CONFIG[activeSheet];
                   const Icon = cfg.icon;
+                  const state = taskState[t.id] || "idle";
+                  const isSubscribe = activeSheet === "subscribe";
+
+                  const handleClick = (e: React.MouseEvent) => {
+                    if (isSubscribe && link) {
+                      // Mark as pending, open channel in Telegram, await verification on return
+                      pendingVerifyRef.current.add(t.id);
+                      setTaskState((s) => ({ ...s, [t.id]: "checking" }));
+                      try {
+                        const tg = (window as any).Telegram?.WebApp;
+                        if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(link)) {
+                          e.preventDefault();
+                          tg.openTelegramLink(link);
+                          return;
+                        }
+                      } catch {}
+                      // Fallback: let the <a> open normally in a new tab
+                    }
+                  };
+
+                  let cta: React.ReactNode;
+                  if (state === "checking") {
+                    cta = (
+                      <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-white/8 border border-white/10">
+                        <Loader2 className="w-4 h-4 animate-spin text-white/80" />
+                      </span>
+                    );
+                  } else if (state === "done") {
+                    cta = (
+                      <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-emerald-400/20 border border-emerald-400/40 animate-scale-in">
+                        <CheckCircle className="w-4 h-4 text-emerald-300" />
+                      </span>
+                    );
+                  } else {
+                    cta = (
+                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
+                        {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
+                      </span>
+                    );
+                  }
+
+                  const disabled = state === "checking" || state === "done";
                   const content = (
                     <div
-                      className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                      className={
+                        "rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 " +
+                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
+                      }
                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
                     >
                       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
@@ -785,13 +881,22 @@ export default function MiniApp() {
                         <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
                         <div className="text-[12px] text-yellow-300/90 mt-0.5 tabular-nums">+{t.reward_pt} PT</div>
                       </div>
-                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
-                        {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
-                      </span>
+                      {cta}
                     </div>
                   );
+
+                  if (disabled) {
+                    return <div key={t.id} className="pointer-events-none">{content}</div>;
+                  }
                   return link ? (
-                    <a key={t.id} href={link} target="_blank" rel="noopener noreferrer" className="block">
+                    <a
+                      key={t.id}
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                      onClick={handleClick}
+                    >
                       {content}
                     </a>
                   ) : (
