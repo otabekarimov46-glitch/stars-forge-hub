@@ -170,12 +170,12 @@ export default function MiniApp() {
   // Tasks the user has clicked to subscribe — need verification on return
   const pendingVerifyRef = useRef<Set<string>>(new Set());
 
-  const verifySubscribeTask = useCallback(async (taskId: string) => {
+  const verifyTask = useCallback(async (taskId: string) => {
     if (!telegramId) return;
     setTaskState((s) => ({ ...s, [taskId]: "checking" }));
     try {
       const r = await miniAppApi("verify_task", { telegram_id: telegramId, task_id: taskId });
-      if (r?.subscribed) {
+      if (r?.completed || r?.subscribed) {
         setTaskState((s) => ({ ...s, [taskId]: "done" }));
         if (typeof r.new_balance === "number") {
           setUser((u) => u ? { ...u, balance_pt: r.new_balance } : u);
@@ -191,12 +191,12 @@ export default function MiniApp() {
     }
   }, [telegramId]);
 
-  // When app regains focus, verify any pending subscribe tasks
+  // When app regains focus, verify any pending tasks (subscribe / view_post / survey)
   useEffect(() => {
     const onFocus = () => {
       if (document.hidden) return;
       const pending = Array.from(pendingVerifyRef.current);
-      pending.forEach((id) => verifySubscribeTask(id));
+      pending.forEach((id) => verifyTask(id));
     };
     document.addEventListener("visibilitychange", onFocus);
     window.addEventListener("focus", onFocus);
@@ -204,20 +204,18 @@ export default function MiniApp() {
       document.removeEventListener("visibilitychange", onFocus);
       window.removeEventListener("focus", onFocus);
     };
-  }, [verifySubscribeTask]);
+  }, [verifyTask]);
 
   // Group bot tasks by type — must be defined before any conditional return
-  // to keep hook order stable across renders.
+  // to keep hook order stable across renders. Tasks completed in this session
+  // stay visible (with a check) until the sheet closes and the list refreshes.
   const tasksByType = useMemo(() => {
     const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
     for (const t of botTasks) {
       if (m[t.type]) m[t.type].push(t);
     }
-    // Hide tasks marked 'done' locally (server also hides completed on reload)
-    return Object.fromEntries(
-      Object.entries(m).map(([k, arr]) => [k, arr.filter((t) => taskState[t.id] !== "done")])
-    ) as Record<string, BotTask[]>;
-  }, [botTasks, taskState]);
+    return m;
+  }, [botTasks]);
 
   // First-frame poster
   useEffect(() => {
@@ -544,7 +542,7 @@ export default function MiniApp() {
   const categoryTile = (kind: "subscribe" | "survey" | "view_post") => {
     const cfg = SHEET_CONFIG[kind];
     const Icon = cfg.icon;
-    const list = tasksByType[kind] || [];
+    const list = (tasksByType[kind] || []).filter((t) => taskState[t.id] !== "done");
     const disabled = list.length === 0;
     return (
       <button
@@ -775,7 +773,7 @@ export default function MiniApp() {
       {/* ===== Category bottom sheet (full-screen w/ grabber) ===== */}
       <Vaul.Root
         open={activeSheet !== null}
-        onOpenChange={(o) => { if (!o) setActiveSheet(null); else setSnap(0.97); }}
+        onOpenChange={(o) => { if (!o) { setActiveSheet(null); loadBotTasks(); } else setSnap(0.97); }}
         snapPoints={[0.7, 0.97]}
         activeSnapPoint={snap}
         setActiveSnapPoint={setSnap}
@@ -800,7 +798,7 @@ export default function MiniApp() {
 
             {/* Header */}
             <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
-              <Vaul.Title className="text-[17px] font-semibold tracking-tight">
+              <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white">
                 {activeSheet ? SHEET_CONFIG[activeSheet].title : ""}
               </Vaul.Title>
               <button
@@ -825,23 +823,30 @@ export default function MiniApp() {
                   const cfg = SHEET_CONFIG[activeSheet];
                   const Icon = cfg.icon;
                   const state = taskState[t.id] || "idle";
-                  const isSubscribe = activeSheet === "subscribe";
 
                   const handleClick = (e: React.MouseEvent) => {
-                    if (isSubscribe && link) {
-                      // Mark as pending, open channel in Telegram, await verification on return
-                      pendingVerifyRef.current.add(t.id);
-                      setTaskState((s) => ({ ...s, [t.id]: "checking" }));
-                      try {
-                        const tg = (window as any).Telegram?.WebApp;
-                        if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(link)) {
-                          e.preventDefault();
-                          tg.openTelegramLink(link);
-                          return;
-                        }
-                      } catch {}
-                      // Fallback: let the <a> open normally in a new tab
+                    if (!link) return;
+                    // Mark as pending, log the click server-side, open the link,
+                    // verification happens automatically when the user returns.
+                    pendingVerifyRef.current.add(t.id);
+                    setTaskState((s) => ({ ...s, [t.id]: "checking" }));
+                    if (telegramId) {
+                      miniAppApi("start_task", { telegram_id: telegramId, task_id: t.id }).catch(() => {});
                     }
+                    try {
+                      const tg = (window as any).Telegram?.WebApp;
+                      if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(link)) {
+                        e.preventDefault();
+                        tg.openTelegramLink(link);
+                        return;
+                      }
+                      if (tg?.openLink) {
+                        e.preventDefault();
+                        tg.openLink(link);
+                        return;
+                      }
+                    } catch {}
+                    // Fallback: let the <a> open normally in a new tab
                   };
 
                   let cta: React.ReactNode;
@@ -879,7 +884,10 @@ export default function MiniApp() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
-                        <div className="text-[12px] text-yellow-300/90 mt-0.5 tabular-nums">+{t.reward_pt} PT</div>
+                        <div className={
+                          "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
+                          (state === "done" ? "text-emerald-400 line-through" : "text-yellow-300/90")
+                        }>+{t.reward_pt} PT</div>
                       </div>
                       {cta}
                     </div>

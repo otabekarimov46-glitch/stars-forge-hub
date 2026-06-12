@@ -435,6 +435,18 @@ Deno.serve(async (req) => {
         return jsonResponse({ data: { tasks: filtered } });
       }
 
+      case "start_task": {
+        const { telegram_id, task_id } = params;
+        if (!telegram_id || !task_id) throw new Error("telegram_id and task_id required");
+        const { data: user } = await supabase
+          .from("users").select("id, is_banned").eq("telegram_id", telegram_id).single();
+        if (!user || user.is_banned) return jsonResponse({ data: { ok: false } });
+        await supabase.from("logs_activity").insert({
+          user_id: user.id, action: "task_started", ip_address: ip, metadata: { task_id },
+        });
+        return jsonResponse({ data: { ok: true } });
+      }
+
       case "verify_task": {
         const { telegram_id, task_id } = params;
         if (!telegram_id || !task_id) throw new Error("telegram_id and task_id required");
@@ -452,49 +464,82 @@ Deno.serve(async (req) => {
           .from("task_completions")
           .select("id").eq("user_id", user.id).eq("task_id", task_id).maybeSingle();
         if (existing) {
-          return jsonResponse({ data: { subscribed: true, already: true, new_balance: Number(user.balance_pt) } });
+          return jsonResponse({ data: { completed: true, subscribed: true, already: true, new_balance: Number(user.balance_pt) } });
         }
 
         const { data: task } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, channel_id, reward_pt, is_active, max_completions, current_completions")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions")
           .eq("id", task_id).single();
         if (!task || !task.is_active) throw new Error("Task unavailable");
-        if (task.type !== "subscribe") {
-          return jsonResponse({ data: { subscribed: false, reason: "unsupported_type" } });
-        }
         if (task.max_completions && task.current_completions >= task.max_completions) {
-          return jsonResponse({ data: { subscribed: false, reason: "limit_reached" } });
+          return jsonResponse({ data: { completed: false, subscribed: false, reason: "limit_reached" } });
         }
 
-        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-        if (!botToken) return jsonResponse({ data: { subscribed: false, reason: "bot_not_configured" } });
+        let completed = false;
+        let failReason = "";
 
-        // Resolve chat identifier: prefer numeric channel_id, fallback to @username
-        let chatId: string | number | null = null;
-        if (task.channel_id) chatId = Number(task.channel_id);
-        else if (task.channel_username) {
-          const u = task.channel_username.replace(/^@/, "");
-          chatId = `@${u}`;
-        }
-        if (!chatId) return jsonResponse({ data: { subscribed: false, reason: "no_channel" } });
+        if (task.type === "subscribe") {
+          // IMPORTANT: use the NEW bot token first — the active bot (channel admin)
+          // is the one configured in TELEGRAM_BOT_TOKEN_NEW (same as telegram-bot fn).
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          if (!botToken) return jsonResponse({ data: { completed: false, subscribed: false, reason: "bot_not_configured" } });
 
-        let isMember = false;
-        try {
-          const r = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: chatId, user_id: telegram_id }),
-          });
-          const j = await r.json();
-          if (j?.ok) {
-            const st = j.result?.status;
-            isMember = st === "member" || st === "administrator" || st === "creator";
+          const candidates: (string | number)[] = [];
+          if (task.channel_id) candidates.push(Number(task.channel_id));
+          if (task.channel_username) candidates.push(`@${String(task.channel_username).replace(/^@/, "")}`);
+          if (candidates.length === 0) {
+            return jsonResponse({ data: { completed: false, subscribed: false, reason: "no_channel" } });
           }
-        } catch {}
 
-        if (!isMember) {
-          return jsonResponse({ data: { subscribed: false } });
+          for (const chatId of candidates) {
+            try {
+              const r = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: chatId, user_id: Number(telegram_id) }),
+              });
+              const j = await r.json();
+              console.log("verify_task getChatMember", JSON.stringify({ chatId, ok: j?.ok, status: j?.result?.status, error: j?.description }));
+              if (j?.ok) {
+                const st = j.result?.status;
+                if (st === "member" || st === "administrator" || st === "creator") completed = true;
+                else failReason = "not_member";
+                break; // definitive answer received
+              } else {
+                failReason = j?.description || "telegram_error";
+              }
+            } catch (e) {
+              console.log("verify_task getChatMember fetch error", String(e));
+              failReason = "network_error";
+            }
+          }
+        } else if (task.type === "view_post" || task.type === "survey") {
+          // Time-based check: user must have opened the link >= 4s ago (within last hour)
+          const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+          const { data: started } = await supabase
+            .from("logs_activity")
+            .select("created_at")
+            .eq("user_id", user.id)
+            .eq("action", "task_started")
+            .contains("metadata", { task_id })
+            .gte("created_at", hourAgo)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const startedAt = started?.[0]?.created_at;
+          if (!startedAt) {
+            failReason = "not_started";
+          } else if (Date.now() - new Date(startedAt).getTime() < 4000) {
+            failReason = "too_fast";
+          } else {
+            completed = true;
+          }
+        } else {
+          return jsonResponse({ data: { completed: false, subscribed: false, reason: "unsupported_type" } });
+        }
+
+        if (!completed) {
+          return jsonResponse({ data: { completed: false, subscribed: false, reason: failReason } });
         }
 
         // Record completion and award PT
@@ -513,11 +558,12 @@ Deno.serve(async (req) => {
           user_id: user.id,
           action: "task_reward",
           ip_address: ip,
-          metadata: { task_id, reward_pt: task.reward_pt, type: "subscribe" },
+          metadata: { task_id, reward_pt: task.reward_pt, type: task.type },
         });
 
-        return jsonResponse({ data: { subscribed: true, new_balance: newBalance, reward: Number(task.reward_pt) } });
+        return jsonResponse({ data: { completed: true, subscribed: true, new_balance: newBalance, reward: Number(task.reward_pt) } });
       }
+
 
       default:
         return new Response(
