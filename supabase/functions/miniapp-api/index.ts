@@ -414,13 +414,109 @@ Deno.serve(async (req) => {
       }
 
       case "list_tasks": {
+        const { telegram_id } = params;
+        let completedIds = new Set<string>();
+        if (telegram_id) {
+          const { data: user } = await supabase
+            .from("users").select("id").eq("telegram_id", telegram_id).single();
+          if (user) {
+            const { data: done } = await supabase
+              .from("task_completions").select("task_id").eq("user_id", user.id);
+            completedIds = new Set((done || []).map((d: any) => d.task_id));
+          }
+        }
         const { data: tasks } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, post_url, reward_pt, max_completions, current_completions")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, max_completions, current_completions")
           .eq("is_active", true)
           .neq("type", "video")
           .order("created_at", { ascending: false });
-        return jsonResponse({ data: { tasks: tasks || [] } });
+        const filtered = (tasks || []).filter((t: any) => !completedIds.has(t.id));
+        return jsonResponse({ data: { tasks: filtered } });
+      }
+
+      case "verify_task": {
+        const { telegram_id, task_id } = params;
+        if (!telegram_id || !task_id) throw new Error("telegram_id and task_id required");
+
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, balance_pt, balance_frozen, is_banned, captcha_pending")
+          .eq("telegram_id", telegram_id).single();
+        if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) return jsonResponse({ data: { locked: true } });
+
+        // Already done?
+        const { data: existing } = await supabase
+          .from("task_completions")
+          .select("id").eq("user_id", user.id).eq("task_id", task_id).maybeSingle();
+        if (existing) {
+          return jsonResponse({ data: { subscribed: true, already: true, new_balance: Number(user.balance_pt) } });
+        }
+
+        const { data: task } = await supabase
+          .from("tasks")
+          .select("id, type, channel_username, channel_id, reward_pt, is_active, max_completions, current_completions")
+          .eq("id", task_id).single();
+        if (!task || !task.is_active) throw new Error("Task unavailable");
+        if (task.type !== "subscribe") {
+          return jsonResponse({ data: { subscribed: false, reason: "unsupported_type" } });
+        }
+        if (task.max_completions && task.current_completions >= task.max_completions) {
+          return jsonResponse({ data: { subscribed: false, reason: "limit_reached" } });
+        }
+
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (!botToken) return jsonResponse({ data: { subscribed: false, reason: "bot_not_configured" } });
+
+        // Resolve chat identifier: prefer numeric channel_id, fallback to @username
+        let chatId: string | number | null = null;
+        if (task.channel_id) chatId = Number(task.channel_id);
+        else if (task.channel_username) {
+          const u = task.channel_username.replace(/^@/, "");
+          chatId = `@${u}`;
+        }
+        if (!chatId) return jsonResponse({ data: { subscribed: false, reason: "no_channel" } });
+
+        let isMember = false;
+        try {
+          const r = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: chatId, user_id: telegram_id }),
+          });
+          const j = await r.json();
+          if (j?.ok) {
+            const st = j.result?.status;
+            isMember = st === "member" || st === "administrator" || st === "creator";
+          }
+        } catch {}
+
+        if (!isMember) {
+          return jsonResponse({ data: { subscribed: false } });
+        }
+
+        // Record completion and award PT
+        await supabase.from("task_completions").insert({ user_id: user.id, task_id });
+        await supabase.from("tasks").update({
+          current_completions: (task.current_completions || 0) + 1,
+        }).eq("id", task_id);
+
+        let newBalance = Number(user.balance_pt);
+        if (!user.balance_frozen) {
+          newBalance = Number(user.balance_pt) + Number(task.reward_pt);
+          await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+        }
+
+        await supabase.from("logs_activity").insert({
+          user_id: user.id,
+          action: "task_reward",
+          ip_address: ip,
+          metadata: { task_id, reward_pt: task.reward_pt, type: "subscribe" },
+        });
+
+        return jsonResponse({ data: { subscribed: true, new_balance: newBalance, reward: Number(task.reward_pt) } });
       }
 
       default:
