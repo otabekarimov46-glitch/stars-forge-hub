@@ -824,9 +824,54 @@ export default function MiniApp() {
                   const link = taskLink(t);
                   const cfg = SHEET_CONFIG[activeSheet];
                   const Icon = cfg.icon;
+                  const state = taskState[t.id] || "idle";
+                  const isSubscribe = activeSheet === "subscribe";
+
+                  const handleClick = (e: React.MouseEvent) => {
+                    if (isSubscribe && link) {
+                      // Mark as pending, open channel in Telegram, await verification on return
+                      pendingVerifyRef.current.add(t.id);
+                      setTaskState((s) => ({ ...s, [t.id]: "checking" }));
+                      try {
+                        const tg = (window as any).Telegram?.WebApp;
+                        if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(link)) {
+                          e.preventDefault();
+                          tg.openTelegramLink(link);
+                          return;
+                        }
+                      } catch {}
+                      // Fallback: let the <a> open normally in a new tab
+                    }
+                  };
+
+                  let cta: React.ReactNode;
+                  if (state === "checking") {
+                    cta = (
+                      <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-white/8 border border-white/10">
+                        <Loader2 className="w-4 h-4 animate-spin text-white/80" />
+                      </span>
+                    );
+                  } else if (state === "done") {
+                    cta = (
+                      <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-emerald-400/20 border border-emerald-400/40 animate-scale-in">
+                        <CheckCircle className="w-4 h-4 text-emerald-300" />
+                      </span>
+                    );
+                  } else {
+                    cta = (
+                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
+                        {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
+                      </span>
+                    );
+                  }
+
+                  const disabled = state === "checking" || state === "done";
                   const content = (
                     <div
-                      className="rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                      className={
+                        "rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 " +
+                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
+                      }
                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
                     >
                       <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
@@ -836,13 +881,22 @@ export default function MiniApp() {
                         <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
                         <div className="text-[12px] text-yellow-300/90 mt-0.5 tabular-nums">+{t.reward_pt} PT</div>
                       </div>
-                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
-                        {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
-                      </span>
+                      {cta}
                     </div>
                   );
+
+                  if (disabled) {
+                    return <div key={t.id} className="pointer-events-none">{content}</div>;
+                  }
                   return link ? (
-                    <a key={t.id} href={link} target="_blank" rel="noopener noreferrer" className="block">
+                    <a
+                      key={t.id}
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                      onClick={handleClick}
+                    >
                       {content}
                     </a>
                   ) : (
