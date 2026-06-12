@@ -156,12 +156,68 @@ export default function MiniApp() {
   useEffect(() => { loadVideo(); }, [loadVideo]);
 
   // Load bot tasks (subscribe / survey / view_post)
-  useEffect(() => {
+  const loadBotTasks = useCallback(() => {
     if (!telegramId) return;
     miniAppApi("list_tasks", { telegram_id: telegramId })
       .then((d) => setBotTasks(Array.isArray(d?.tasks) ? d.tasks : []))
       .catch(() => {});
   }, [telegramId]);
+  useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
+
+  // Per-task UI state for subscribe verification
+  // 'idle' | 'checking' | 'done' | 'failed'
+  const [taskState, setTaskState] = useState<Record<string, "idle" | "checking" | "done" | "failed">>({});
+  // Tasks the user has clicked to subscribe — need verification on return
+  const pendingVerifyRef = useRef<Set<string>>(new Set());
+
+  const verifySubscribeTask = useCallback(async (taskId: string) => {
+    if (!telegramId) return;
+    setTaskState((s) => ({ ...s, [taskId]: "checking" }));
+    try {
+      const r = await miniAppApi("verify_task", { telegram_id: telegramId, task_id: taskId });
+      if (r?.subscribed) {
+        setTaskState((s) => ({ ...s, [taskId]: "done" }));
+        if (typeof r.new_balance === "number") {
+          setUser((u) => u ? { ...u, balance_pt: r.new_balance } : u);
+        }
+        pendingVerifyRef.current.delete(taskId);
+      } else {
+        setTaskState((s) => ({ ...s, [taskId]: "idle" }));
+        pendingVerifyRef.current.delete(taskId);
+      }
+    } catch {
+      setTaskState((s) => ({ ...s, [taskId]: "idle" }));
+      pendingVerifyRef.current.delete(taskId);
+    }
+  }, [telegramId]);
+
+  // When app regains focus, verify any pending subscribe tasks
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.hidden) return;
+      const pending = Array.from(pendingVerifyRef.current);
+      pending.forEach((id) => verifySubscribeTask(id));
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [verifySubscribeTask]);
+
+  // Group bot tasks by type — must be defined before any conditional return
+  // to keep hook order stable across renders.
+  const tasksByType = useMemo(() => {
+    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
+    for (const t of botTasks) {
+      if (m[t.type]) m[t.type].push(t);
+    }
+    // Hide tasks marked 'done' locally (server also hides completed on reload)
+    return Object.fromEntries(
+      Object.entries(m).map(([k, arr]) => [k, arr.filter((t) => taskState[t.id] !== "done")])
+    ) as Record<string, BotTask[]>;
+  }, [botTasks, taskState]);
 
   // First-frame poster
   useEffect(() => {
