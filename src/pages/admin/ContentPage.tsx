@@ -7,19 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
   view_post: { icon: Eye, color: "bg-brand-green/10 text-brand-green" },
   survey: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
+  video: { icon: Film, color: "bg-brand-purple/10 text-brand-purple" },
 };
+
+type ContentKind = "video" | "subscribe" | "view_post" | "survey";
 
 export default function ContentPage() {
   const { t } = useTranslation();
@@ -31,25 +33,18 @@ export default function ContentPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptyTaskForm = { type: "subscribe", title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5" };
+  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5" };
+  const emptyVideoForm = { title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
+
+  const [contentDialogOpen, setContentDialogOpen] = useState(false);
+  const [contentKind, setContentKind] = useState<ContentKind>("subscribe");
   const [taskForm, setTaskForm] = useState<any>(emptyTaskForm);
+  const [videoForm, setVideoForm] = useState<any>(emptyVideoForm);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
 
   const [advForm, setAdvForm] = useState({ name: "" });
   const [advDialogOpen, setAdvDialogOpen] = useState(false);
   const [editingAdvId, setEditingAdvId] = useState<string | null>(null);
-
-  const [videoForm, setVideoForm] = useState({
-    title: "",
-    video_url: "",
-    duration_seconds: "30",
-    reward_pt: "5",
-    external_link_url: "",
-    external_link_label: "Перейти",
-    media_type: "video" as "video" | "image",
-  });
-  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -70,14 +65,17 @@ export default function ContentPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const openCreateTask = () => {
+  const openCreateContent = () => {
     setEditingTaskId(null);
+    setContentKind("subscribe");
     setTaskForm(emptyTaskForm);
-    setTaskDialogOpen(true);
+    setVideoForm(emptyVideoForm);
+    setContentDialogOpen(true);
   };
 
   const openEditTask = (ta: any) => {
     setEditingTaskId(ta.id);
+    setContentKind(ta.type);
     setTaskForm({
       type: ta.type,
       title: ta.title || "",
@@ -88,7 +86,7 @@ export default function ContentPage() {
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
     });
-    setTaskDialogOpen(true);
+    setContentDialogOpen(true);
   };
 
   const submitTask = async () => {
@@ -98,7 +96,7 @@ export default function ContentPage() {
       if (editingTaskId) {
         await adminApi("update_task", {
           task_id: editingTaskId,
-          type: taskForm.type,
+          type: contentKind,
           title: taskForm.title.trim(),
           channel_username: taskForm.channel_username || null,
           channel_id: taskForm.channel_id || null,
@@ -110,7 +108,7 @@ export default function ContentPage() {
         toast.success("Задание обновлено");
       } else {
         await adminApi("create_task", {
-          type: taskForm.type,
+          type: contentKind,
           title: taskForm.title.trim(),
           advertiser_id: activeAdvertiser.id,
           channel_username: taskForm.channel_username || null,
@@ -122,7 +120,7 @@ export default function ContentPage() {
         });
         toast.success(t("content.taskCreated"));
       }
-      setTaskDialogOpen(false);
+      setContentDialogOpen(false);
       setEditingTaskId(null);
       setTaskForm(emptyTaskForm);
       fetchData();
@@ -190,7 +188,6 @@ export default function ContentPage() {
     try {
       const isImage = file.type.startsWith("image/");
       const mediaType: "video" | "image" = isImage ? "image" : "video";
-      // Soft limit warning: keep videos light for fast Mini App load
       const sizeMb = file.size / (1024 * 1024);
       if (!isImage && sizeMb > 6) {
         toast.warning(`Видео ${sizeMb.toFixed(1)} МБ. Рекомендуем 720p и 3–5 МБ для мгновенной загрузки в Mini App.`);
@@ -198,12 +195,12 @@ export default function ContentPage() {
       const fileName = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
       const { error } = await supabase.storage.from("video-ads").upload(fileName, file, {
         contentType: file.type,
-        cacheControl: "31536000", // aggressive CDN cache (1 year)
+        cacheControl: "31536000",
       });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("video-ads").getPublicUrl(fileName);
       const dur = isImage ? 30 : (await detectDuration(file)) ?? 30;
-      setVideoForm((f) => ({
+      setVideoForm((f: any) => ({
         ...f,
         video_url: urlData.publicUrl,
         duration_seconds: String(dur),
@@ -218,19 +215,23 @@ export default function ContentPage() {
   };
 
   const createVideo = async () => {
+    if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
+    if (!videoForm.title.trim()) { toast.error("Введите название"); return; }
+    if (!videoForm.video_url) { toast.error("Загрузите медиафайл"); return; }
     try {
       await adminApi("create_video_ad", {
-        title: videoForm.title,
+        title: videoForm.title.trim(),
         video_url: videoForm.video_url,
         duration_seconds: Number(videoForm.duration_seconds),
         reward_pt: Number(videoForm.reward_pt),
         external_link_url: videoForm.external_link_url || null,
         external_link_label: videoForm.external_link_label || "Перейти",
         media_type: videoForm.media_type,
+        advertiser_id: activeAdvertiser.id,
       });
       toast.success(t("content.videoAdded"));
-      setVideoDialogOpen(false);
-      setVideoForm({ title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" });
+      setContentDialogOpen(false);
+      setVideoForm(emptyVideoForm);
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -262,12 +263,10 @@ export default function ContentPage() {
       subscribe: t("task.subscribe"),
       view_post: t("task.view_post"),
       survey: t("task.survey"),
+      video: "Видеореклама",
     };
     return map[type] || type;
   };
-
-  const showChannelFields = taskForm.type === "subscribe";
-  const showPostUrl = taskForm.type === "view_post" || taskForm.type === "survey";
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -275,285 +274,241 @@ export default function ContentPage() {
     </div>
   );
 
-  // Split tasks: Bot tasks (subscribe, view_post, reaction) — video is Mini App only
-  const botTasks = tasks.filter(t => t.type !== "video");
+  // Combined items for active advertiser
+  const advTasks = activeAdvertiser ? tasks.filter(x => x.advertiser_id === activeAdvertiser.id) : [];
+  const advVideos = activeAdvertiser ? videos.filter(x => x.advertiser_id === activeAdvertiser.id) : [];
+  const totalAdvItems = advTasks.length + advVideos.length;
+
+  const showChannelFields = contentKind === "subscribe";
+  const showPostUrl = contentKind === "view_post" || contentKind === "survey";
+  const isVideoKind = contentKind === "video";
 
   return (
     <div className="space-y-8">
-      <Tabs defaultValue="videos">
-        <TabsList className="rounded-xl">
-          <TabsTrigger value="videos" className="rounded-lg gap-2"><Film className="h-4 w-4" /> {t("content.videoAds")} ({videos.length})</TabsTrigger>
-          <TabsTrigger value="tasks" className="rounded-lg gap-2"><UsersIcon className="h-4 w-4" /> {t("content.botTasks")} ({botTasks.length})</TabsTrigger>
-        </TabsList>
-
-        {/* VIDEO ADS (Mini App) */}
-        <TabsContent value="videos" className="mt-4">
-          <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden">
+        {!activeAdvertiser ? (
+          <>
             <div className="flex items-center justify-between p-6 pb-4">
               <div>
-                <h2 className="text-lg font-semibold">{t("content.videoAds")}</h2>
-                <p className="text-xs text-muted-foreground mt-1">{t("content.videoDesc")}</p>
+                <h2 className="text-lg font-semibold">Рекламодатели</h2>
+                <p className="text-xs text-muted-foreground mt-1">Все задания и видеореклама группируются по рекламодателям.</p>
               </div>
-              <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+              <Dialog open={advDialogOpen} onOpenChange={(o) => { setAdvDialogOpen(o); if (!o) { setEditingAdvId(null); setAdvForm({ name: "" }); } }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-blue to-brand-green text-white border-0">
-                    <Plus className="h-4 w-4" /> {t("common.add")}
+                  <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0" onClick={() => { setEditingAdvId(null); setAdvForm({ name: "" }); }}>
+                    <Plus className="h-4 w-4" /> Добавить рекламодателя
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="glass-card border-0">
-                  <DialogHeader><DialogTitle>{t("content.newVideo")}</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingAdvId ? "Переименовать рекламодателя" : "Новый рекламодатель"}</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label>{t("content.videoTitle")}</Label>
-                      <Input className="rounded-xl" value={videoForm.title} onChange={e => setVideoForm(f => ({ ...f, title: e.target.value }))} />
+                      <Label>Название</Label>
+                      <Input className="rounded-xl" value={advForm.name} onChange={(e) => setAdvForm({ name: e.target.value })} placeholder="Например, Coca-Cola" autoFocus />
                     </div>
-                    <div>
-                      <Label>{t("content.videoUrl")}</Label>
-                      <div className="flex gap-2">
-                        <Input className="rounded-xl flex-1" value={videoForm.video_url} onChange={e => setVideoForm(f => ({ ...f, video_url: e.target.value }))} placeholder="https://..." />
-                        <input ref={fileInputRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleVideoUpload(file); }} />
-                        <Button variant="outline" className="rounded-xl gap-1" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                          <Upload className="h-4 w-4" />
-                          {uploading ? "..." : t("content.uploadVideo")}
-                        </Button>
-                      </div>
-                      {videoForm.video_url && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {videoForm.media_type === "image" ? "📷 Фото" : "🎬 Видео"} · {videoForm.duration_seconds}с
-                        </p>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>{t("content.duration")}</Label>
-                        <Input className="rounded-xl" type="number" value={videoForm.duration_seconds} onChange={e => setVideoForm(f => ({ ...f, duration_seconds: e.target.value }))} />
-                      </div>
-                      <div>
-                        <Label>{t("common.reward")} (PT)</Label>
-                        <Input className="rounded-xl" type="number" value={videoForm.reward_pt} onChange={e => setVideoForm(f => ({ ...f, reward_pt: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div>
-                      <Label>{t("content.externalLink")} ({t("content.optional")})</Label>
-                      <Input className="rounded-xl" value={videoForm.external_link_url} onChange={e => setVideoForm(f => ({ ...f, external_link_url: e.target.value }))} placeholder="https://advertiser.com" />
-                    </div>
-                    <div>
-                      <Label>{t("content.linkLabel")}</Label>
-                      <Input className="rounded-xl" value={videoForm.external_link_label} onChange={e => setVideoForm(f => ({ ...f, external_link_label: e.target.value }))} placeholder="Перейти" />
-                    </div>
-                    <Button onClick={createVideo} className="w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-green text-white">{t("common.add")}</Button>
+                    <Button onClick={submitAdvertiser} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
+                      {editingAdvId ? "Сохранить" : "Создать"}
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
             </div>
             <div className="px-6 pb-6">
-              {videos.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">{t("content.noVideos")}</p>
+              {advertisers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Нет рекламодателей. Создайте первого, чтобы начать.</p>
               ) : (
-                <div className="space-y-3">
-                  {videos.map(v => (
-                    <div key={v.id} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
-                        <Film className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{v.title}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{v.duration_seconds}s • {v.reward_pt} PT</span>
-                          {v.external_link_url && (
-                            <Badge variant="outline" className="rounded-lg text-xs gap-1">
-                              <Link2 className="h-3 w-3" /> {t("content.hasLink")}
-                            </Badge>
-                          )}
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {advertisers.map((a) => (
+                    <div
+                      key={a.id}
+                      className="group relative rounded-2xl p-4 bg-muted/30 hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-border"
+                      onClick={() => setActiveAdvertiser(a)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
+                          <Building2 className="h-5 w-5" />
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{a.name}</p>
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} всего</Badge>
+                            {a.video_count > 0 && (
+                              <Badge variant="outline" className="rounded-lg text-xs gap-1">
+                                <Film className="h-3 w-3" /> {a.video_count}
+                              </Badge>
+                            )}
+                            {a.active_count > 0 && (
+                              <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
+                                {a.active_count} активных
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 opacity-60 hover:opacity-100">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
+                              <Pencil className="h-4 w-4 mr-2" /> Переименовать
+                            </DropdownMenuItem>
+                            {a.tasks_count > 0 && (
+                              <>
+                                <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
+                                  <Power className="h-4 w-4 mr-2" /> Включить все
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
+                                  <PowerOff className="h-4 w-4 mr-2" /> Отключить все
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" /> Удалить рекламодателя
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="glass-card border-0">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Удалить «{a.name}»?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Все {a.tasks_count} единиц контента рекламодателя будут удалены безвозвратно.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
+                                  <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
+                                    Удалить
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <Switch checked={v.is_active} onCheckedChange={(val) => toggleVideo(v.id, val)} />
-                      <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteVideo(v.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        </TabsContent>
-
-        {/* BOT TASKS — advertiser-based */}
-        <TabsContent value="tasks" className="mt-4">
-          <div className="glass-card overflow-hidden">
-            {!activeAdvertiser ? (
-              <>
-                <div className="flex items-center justify-between p-6 pb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold">Рекламодатели</h2>
-                    <p className="text-xs text-muted-foreground mt-1">Каждый рекламодатель — отдельная группа заданий.</p>
-                  </div>
-                  <Dialog open={advDialogOpen} onOpenChange={(o) => { setAdvDialogOpen(o); if (!o) { setEditingAdvId(null); setAdvForm({ name: "" }); } }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0" onClick={() => { setEditingAdvId(null); setAdvForm({ name: "" }); }}>
-                        <Plus className="h-4 w-4" /> Добавить рекламодателя
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="glass-card border-0">
-                      <DialogHeader><DialogTitle>{editingAdvId ? "Переименовать рекламодателя" : "Новый рекламодатель"}</DialogTitle></DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Название</Label>
-                          <Input className="rounded-xl" value={advForm.name} onChange={(e) => setAdvForm({ name: e.target.value })} placeholder="Например, Coca-Cola" autoFocus />
-                        </div>
-                        <Button onClick={submitAdvertiser} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
-                          {editingAdvId ? "Сохранить" : "Создать"}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+          </>
+        ) : (
+          <>
+            {/* Inside advertiser */}
+            <div className="flex items-center justify-between p-6 pb-4 gap-3 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0">
+                <Button variant="ghost" size="icon" className="rounded-xl shrink-0" onClick={() => setActiveAdvertiser(null)}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold truncate">{activeAdvertiser.name}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {totalAdvItems} единиц контента
+                  </p>
                 </div>
-                <div className="px-6 pb-6">
-                  {advertisers.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Нет рекламодателей. Создайте первого, чтобы начать.</p>
-                  ) : (
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      {advertisers.map((a) => (
-                        <div
-                          key={a.id}
-                          className="group relative rounded-2xl p-4 bg-muted/30 hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-border"
-                          onClick={() => setActiveAdvertiser(a)}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
-                              <Building2 className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm truncate">{a.name}</p>
-                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} заданий</Badge>
-                                {a.active_count > 0 && (
-                                  <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
-                                    {a.active_count} активных
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 opacity-60 hover:opacity-100">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="rounded-xl" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
-                                  <Pencil className="h-4 w-4 mr-2" /> Переименовать
-                                </DropdownMenuItem>
-                                {a.tasks_count > 0 && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
-                                      <Power className="h-4 w-4 mr-2" /> Включить все
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
-                                      <PowerOff className="h-4 w-4 mr-2" /> Отключить все
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                <DropdownMenuSeparator />
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                      <Trash2 className="h-4 w-4 mr-2" /> Удалить рекламодателя
-                                    </DropdownMenuItem>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent className="glass-card border-0">
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Удалить «{a.name}»?</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Все {a.tasks_count} заданий рекламодателя будут удалены безвозвратно.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
-                                      <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
-                                        Удалить
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Inside advertiser */}
-                <div className="flex items-center justify-between p-6 pb-4 gap-3 flex-wrap">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Button variant="ghost" size="icon" className="rounded-xl shrink-0" onClick={() => setActiveAdvertiser(null)}>
-                      <ChevronLeft className="h-5 w-5" />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {totalAdvItems > 0 && (
+                  <>
+                    <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => bulkToggle(activeAdvertiser.id, true)}>
+                      <Power className="h-3.5 w-3.5" /> Вкл. все
                     </Button>
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-semibold truncate">{activeAdvertiser.name}</h2>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {tasks.filter(x => x.advertiser_id === activeAdvertiser.id).length} заданий
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {tasks.some(x => x.advertiser_id === activeAdvertiser.id) && (
-                      <>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => bulkToggle(activeAdvertiser.id, true)}>
-                          <Power className="h-3.5 w-3.5" /> Вкл. все
+                    <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => bulkToggle(activeAdvertiser.id, false)}>
+                      <PowerOff className="h-3.5 w-3.5" /> Откл. все
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="rounded-xl gap-1.5 text-destructive hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" /> Удалить все
                         </Button>
-                        <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => bulkToggle(activeAdvertiser.id, false)}>
-                          <PowerOff className="h-3.5 w-3.5" /> Откл. все
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="rounded-xl gap-1.5 text-destructive hover:text-destructive">
-                              <Trash2 className="h-3.5 w-3.5" /> Удалить все
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="glass-card border-0">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Удалить все задания?</AlertDialogTitle>
-                              <AlertDialogDescription>Удалит все задания рекламодателя «{activeAdvertiser.name}».</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
-                              <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => bulkDelete(activeAdvertiser.id)}>
-                                Удалить
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </>
-                    )}
-                    <Dialog open={taskDialogOpen} onOpenChange={(o) => { setTaskDialogOpen(o); if (!o) { setEditingTaskId(null); setTaskForm(emptyTaskForm); } }}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0" onClick={openCreateTask}>
-                          <Plus className="h-4 w-4" /> Задание
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="glass-card border-0">
-                        <DialogHeader><DialogTitle>{editingTaskId ? "Редактировать задание" : t("content.newTask")}</DialogTitle></DialogHeader>
-                        <div className="space-y-4">
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="glass-card border-0">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Удалить весь контент?</AlertDialogTitle>
+                          <AlertDialogDescription>Удалит все задания и видеорекламу рекламодателя «{activeAdvertiser.name}».</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
+                          <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => bulkDelete(activeAdvertiser.id)}>
+                            Удалить
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+                <Dialog open={contentDialogOpen} onOpenChange={(o) => { setContentDialogOpen(o); if (!o) { setEditingTaskId(null); setTaskForm(emptyTaskForm); setVideoForm(emptyVideoForm); } }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0" onClick={openCreateContent}>
+                      <Plus className="h-4 w-4" /> Добавить контент
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="glass-card border-0 max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>{editingTaskId ? "Редактировать задание" : "Новый контент"}</DialogTitle></DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Тип контента</Label>
+                        <Select value={contentKind} onValueChange={(v) => setContentKind(v as ContentKind)} disabled={!!editingTaskId}>
+                          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="video">🎬 Видеореклама (Mini App)</SelectItem>
+                            <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
+                            <SelectItem value="view_post">{t("task.view_post")}</SelectItem>
+                            <SelectItem value="survey">{t("task.survey")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {isVideoKind ? (
+                        <>
+                          <div>
+                            <Label>{t("content.videoTitle")}</Label>
+                            <Input className="rounded-xl" value={videoForm.title} onChange={e => setVideoForm((f: any) => ({ ...f, title: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label>{t("content.videoUrl")}</Label>
+                            <div className="flex gap-2">
+                              <Input className="rounded-xl flex-1" value={videoForm.video_url} onChange={e => setVideoForm((f: any) => ({ ...f, video_url: e.target.value }))} placeholder="https://..." />
+                              <input ref={fileInputRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleVideoUpload(file); }} />
+                              <Button variant="outline" className="rounded-xl gap-1" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                                <Upload className="h-4 w-4" />
+                                {uploading ? "..." : t("content.uploadVideo")}
+                              </Button>
+                            </div>
+                            {videoForm.video_url && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {videoForm.media_type === "image" ? "📷 Фото" : "🎬 Видео"} · {videoForm.duration_seconds}с
+                              </p>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label>{t("content.duration")}</Label>
+                              <Input className="rounded-xl" type="number" value={videoForm.duration_seconds} onChange={e => setVideoForm((f: any) => ({ ...f, duration_seconds: e.target.value }))} />
+                            </div>
+                            <div>
+                              <Label>{t("common.reward")} (PT)</Label>
+                              <Input className="rounded-xl" type="number" value={videoForm.reward_pt} onChange={e => setVideoForm((f: any) => ({ ...f, reward_pt: e.target.value }))} />
+                            </div>
+                          </div>
+                          <div>
+                            <Label>{t("content.externalLink")} ({t("content.optional")})</Label>
+                            <Input className="rounded-xl" value={videoForm.external_link_url} onChange={e => setVideoForm((f: any) => ({ ...f, external_link_url: e.target.value }))} placeholder="https://advertiser.com" />
+                          </div>
+                          <div>
+                            <Label>{t("content.linkLabel")}</Label>
+                            <Input className="rounded-xl" value={videoForm.external_link_label} onChange={e => setVideoForm((f: any) => ({ ...f, external_link_label: e.target.value }))} placeholder="Перейти" />
+                          </div>
+                          <Button onClick={createVideo} className="w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-green text-white">{t("common.add")}</Button>
+                        </>
+                      ) : (
+                        <>
                           <div>
                             <Label>Название (видно пользователям)</Label>
                             <Input className="rounded-xl" value={taskForm.title} onChange={e => setTaskForm((f: any) => ({ ...f, title: e.target.value }))} placeholder="Например, Подпишись на наш канал" />
-                          </div>
-                          <div>
-                            <Label>{t("common.type")}</Label>
-                            <Select value={taskForm.type} onValueChange={(v) => setTaskForm((f: any) => ({ ...f, type: v }))}>
-                              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
-                                <SelectItem value="view_post">{t("task.view_post")}</SelectItem>
-                                <SelectItem value="survey">{t("task.survey")}</SelectItem>
-                              </SelectContent>
-                            </Select>
                           </div>
                           {showChannelFields && (
                             <>
@@ -591,55 +546,80 @@ export default function ContentPage() {
                           <Button onClick={submitTask} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
                             {editingTaskId ? "Сохранить" : t("common.create")}
                           </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-                <div className="px-6 pb-6">
-                  {tasks.filter(x => x.advertiser_id === activeAdvertiser.id).length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">У этого рекламодателя пока нет заданий.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {tasks.filter(x => x.advertiser_id === activeAdvertiser.id).map(ta => {
-                        const config = TASK_TYPE_CONFIG[ta.type] || TASK_TYPE_CONFIG.subscribe;
-                        const Icon = config.icon;
-                        return (
-                          <div key={ta.id} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                            <div className={`p-2.5 rounded-xl ${config.color}`}>
-                              <Icon className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium text-sm truncate">{ta.title || taskTypeLabel(ta.type)}</p>
-                                <Badge variant="outline" className="rounded-lg text-xs">{taskTypeLabel(ta.type)}</Badge>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <p className="text-sm font-medium">{ta.reward_pt} PT</p>
-                                {ta.max_completions > 0 && (
-                                  <Badge variant="outline" className="rounded-lg text-xs">{ta.current_completions || 0}/{ta.max_completions}</Badge>
-                                )}
-                                <Badge variant="outline" className="rounded-lg text-xs">{t("content.hold")}: {ta.hold_days || 5}d</Badge>
-                              </div>
-                            </div>
-                            <Switch checked={ta.is_active} onCheckedChange={(v) => toggleTask(ta.id, v)} />
-                            <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => openEditTask(ta)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteTask(ta.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
+                        </>
+                      )}
                     </div>
-                  )}
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+            <div className="px-6 pb-6">
+              {totalAdvItems === 0 ? (
+                <p className="text-center text-muted-foreground py-8">У этого рекламодателя пока нет контента.</p>
+              ) : (
+                <div className="space-y-3">
+                  {advVideos.map(v => (
+                    <div key={`v-${v.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
+                        <Film className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm truncate">{v.title}</p>
+                          <Badge variant="outline" className="rounded-lg text-xs">Видеореклама</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          <span>{v.duration_seconds}s • {v.reward_pt} PT</span>
+                          {v.external_link_url && (
+                            <Badge variant="outline" className="rounded-lg text-xs gap-1">
+                              <Link2 className="h-3 w-3" /> {t("content.hasLink")}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Switch checked={v.is_active} onCheckedChange={(val) => toggleVideo(v.id, val)} />
+                      <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteVideo(v.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  {advTasks.map(ta => {
+                    const config = TASK_TYPE_CONFIG[ta.type] || TASK_TYPE_CONFIG.subscribe;
+                    const Icon = config.icon;
+                    return (
+                      <div key={`t-${ta.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className={`p-2.5 rounded-xl ${config.color}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-sm truncate">{ta.title || taskTypeLabel(ta.type)}</p>
+                            <Badge variant="outline" className="rounded-lg text-xs">{taskTypeLabel(ta.type)}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <p className="text-sm font-medium">{ta.reward_pt} PT</p>
+                            {ta.max_completions > 0 && (
+                              <Badge variant="outline" className="rounded-lg text-xs">{ta.current_completions || 0}/{ta.max_completions}</Badge>
+                            )}
+                            <Badge variant="outline" className="rounded-lg text-xs">{t("content.hold")}: {ta.hold_days || 5}d</Badge>
+                          </div>
+                        </div>
+                        <Switch checked={ta.is_active} onCheckedChange={(v) => toggleTask(ta.id, v)} />
+                        <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => openEditTask(ta)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteTask(ta.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
-              </>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
