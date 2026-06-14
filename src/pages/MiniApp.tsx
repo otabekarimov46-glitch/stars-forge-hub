@@ -241,17 +241,20 @@ export default function MiniApp() {
   useEffect(() => {
     if (status !== "playing") return;
     const onVis = () => {
-      if (document.hidden) { videoRef.current?.pause(); stopImageTimer(); }
-      else if (video && elapsed < video.duration_seconds) {
-        videoRef.current?.play().catch(() => {});
+      const v = videoRef.current;
+      if (document.hidden) { try { v?.pause(); } catch {} stopImageTimer(); }
+      else if (video) {
         if (video.media_type === "image") startImageTimer();
+        else if (v && !finishedRef.current && v.currentTime < (video.duration_seconds - 0.05)) {
+          v.play().catch(() => {});
+        }
       }
     };
-    const onBlur = () => { videoRef.current?.pause(); stopImageTimer(); };
+    const onBlur = () => { try { videoRef.current?.pause(); } catch {} stopImageTimer(); };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("blur", onBlur);
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("blur", onBlur); };
-  }, [status, video, elapsed, startImageTimer, stopImageTimer]);
+  }, [status, video, startImageTimer, stopImageTimer]);
 
   const claimDailyBonus = async () => {
     if (!telegramId) return;
@@ -345,7 +348,9 @@ export default function MiniApp() {
   }, [elapsed, status, viewId, telegramId]);
 
   useEffect(() => {
-    if (status === "playing" && video && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching();
+    // For images only — videos finish via onEnded to avoid pausing mid-buffer.
+    if (status === "playing" && video && video.media_type === "image"
+        && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, status, video]);
 
@@ -495,7 +500,23 @@ export default function MiniApp() {
               controls={false} disablePictureInPicture
               onContextMenu={(e) => e.preventDefault()}
               onTimeUpdate={(e) => setElapsed(e.currentTarget.currentTime)}
-              onEnded={(e) => setElapsed(e.currentTarget.duration || video.duration_seconds)}
+              onEnded={() => {
+                if (video) setElapsed(video.duration_seconds);
+                if (!finishedRef.current) finishWatching();
+              }}
+              onStalled={(e) => { e.currentTarget.play().catch(() => {}); }}
+              onWaiting={(e) => {
+                const el = e.currentTarget;
+                // Nudge the buffer if stuck for >1.5s at the same position
+                const startedAt = el.currentTime;
+                window.setTimeout(() => {
+                  if (!videoRef.current || finishedRef.current) return;
+                  if (Math.abs(videoRef.current.currentTime - startedAt) < 0.05 && videoRef.current.paused === false) {
+                    try { videoRef.current.currentTime = Math.min(startedAt + 0.05, (video?.duration_seconds || startedAt)); } catch {}
+                    videoRef.current.play().catch(() => {});
+                  }
+                }, 1500);
+              }}
             />
           )}
         </div>
