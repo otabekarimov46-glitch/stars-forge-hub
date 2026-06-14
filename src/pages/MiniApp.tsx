@@ -319,9 +319,11 @@ export default function MiniApp() {
 
   const finishWatching = async () => {
     if (!viewId || !telegramId || !video) return;
-    if (elapsed < video.duration_seconds - 0.25) return;
+    const effectiveDuration = playbackDuration || video.duration_seconds;
+    if (elapsed < effectiveDuration - 0.25) return;
     try {
       finishedRef.current = true;
+      setIsBuffering(false);
       stopImageTimer();
       try { videoRef.current?.pause(); } catch {}
       const res = await miniAppApi("finish_view", {
@@ -349,6 +351,8 @@ export default function MiniApp() {
     if (!nextVideo) { loadVideo(); return; }
     setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
     setViewId(null); setElapsed(0); finishedRef.current = false;
+    setPlaybackDuration(nextVideo.duration_seconds);
+    setIsBuffering(false);
     setLastFinished(null);
     setStatus("ready");
 
