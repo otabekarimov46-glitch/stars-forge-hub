@@ -533,10 +533,8 @@ export default function MiniApp() {
   };
 
   const taskTitle = (t: BotTask) => {
+    if (t.title && t.title.trim()) return t.title.trim();
     if (t.channel_username) return t.channel_username.startsWith("@") ? t.channel_username : `@${t.channel_username}`;
-    if (t.post_url) {
-      try { return new URL(t.post_url).hostname.replace(/^www\./, ""); } catch { return t.post_url; }
-    }
     return "Задание";
   };
 
