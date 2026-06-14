@@ -37,57 +37,84 @@ Deno.serve(async (req) => {
     for (const check of checks) {
       const task = check.tasks;
       const user = check.users;
-      if (!task || !user) continue;
+      if (!task || !user) {
+        await supabase.from("delayed_checks").update({ checked: true }).eq("id", check.id);
+        continue;
+      }
 
       let shouldDeduct = false;
 
-      if (task.type === "subscribe" && task.channel_id) {
+      if (task.type === "subscribe" && (task.channel_id || task.channel_username)) {
         try {
+          const chatId = task.channel_id
+            ? Number(task.channel_id)
+            : `@${String(task.channel_username).replace(/^@/, "")}`;
           const res = await fetch(`${TELEGRAM_API}${BOT_TOKEN}/getChatMember`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: task.channel_id, user_id: user.telegram_id }),
+            body: JSON.stringify({ chat_id: chatId, user_id: user.telegram_id }),
           });
           const memberData = await res.json();
-          const status = memberData?.result?.status;
-          if (!status || status === "left" || status === "kicked") {
-            shouldDeduct = true;
+          if (memberData?.ok) {
+            const status = memberData?.result?.status;
+            if (!status || status === "left" || status === "kicked") {
+              shouldDeduct = true;
+            }
+          } else {
+            // Telegram API call failed (rate limit / network / channel unreachable) —
+            // do NOT deduct on uncertainty. Just mark checked to avoid retry storms.
+            console.log("delayed-check getChatMember not ok:", memberData?.description);
           }
         } catch (e) {
           console.error("getChatMember error:", e);
         }
       }
 
-      // For reaction tasks — can't easily verify via API, so just check subscription status
-      // Telegram doesn't expose reaction info via Bot API
-
       if (shouldDeduct) {
-        const newBalance = Math.max(0, Number(user.balance_pt) - Number(task.reward_pt));
-        await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+        const balance = Number(user.balance_pt);
+        const reward = Number(task.reward_pt);
+        // If user already withdrew (balance < reward) — do NOT deduct, per spec.
+        const canDeduct = balance >= reward;
+        if (canDeduct) {
+          await supabase.from("users")
+            .update({ balance_pt: balance - reward })
+            .eq("id", user.id);
+        }
 
-        // Restore +1 slot for advertiser
+        // Make task available again: remove completion + free up slot.
+        await supabase.from("task_completions")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("task_id", task.id);
         await supabase.from("tasks").update({
-          current_completions: Math.max(0, (task.current_completions || 1) - 1)
+          current_completions: Math.max(0, (task.current_completions || 1) - 1),
         }).eq("id", task.id);
 
         await supabase.from("delayed_checks")
-          .update({ checked: true, reward_deducted: true })
+          .update({ checked: true, reward_deducted: canDeduct })
           .eq("id", check.id);
 
-        await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: user.telegram_id,
-            text: `⚠️ Вы отписались от ${task.channel_username || "канала"}. С вашего баланса списано *${task.reward_pt} PT*.`,
-            parse_mode: "Markdown",
-          }),
-        });
+        // Notify user only if we actually deducted, to keep Telegram traffic low.
+        if (canDeduct) {
+          try {
+            await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: user.telegram_id,
+                text: `⚠️ Вы отписались от ${task.channel_username || "канала"}. С вашего баланса списано *${reward} PT*.`,
+                parse_mode: "Markdown",
+              }),
+            });
+          } catch {}
+        }
 
         await supabase.from("admin_alerts").insert({
           type: "subscription_check_fail",
           user_id: user.id,
-          message: `Пользователь отписался от ${task.channel_username || "канала"}. Списано ${task.reward_pt} PT. Место в лимите восстановлено.`,
+          message: canDeduct
+            ? `Пользователь отписался от ${task.channel_username || "канала"}. Списано ${reward} PT.`
+            : `Пользователь отписался от ${task.channel_username || "канала"}, но баланс уже выведен — списание пропущено.`,
         });
 
         deducted++;
@@ -99,6 +126,7 @@ Deno.serve(async (req) => {
 
       processed++;
     }
+
 
     return jsonResponse({ data: { processed, deducted } });
   } catch (err) {

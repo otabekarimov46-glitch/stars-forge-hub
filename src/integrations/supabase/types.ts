@@ -356,6 +356,7 @@ export type Database = {
       }
       video_ads: {
         Row: {
+          advertiser_id: string | null
           created_at: string
           duration_seconds: number
           external_link_label: string | null
@@ -368,6 +369,7 @@ export type Database = {
           video_url: string
         }
         Insert: {
+          advertiser_id?: string | null
           created_at?: string
           duration_seconds: number
           external_link_label?: string | null
@@ -380,6 +382,7 @@ export type Database = {
           video_url: string
         }
         Update: {
+          advertiser_id?: string | null
           created_at?: string
           duration_seconds?: number
           external_link_label?: string | null
@@ -391,7 +394,15 @@ export type Database = {
           title?: string
           video_url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "video_ads_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_views: {
         Row: {
