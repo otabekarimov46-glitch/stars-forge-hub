@@ -25,20 +25,20 @@ export default function ContentPage() {
   const { t } = useTranslation();
   const [tasks, setTasks] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
+  const [advertisers, setAdvertisers] = useState<any[]>([]);
+  const [activeAdvertiser, setActiveAdvertiser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [taskForm, setTaskForm] = useState({
-    type: "subscribe" as string,
-    channel_username: "",
-    channel_id: "",
-    reward_pt: "10",
-    post_url: "",
-    max_completions: "0",
-    hold_days: "5",
-  });
+  const emptyTaskForm = { type: "subscribe", title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5" };
+  const [taskForm, setTaskForm] = useState<any>(emptyTaskForm);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+
+  const [advForm, setAdvForm] = useState({ name: "" });
+  const [advDialogOpen, setAdvDialogOpen] = useState(false);
+  const [editingAdvId, setEditingAdvId] = useState<string | null>(null);
 
   const [videoForm, setVideoForm] = useState({
     title: "",
@@ -53,9 +53,14 @@ export default function ContentPage() {
 
   const fetchData = async () => {
     try {
-      const [ta, vi] = await Promise.all([adminApi("get_tasks"), adminApi("get_video_ads")]);
+      const [ta, vi, ad] = await Promise.all([
+        adminApi("get_tasks"),
+        adminApi("get_video_ads"),
+        adminApi("get_advertisers"),
+      ]);
       setTasks(ta || []);
       setVideos(vi || []);
+      setAdvertisers(ad || []);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -65,20 +70,103 @@ export default function ContentPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  const createTask = async () => {
+  const openCreateTask = () => {
+    setEditingTaskId(null);
+    setTaskForm(emptyTaskForm);
+    setTaskDialogOpen(true);
+  };
+
+  const openEditTask = (ta: any) => {
+    setEditingTaskId(ta.id);
+    setTaskForm({
+      type: ta.type,
+      title: ta.title || "",
+      channel_username: ta.channel_username || "",
+      channel_id: ta.channel_id ? String(ta.channel_id) : "",
+      reward_pt: String(ta.reward_pt ?? "10"),
+      post_url: ta.post_url || "",
+      max_completions: String(ta.max_completions ?? "0"),
+      hold_days: String(ta.hold_days ?? "5"),
+    });
+    setTaskDialogOpen(true);
+  };
+
+  const submitTask = async () => {
+    if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
+    if (!taskForm.title.trim()) { toast.error("Введите название задания"); return; }
     try {
-      await adminApi("create_task", {
-        type: taskForm.type,
-        channel_username: taskForm.channel_username || null,
-        channel_id: taskForm.channel_id ? Number(taskForm.channel_id) : null,
-        reward_pt: Number(taskForm.reward_pt),
-        post_url: taskForm.post_url || null,
-        max_completions: Number(taskForm.max_completions) || 0,
-        hold_days: Number(taskForm.hold_days) || 5,
-      });
-      toast.success(t("content.taskCreated"));
+      if (editingTaskId) {
+        await adminApi("update_task", {
+          task_id: editingTaskId,
+          type: taskForm.type,
+          title: taskForm.title.trim(),
+          channel_username: taskForm.channel_username || null,
+          channel_id: taskForm.channel_id || null,
+          reward_pt: Number(taskForm.reward_pt),
+          post_url: taskForm.post_url || null,
+          max_completions: Number(taskForm.max_completions) || 0,
+          hold_days: Number(taskForm.hold_days) || 5,
+        });
+        toast.success("Задание обновлено");
+      } else {
+        await adminApi("create_task", {
+          type: taskForm.type,
+          title: taskForm.title.trim(),
+          advertiser_id: activeAdvertiser.id,
+          channel_username: taskForm.channel_username || null,
+          channel_id: taskForm.channel_id ? Number(taskForm.channel_id) : null,
+          reward_pt: Number(taskForm.reward_pt),
+          post_url: taskForm.post_url || null,
+          max_completions: Number(taskForm.max_completions) || 0,
+          hold_days: Number(taskForm.hold_days) || 5,
+        });
+        toast.success(t("content.taskCreated"));
+      }
       setTaskDialogOpen(false);
-      setTaskForm({ type: "subscribe", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5" });
+      setEditingTaskId(null);
+      setTaskForm(emptyTaskForm);
+      fetchData();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const submitAdvertiser = async () => {
+    if (!advForm.name.trim()) { toast.error("Введите название"); return; }
+    try {
+      if (editingAdvId) {
+        await adminApi("update_advertiser", { advertiser_id: editingAdvId, name: advForm.name.trim() });
+        toast.success("Рекламодатель обновлён");
+      } else {
+        await adminApi("create_advertiser", { name: advForm.name.trim() });
+        toast.success("Рекламодатель добавлен");
+      }
+      setAdvDialogOpen(false);
+      setAdvForm({ name: "" });
+      setEditingAdvId(null);
+      fetchData();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const deleteAdvertiser = async (id: string) => {
+    try {
+      await adminApi("delete_advertiser", { advertiser_id: id });
+      toast.success("Рекламодатель удалён");
+      if (activeAdvertiser?.id === id) setActiveAdvertiser(null);
+      fetchData();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const bulkToggle = async (advertiser_id: string, is_active: boolean) => {
+    try {
+      await adminApi("bulk_toggle_advertiser_tasks", { advertiser_id, is_active });
+      toast.success(is_active ? "Все задания включены" : "Все задания отключены");
+      fetchData();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const bulkDelete = async (advertiser_id: string) => {
+    try {
+      await adminApi("bulk_delete_advertiser_tasks", { advertiser_id });
+      toast.success("Все задания удалены");
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
