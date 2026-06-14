@@ -71,6 +71,8 @@ export default function MiniApp() {
   const [limitInfo, setLimitInfo] = useState<{ watched: number; limit: number } | null>(null);
   const [turnstileState, setTurnstileState] = useState<"idle" | "running" | "passed" | "failed">("idle");
   const [elapsed, setElapsed] = useState(0); // seconds (float)
+  const [playbackDuration, setPlaybackDuration] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [user, setUser] = useState<UserSnap | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [bonusToast, setBonusToast] = useState<{ kind: "got" | "wait"; bonus?: number; hours?: number } | null>(null);
@@ -93,6 +95,17 @@ export default function MiniApp() {
   const sessionSecretRef = useRef<string | null>(null);
   const checkpointTimesRef = useRef<number[]>([]);
   const checkpointSentRef = useRef<number>(0);
+
+  const syncPlaybackDuration = useCallback((node?: HTMLVideoElement | null) => {
+    const mediaDuration = node?.duration;
+    if (typeof mediaDuration === "number" && Number.isFinite(mediaDuration) && mediaDuration > 0) {
+      setPlaybackDuration(mediaDuration);
+      return mediaDuration;
+    }
+    const fallback = video?.duration_seconds ?? 0;
+    if (fallback > 0) setPlaybackDuration(fallback);
+    return fallback;
+  }, [video]);
 
   // Telegram WebApp init
   useEffect(() => {
