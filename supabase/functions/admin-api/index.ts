@@ -306,12 +306,14 @@ Deno.serve(async (req) => {
           external_link_url: params.external_link_url || null,
           external_link_label: params.external_link_label || "Перейти",
           media_type: params.media_type === "image" ? "image" : "video",
+          advertiser_id: params.advertiser_id || null,
           is_active: true,
         }).select();
         data = res.data;
         error = res.error;
         break;
       }
+
       case "toggle_video_ad": {
         const res = await supabase
           .from("video_ads")
