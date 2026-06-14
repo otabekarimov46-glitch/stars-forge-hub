@@ -49,6 +49,27 @@ export type Database = {
           },
         ]
       }
+      advertisers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       delayed_checks: {
         Row: {
           check_at: string
@@ -185,6 +206,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          advertiser_id: string | null
           channel_id: number | null
           channel_username: string | null
           created_at: string
@@ -196,9 +218,11 @@ export type Database = {
           post_url: string | null
           reaction_emoji: string | null
           reward_pt: number
+          title: string | null
           type: Database["public"]["Enums"]["task_type"]
         }
         Insert: {
+          advertiser_id?: string | null
           channel_id?: number | null
           channel_username?: string | null
           created_at?: string
@@ -210,9 +234,11 @@ export type Database = {
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
+          title?: string | null
           type: Database["public"]["Enums"]["task_type"]
         }
         Update: {
+          advertiser_id?: string | null
           channel_id?: number | null
           channel_username?: string | null
           created_at?: string
@@ -224,9 +250,18 @@ export type Database = {
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
+          title?: string | null
           type?: Database["public"]["Enums"]["task_type"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_ips: {
         Row: {

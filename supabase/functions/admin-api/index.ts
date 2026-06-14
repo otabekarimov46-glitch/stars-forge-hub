@@ -166,12 +166,65 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ===== ADVERTISERS =====
+      case "get_advertisers": {
+        const [advs, tks] = await Promise.all([
+          supabase.from("advertisers").select("*").order("created_at", { ascending: false }),
+          supabase.from("tasks").select("id, advertiser_id, is_active").neq("type", "video"),
+        ]);
+        if (advs.error) { error = advs.error; break; }
+        const counts: Record<string, { total: number; active: number }> = {};
+        (tks.data || []).forEach((t: any) => {
+          const k = t.advertiser_id || "_none";
+          if (!counts[k]) counts[k] = { total: 0, active: 0 };
+          counts[k].total++;
+          if (t.is_active) counts[k].active++;
+        });
+        data = (advs.data || []).map((a: any) => ({
+          ...a,
+          tasks_count: counts[a.id]?.total || 0,
+          active_count: counts[a.id]?.active || 0,
+        }));
+        break;
+      }
+      case "create_advertiser": {
+        const res = await supabase.from("advertisers").insert({ name: params.name }).select().single();
+        data = res.data; error = res.error;
+        break;
+      }
+      case "update_advertiser": {
+        const res = await supabase.from("advertisers")
+          .update({ name: params.name, updated_at: new Date().toISOString() })
+          .eq("id", params.advertiser_id);
+        data = res.data; error = res.error;
+        break;
+      }
+      case "delete_advertiser": {
+        // Also delete that advertiser's tasks
+        await supabase.from("tasks").delete().eq("advertiser_id", params.advertiser_id);
+        const res = await supabase.from("advertisers").delete().eq("id", params.advertiser_id);
+        data = res.data; error = res.error;
+        break;
+      }
+      case "bulk_toggle_advertiser_tasks": {
+        const res = await supabase.from("tasks")
+          .update({ is_active: params.is_active })
+          .eq("advertiser_id", params.advertiser_id);
+        data = res.data; error = res.error;
+        break;
+      }
+      case "bulk_delete_advertiser_tasks": {
+        const res = await supabase.from("tasks").delete().eq("advertiser_id", params.advertiser_id);
+        data = res.data; error = res.error;
+        break;
+      }
+
       // ===== CONTENT: TASKS =====
       case "get_tasks": {
-        const res = await supabase
-          .from("tasks")
-          .select("*")
-          .order("created_at", { ascending: false });
+        const q = supabase.from("tasks").select("*").order("created_at", { ascending: false });
+        const res = params.advertiser_id
+          ? await supabase.from("tasks").select("*").eq("advertiser_id", params.advertiser_id).order("created_at", { ascending: false })
+          : await q;
         data = res.data;
         error = res.error;
         break;
@@ -179,17 +232,29 @@ Deno.serve(async (req) => {
       case "create_task": {
         const res = await supabase.from("tasks").insert({
           type: params.type,
+          title: params.title || null,
+          advertiser_id: params.advertiser_id || null,
           channel_username: params.channel_username || null,
           channel_id: params.channel_id ? Number(params.channel_id) : null,
           reward_pt: params.reward_pt,
           post_url: params.post_url || null,
-          reaction_emoji: null, // no longer used — check any emoji
+          reaction_emoji: null,
           is_active: true,
           max_completions: params.max_completions || 0,
           hold_days: params.hold_days || 5,
         }).select();
         data = res.data;
         error = res.error;
+        break;
+      }
+      case "update_task": {
+        const patch: Record<string, any> = {};
+        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "hold_days", "type"].forEach((k) => {
+          if (params[k] !== undefined) patch[k] = params[k];
+        });
+        if (params.channel_id !== undefined) patch.channel_id = params.channel_id ? Number(params.channel_id) : null;
+        const res = await supabase.from("tasks").update(patch).eq("id", params.task_id);
+        data = res.data; error = res.error;
         break;
       }
       case "toggle_task": {

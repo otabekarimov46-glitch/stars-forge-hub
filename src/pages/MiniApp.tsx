@@ -11,6 +11,7 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 interface BotTask {
   id: string;
   type: string;
+  title?: string | null;
   channel_username?: string | null;
   post_url?: string | null;
   reward_pt: number;
@@ -532,10 +533,8 @@ export default function MiniApp() {
   };
 
   const taskTitle = (t: BotTask) => {
+    if (t.title && t.title.trim()) return t.title.trim();
     if (t.channel_username) return t.channel_username.startsWith("@") ? t.channel_username : `@${t.channel_username}`;
-    if (t.post_url) {
-      try { return new URL(t.post_url).hostname.replace(/^www\./, ""); } catch { return t.post_url; }
-    }
     return "Задание";
   };
 
