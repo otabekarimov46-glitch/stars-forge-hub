@@ -119,16 +119,17 @@ Deno.serve(async (req) => {
 
         const { data: video } = await supabase
           .from("video_ads")
-          .select("duration_seconds")
+          .select("video_url, duration_seconds")
           .eq("id", video_ad_id)
           .single();
         if (!video) throw new Error("Video not found");
+
+        const dur = await getEffectiveVideoDuration(supabase, video_ad_id, video.video_url, Number(video.duration_seconds));
 
         // Dynamic-hash session: 4 checkpoints at 20/40/60/80% (not 100% to avoid
         // racing with finish_view). Frontend reports them with the secret;
         // server verifies sequence + reasonable timing — but soft, not strict.
         const sessionSecret = crypto.randomUUID() + "." + crypto.randomUUID();
-        const dur = Number(video.duration_seconds);
         const checkpointTimes = [1, 2, 3, 4].map((i) => +(dur * i / 5).toFixed(2));
 
         const { data: view, error } = await supabase
@@ -196,14 +197,14 @@ Deno.serve(async (req) => {
 
         const { data: video } = await supabase
           .from("video_ads")
-          .select("duration_seconds, reward_pt")
+          .select("video_url, duration_seconds, reward_pt")
           .eq("id", view.video_ad_id)
           .single();
         if (!video) throw new Error("Video not found");
 
         const startedAt = new Date(view.started_at).getTime();
         const elapsedSec = (Date.now() - startedAt) / 1000;
-        const dur = Number(video.duration_seconds);
+        const dur = await getEffectiveVideoDuration(supabase, view.video_ad_id, video.video_url, Number(video.duration_seconds));
 
         // ====== Anti-userbot validation (тонкая, не мешает живым) ======
         // Тиры:
