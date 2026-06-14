@@ -71,6 +71,8 @@ export default function MiniApp() {
   const [limitInfo, setLimitInfo] = useState<{ watched: number; limit: number } | null>(null);
   const [turnstileState, setTurnstileState] = useState<"idle" | "running" | "passed" | "failed">("idle");
   const [elapsed, setElapsed] = useState(0); // seconds (float)
+  const [playbackDuration, setPlaybackDuration] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [user, setUser] = useState<UserSnap | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [bonusToast, setBonusToast] = useState<{ kind: "got" | "wait"; bonus?: number; hours?: number } | null>(null);
@@ -93,6 +95,17 @@ export default function MiniApp() {
   const sessionSecretRef = useRef<string | null>(null);
   const checkpointTimesRef = useRef<number[]>([]);
   const checkpointSentRef = useRef<number>(0);
+
+  const syncPlaybackDuration = useCallback((node?: HTMLVideoElement | null) => {
+    const mediaDuration = node?.duration;
+    if (typeof mediaDuration === "number" && Number.isFinite(mediaDuration) && mediaDuration > 0) {
+      setPlaybackDuration(mediaDuration);
+      return mediaDuration;
+    }
+    const fallback = video?.duration_seconds ?? 0;
+    if (fallback > 0) setPlaybackDuration(fallback);
+    return fallback;
+  }, [video]);
 
   // Telegram WebApp init
   useEffect(() => {
@@ -147,6 +160,8 @@ export default function MiniApp() {
       if (!data?.video) { setStatus("no_video"); return; }
       setVideo(data.video);
       setPosterUrl(null);
+      setPlaybackDuration(data.video.duration_seconds);
+      setIsBuffering(false);
       setStatus("ready");
 
     } catch (e: any) {
@@ -155,6 +170,11 @@ export default function MiniApp() {
     }
   }, [telegramId]);
   useEffect(() => { loadVideo(); }, [loadVideo]);
+
+  useEffect(() => {
+    setPlaybackDuration(video?.duration_seconds ?? 0);
+    setIsBuffering(false);
+  }, [video?.id, video?.duration_seconds]);
 
   // Load bot tasks (subscribe / survey / view_post)
   const loadBotTasks = useCallback(() => {
@@ -223,7 +243,7 @@ export default function MiniApp() {
     if (!video || video.media_type === "image") { setPosterUrl(null); return; }
     let cancelled = false;
     const v = document.createElement("video");
-    v.crossOrigin = "anonymous"; v.muted = true; v.preload = "auto"; v.src = video.video_url;
+    v.crossOrigin = "anonymous"; v.muted = true; v.preload = "metadata"; v.src = video.video_url;
     const onSeeked = () => {
       try {
         const c = document.createElement("canvas");
@@ -232,10 +252,13 @@ export default function MiniApp() {
         if (ctx) { ctx.drawImage(v, 0, 0, c.width, c.height); if (!cancelled) setPosterUrl(c.toDataURL("image/jpeg", 0.6)); }
       } catch {}
     };
-    const onMeta = () => { try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch {} };
+    const onMeta = () => {
+      syncPlaybackDuration(v);
+      try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch {}
+    };
     v.addEventListener("loadedmetadata", onMeta); v.addEventListener("seeked", onSeeked);
     return () => { cancelled = true; v.removeEventListener("loadedmetadata", onMeta); v.removeEventListener("seeked", onSeeked); v.src = ""; };
-  }, [video]);
+  }, [syncPlaybackDuration, video]);
 
   // Pause when hidden
   useEffect(() => {
@@ -297,11 +320,14 @@ export default function MiniApp() {
     }
   };
 
-  const finishWatching = async () => {
+  const finishWatching = async (finishedElapsed?: number) => {
     if (!viewId || !telegramId || !video) return;
-    if (elapsed < video.duration_seconds - 0.25) return;
+    const effectiveDuration = videoRef.current?.duration || playbackDuration || video.duration_seconds;
+    const effectiveElapsed = typeof finishedElapsed === "number" ? finishedElapsed : elapsed;
+    if (effectiveElapsed < effectiveDuration - 0.25) return;
     try {
       finishedRef.current = true;
+      setIsBuffering(false);
       stopImageTimer();
       try { videoRef.current?.pause(); } catch {}
       const res = await miniAppApi("finish_view", {
@@ -329,6 +355,8 @@ export default function MiniApp() {
     if (!nextVideo) { loadVideo(); return; }
     setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
     setViewId(null); setElapsed(0); finishedRef.current = false;
+    setPlaybackDuration(nextVideo.duration_seconds);
+    setIsBuffering(false);
     setLastFinished(null);
     setStatus("ready");
 
@@ -350,7 +378,7 @@ export default function MiniApp() {
   useEffect(() => {
     // For images only — videos finish via onEnded to avoid pausing mid-buffer.
     if (status === "playing" && video && video.media_type === "image"
-        && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching();
+        && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching(elapsed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, status, video]);
 
@@ -361,7 +389,9 @@ export default function MiniApp() {
   const bonusCountdownMs = Math.max(0, bonusReadyAt - now);
   const bonusClaimed = bonusReadyAt > now;
 
-  const progressPercent = video ? Math.min(100, (elapsed / video.duration_seconds) * 100) : 0;
+  const progressPercent = video
+    ? Math.min(100, (elapsed / Math.max(playbackDuration || video.duration_seconds, 0.1)) * 100)
+    : 0;
 
   // ===== Locked screen with invisible Turnstile =====
   const turnstileRef = useRef<HTMLDivElement>(null);
@@ -496,37 +526,41 @@ export default function MiniApp() {
           ) : (
             <video
               ref={videoRef} src={video.video_url} poster={posterUrl || undefined}
-              className="max-w-full max-h-full" playsInline autoPlay preload="auto"
+              className="max-w-full max-h-full" playsInline autoPlay preload="metadata"
               controls={false} disablePictureInPicture
               onContextMenu={(e) => e.preventDefault()}
-              onTimeUpdate={(e) => setElapsed(e.currentTarget.currentTime)}
+              onLoadedMetadata={(e) => {
+                syncPlaybackDuration(e.currentTarget);
+                setIsBuffering(false);
+              }}
+              onDurationChange={(e) => {
+                syncPlaybackDuration(e.currentTarget);
+              }}
+              onCanPlay={() => setIsBuffering(false)}
+              onPlaying={() => setIsBuffering(false)}
+              onTimeUpdate={(e) => {
+                setElapsed(e.currentTarget.currentTime);
+                if (isBuffering) setIsBuffering(false);
+              }}
               onEnded={() => {
-                if (video) setElapsed(video.duration_seconds);
-                if (!finishedRef.current) finishWatching();
+                const naturalDuration = syncPlaybackDuration(videoRef.current);
+                setElapsed(naturalDuration || video.duration_seconds);
+                if (!finishedRef.current) finishWatching(naturalDuration || video.duration_seconds);
               }}
-              onStalled={(e) => { e.currentTarget.play().catch(() => {}); }}
-              onWaiting={(e) => {
-                const el = e.currentTarget;
-                // Nudge the buffer if stuck for >1.5s at the same position
-                const startedAt = el.currentTime;
-                window.setTimeout(() => {
-                  if (!videoRef.current || finishedRef.current) return;
-                  if (Math.abs(videoRef.current.currentTime - startedAt) < 0.05 && videoRef.current.paused === false) {
-                    try { videoRef.current.currentTime = Math.min(startedAt + 0.05, (video?.duration_seconds || startedAt)); } catch {}
-                    videoRef.current.play().catch(() => {});
-                  }
-                }, 1500);
-              }}
+              onStalled={() => setIsBuffering(true)}
+              onSuspend={() => setIsBuffering(false)}
+              onWaiting={() => setIsBuffering(true)}
+              onError={() => setIsBuffering(false)}
             />
           )}
         </div>
         <div className="p-4 bg-black/80 backdrop-blur space-y-2">
           <div className="flex justify-between text-xs text-white">
-            <span className="tabular-nums">{Math.min(video.duration_seconds, elapsed).toFixed(1)}с / {video.duration_seconds}с</span>
+            <span className="tabular-nums">{Math.min(playbackDuration || video.duration_seconds, elapsed).toFixed(1)}с / {(playbackDuration || video.duration_seconds).toFixed(1)}с</span>
             <span className="text-yellow-300">+{video.reward_pt} PT</span>
           </div>
           <Progress value={progressPercent} className="h-1.5" />
-          <p className="text-center text-[11px] text-white/70">Не закрывайте — иначе просмотр не засчитается</p>
+          <p className="text-center text-[11px] text-white/70">{isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}</p>
         </div>
       </div>
     );

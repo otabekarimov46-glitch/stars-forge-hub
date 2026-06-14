@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const MP4_HEADER_SCAN_BYTES = 2 * 1024 * 1024;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -117,16 +119,17 @@ Deno.serve(async (req) => {
 
         const { data: video } = await supabase
           .from("video_ads")
-          .select("duration_seconds")
+          .select("video_url, duration_seconds")
           .eq("id", video_ad_id)
           .single();
         if (!video) throw new Error("Video not found");
+
+        const dur = await getEffectiveVideoDuration(supabase, video_ad_id, video.video_url, Number(video.duration_seconds));
 
         // Dynamic-hash session: 4 checkpoints at 20/40/60/80% (not 100% to avoid
         // racing with finish_view). Frontend reports them with the secret;
         // server verifies sequence + reasonable timing — but soft, not strict.
         const sessionSecret = crypto.randomUUID() + "." + crypto.randomUUID();
-        const dur = Number(video.duration_seconds);
         const checkpointTimes = [1, 2, 3, 4].map((i) => +(dur * i / 5).toFixed(2));
 
         const { data: view, error } = await supabase
@@ -194,14 +197,14 @@ Deno.serve(async (req) => {
 
         const { data: video } = await supabase
           .from("video_ads")
-          .select("duration_seconds, reward_pt")
+          .select("video_url, duration_seconds, reward_pt")
           .eq("id", view.video_ad_id)
           .single();
         if (!video) throw new Error("Video not found");
 
         const startedAt = new Date(view.started_at).getTime();
         const elapsedSec = (Date.now() - startedAt) / 1000;
-        const dur = Number(video.duration_seconds);
+        const dur = await getEffectiveVideoDuration(supabase, view.video_ad_id, video.video_url, Number(video.duration_seconds));
 
         // ====== Anti-userbot validation (тонкая, не мешает живым) ======
         // Тиры:
@@ -595,6 +598,83 @@ async function recordIp(supabase: any, userId: string, ip: string) {
     await supabase.from("user_ips")
       .insert({ user_id: userId, ip_address: ip });
   }
+}
+
+async function getEffectiveVideoDuration(supabase: any, videoId: string, videoUrl: string | null, fallbackSeconds: number) {
+  const fallback = Number.isFinite(fallbackSeconds) && fallbackSeconds > 0 ? fallbackSeconds : 1;
+  if (!videoUrl || !/\.mp4($|\?)/i.test(videoUrl)) return fallback;
+
+  try {
+    const duration = await readMp4Duration(videoUrl);
+    if (duration && Math.abs(duration - fallback) > 0.75) {
+      const normalized = Math.max(1, Math.round(duration));
+      await supabase.from("video_ads").update({ duration_seconds: normalized }).eq("id", videoId);
+      return duration;
+    }
+    return duration || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function readMp4Duration(url: string) {
+  const res = await fetch(url, { headers: { Range: `bytes=0-${MP4_HEADER_SCAN_BYTES - 1}` } });
+  if (!res.ok) return null;
+
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const moov = findBox(bytes, 0, bytes.length, "moov");
+  if (!moov) return null;
+  const mvhd = findBox(bytes, moov.start, moov.end, "mvhd");
+  if (!mvhd) return null;
+  return parseMvhdDuration(bytes, mvhd.start, mvhd.end);
+}
+
+function findBox(bytes: Uint8Array, start: number, end: number, type: string) {
+  let offset = start;
+  while (offset + 8 <= end) {
+    let size = readUint32(bytes, offset);
+    const name = readType(bytes, offset + 4);
+    let header = 8;
+    if (size === 1) {
+      if (offset + 16 > end) return null;
+      size = Number(readUint64(bytes, offset + 8));
+      header = 16;
+    } else if (size === 0) {
+      size = end - offset;
+    }
+    if (!size || size < header) return null;
+    const boxStart = offset + header;
+    const boxEnd = Math.min(end, offset + size);
+    if (name === type) return { start: boxStart, end: boxEnd };
+    offset += size;
+  }
+  return null;
+}
+
+function parseMvhdDuration(bytes: Uint8Array, start: number, end: number) {
+  if (start + 20 > end) return null;
+  const version = bytes[start];
+  if (version === 1) {
+    if (start + 32 > end) return null;
+    const timescale = readUint32(bytes, start + 20);
+    const duration = Number(readUint64(bytes, start + 24));
+    return timescale > 0 ? duration / timescale : null;
+  }
+  const timescale = readUint32(bytes, start + 12);
+  const duration = readUint32(bytes, start + 16);
+  return timescale > 0 ? duration / timescale : null;
+}
+
+function readUint32(bytes: Uint8Array, offset: number) {
+  return (bytes[offset] * 2 ** 24) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3];
+}
+
+function readUint64(bytes: Uint8Array, offset: number) {
+  return (BigInt(readUint32(bytes, offset)) << 32n) + BigInt(readUint32(bytes, offset + 4));
+}
+
+function readType(bytes: Uint8Array, offset: number) {
+  return String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
 }
 
 function jsonResponse(body: any, status = 200) {
