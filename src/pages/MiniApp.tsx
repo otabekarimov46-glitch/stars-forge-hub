@@ -500,7 +500,23 @@ export default function MiniApp() {
               controls={false} disablePictureInPicture
               onContextMenu={(e) => e.preventDefault()}
               onTimeUpdate={(e) => setElapsed(e.currentTarget.currentTime)}
-              onEnded={(e) => setElapsed(e.currentTarget.duration || video.duration_seconds)}
+              onEnded={() => {
+                if (video) setElapsed(video.duration_seconds);
+                if (!finishedRef.current) finishWatching();
+              }}
+              onStalled={(e) => { e.currentTarget.play().catch(() => {}); }}
+              onWaiting={(e) => {
+                const el = e.currentTarget;
+                // Nudge the buffer if stuck for >1.5s at the same position
+                const startedAt = el.currentTime;
+                window.setTimeout(() => {
+                  if (!videoRef.current || finishedRef.current) return;
+                  if (Math.abs(videoRef.current.currentTime - startedAt) < 0.05 && videoRef.current.paused === false) {
+                    try { videoRef.current.currentTime = Math.min(startedAt + 0.05, (video?.duration_seconds || startedAt)); } catch {}
+                    videoRef.current.play().catch(() => {});
+                  }
+                }, 1500);
+              }}
             />
           )}
         </div>
