@@ -243,7 +243,7 @@ export default function MiniApp() {
     if (!video || video.media_type === "image") { setPosterUrl(null); return; }
     let cancelled = false;
     const v = document.createElement("video");
-    v.crossOrigin = "anonymous"; v.muted = true; v.preload = "auto"; v.src = video.video_url;
+    v.crossOrigin = "anonymous"; v.muted = true; v.preload = "metadata"; v.src = video.video_url;
     const onSeeked = () => {
       try {
         const c = document.createElement("canvas");
@@ -252,10 +252,13 @@ export default function MiniApp() {
         if (ctx) { ctx.drawImage(v, 0, 0, c.width, c.height); if (!cancelled) setPosterUrl(c.toDataURL("image/jpeg", 0.6)); }
       } catch {}
     };
-    const onMeta = () => { try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch {} };
+    const onMeta = () => {
+      syncPlaybackDuration(v);
+      try { v.currentTime = Math.min(0.1, (v.duration || 1) / 2); } catch {}
+    };
     v.addEventListener("loadedmetadata", onMeta); v.addEventListener("seeked", onSeeked);
     return () => { cancelled = true; v.removeEventListener("loadedmetadata", onMeta); v.removeEventListener("seeked", onSeeked); v.src = ""; };
-  }, [video]);
+  }, [syncPlaybackDuration, video]);
 
   // Pause when hidden
   useEffect(() => {
