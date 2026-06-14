@@ -168,22 +168,27 @@ Deno.serve(async (req) => {
 
       // ===== ADVERTISERS =====
       case "get_advertisers": {
-        const [advs, tks] = await Promise.all([
+        const [advs, tks, vds] = await Promise.all([
           supabase.from("advertisers").select("*").order("created_at", { ascending: false }),
           supabase.from("tasks").select("id, advertiser_id, is_active").neq("type", "video"),
+          supabase.from("video_ads").select("id, advertiser_id, is_active"),
         ]);
         if (advs.error) { error = advs.error; break; }
-        const counts: Record<string, { total: number; active: number }> = {};
-        (tks.data || []).forEach((t: any) => {
-          const k = t.advertiser_id || "_none";
-          if (!counts[k]) counts[k] = { total: 0, active: 0 };
+        const counts: Record<string, { total: number; active: number; tasks: number; videos: number }> = {};
+        const bump = (k: string, active: boolean, kind: "tasks" | "videos") => {
+          if (!counts[k]) counts[k] = { total: 0, active: 0, tasks: 0, videos: 0 };
           counts[k].total++;
-          if (t.is_active) counts[k].active++;
-        });
+          counts[k][kind]++;
+          if (active) counts[k].active++;
+        };
+        (tks.data || []).forEach((t: any) => bump(t.advertiser_id || "_none", t.is_active, "tasks"));
+        (vds.data || []).forEach((v: any) => bump(v.advertiser_id || "_none", v.is_active, "videos"));
         data = (advs.data || []).map((a: any) => ({
           ...a,
           tasks_count: counts[a.id]?.total || 0,
           active_count: counts[a.id]?.active || 0,
+          bot_tasks_count: counts[a.id]?.tasks || 0,
+          video_count: counts[a.id]?.videos || 0,
         }));
         break;
       }
@@ -200,24 +205,30 @@ Deno.serve(async (req) => {
         break;
       }
       case "delete_advertiser": {
-        // Also delete that advertiser's tasks
+        // Cascade: delete advertiser's tasks AND video ads
         await supabase.from("tasks").delete().eq("advertiser_id", params.advertiser_id);
+        await supabase.from("video_ads").delete().eq("advertiser_id", params.advertiser_id);
         const res = await supabase.from("advertisers").delete().eq("id", params.advertiser_id);
         data = res.data; error = res.error;
         break;
       }
       case "bulk_toggle_advertiser_tasks": {
-        const res = await supabase.from("tasks")
+        await supabase.from("tasks")
+          .update({ is_active: params.is_active })
+          .eq("advertiser_id", params.advertiser_id);
+        const res = await supabase.from("video_ads")
           .update({ is_active: params.is_active })
           .eq("advertiser_id", params.advertiser_id);
         data = res.data; error = res.error;
         break;
       }
       case "bulk_delete_advertiser_tasks": {
-        const res = await supabase.from("tasks").delete().eq("advertiser_id", params.advertiser_id);
+        await supabase.from("tasks").delete().eq("advertiser_id", params.advertiser_id);
+        const res = await supabase.from("video_ads").delete().eq("advertiser_id", params.advertiser_id);
         data = res.data; error = res.error;
         break;
       }
+
 
       // ===== CONTENT: TASKS =====
       case "get_tasks": {
