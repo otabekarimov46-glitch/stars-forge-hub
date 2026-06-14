@@ -317,10 +317,11 @@ export default function MiniApp() {
     }
   };
 
-  const finishWatching = async () => {
+  const finishWatching = async (finishedElapsed?: number) => {
     if (!viewId || !telegramId || !video) return;
-    const effectiveDuration = playbackDuration || video.duration_seconds;
-    if (elapsed < effectiveDuration - 0.25) return;
+    const effectiveDuration = videoRef.current?.duration || playbackDuration || video.duration_seconds;
+    const effectiveElapsed = typeof finishedElapsed === "number" ? finishedElapsed : elapsed;
+    if (effectiveElapsed < effectiveDuration - 0.25) return;
     try {
       finishedRef.current = true;
       setIsBuffering(false);
@@ -374,7 +375,7 @@ export default function MiniApp() {
   useEffect(() => {
     // For images only — videos finish via onEnded to avoid pausing mid-buffer.
     if (status === "playing" && video && video.media_type === "image"
-        && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching();
+        && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching(elapsed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, status, video]);
 
@@ -541,7 +542,7 @@ export default function MiniApp() {
               onEnded={() => {
                 const naturalDuration = syncPlaybackDuration(videoRef.current);
                 setElapsed(naturalDuration || video.duration_seconds);
-                if (!finishedRef.current) finishWatching();
+                if (!finishedRef.current) finishWatching(naturalDuration || video.duration_seconds);
               }}
               onStalled={() => setIsBuffering(true)}
               onSuspend={() => setIsBuffering(false)}
