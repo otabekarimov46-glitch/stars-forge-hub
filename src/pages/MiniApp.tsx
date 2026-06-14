@@ -11,6 +11,7 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 interface BotTask {
   id: string;
   type: string;
+  title?: string | null;
   channel_username?: string | null;
   post_url?: string | null;
   reward_pt: number;
