@@ -348,7 +348,9 @@ export default function MiniApp() {
   }, [elapsed, status, viewId, telegramId]);
 
   useEffect(() => {
-    if (status === "playing" && video && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching();
+    // For images only — videos finish via onEnded to avoid pausing mid-buffer.
+    if (status === "playing" && video && video.media_type === "image"
+        && elapsed >= video.duration_seconds - 0.05 && !finishedRef.current) finishWatching();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, status, video]);
 
