@@ -241,17 +241,20 @@ export default function MiniApp() {
   useEffect(() => {
     if (status !== "playing") return;
     const onVis = () => {
-      if (document.hidden) { videoRef.current?.pause(); stopImageTimer(); }
-      else if (video && elapsed < video.duration_seconds) {
-        videoRef.current?.play().catch(() => {});
+      const v = videoRef.current;
+      if (document.hidden) { try { v?.pause(); } catch {} stopImageTimer(); }
+      else if (video) {
         if (video.media_type === "image") startImageTimer();
+        else if (v && !finishedRef.current && v.currentTime < (video.duration_seconds - 0.05)) {
+          v.play().catch(() => {});
+        }
       }
     };
-    const onBlur = () => { videoRef.current?.pause(); stopImageTimer(); };
+    const onBlur = () => { try { videoRef.current?.pause(); } catch {} stopImageTimer(); };
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("blur", onBlur);
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("blur", onBlur); };
-  }, [status, video, elapsed, startImageTimer, stopImageTimer]);
+  }, [status, video, startImageTimer, stopImageTimer]);
 
   const claimDailyBonus = async () => {
     if (!telegramId) return;
