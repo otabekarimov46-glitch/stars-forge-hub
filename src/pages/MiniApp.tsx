@@ -385,7 +385,9 @@ export default function MiniApp() {
   const bonusCountdownMs = Math.max(0, bonusReadyAt - now);
   const bonusClaimed = bonusReadyAt > now;
 
-  const progressPercent = video ? Math.min(100, (elapsed / video.duration_seconds) * 100) : 0;
+  const progressPercent = video
+    ? Math.min(100, (elapsed / Math.max(playbackDuration || video.duration_seconds, 0.1)) * 100)
+    : 0;
 
   // ===== Locked screen with invisible Turnstile =====
   const turnstileRef = useRef<HTMLDivElement>(null);
