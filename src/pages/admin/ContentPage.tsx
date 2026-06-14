@@ -15,6 +15,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 
+async function normalizeVideoFile(file: File): Promise<File> {
+  if (!file.type.startsWith("video/")) return file;
+  const ffmpegFactory = (window as any).FFmpegWASM;
+  if (!ffmpegFactory?.createFFmpeg || !ffmpegFactory?.fetchFile) return file;
+
+  const { createFFmpeg, fetchFile } = ffmpegFactory;
+  const ffmpeg = createFFmpeg({ log: false });
+  if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+  const inputName = `input_${Date.now()}.mp4`;
+  const outputName = `normalized_${Date.now()}.mp4`;
+  ffmpeg.FS("writeFile", inputName, await fetchFile(file));
+  await ffmpeg.run(
+    "-i", inputName,
+    "-movflags", "+faststart",
+    "-c:v", "libx264",
+    "-preset", "veryfast",
+    "-pix_fmt", "yuv420p",
+    "-profile:v", "main",
+    "-c:a", "aac",
+    "-b:a", "128k",
+    "-ar", "48000",
+    outputName,
+  );
+
+  const data = ffmpeg.FS("readFile", outputName);
+  ffmpeg.FS("unlink", inputName);
+  ffmpeg.FS("unlink", outputName);
+  return new File([data.buffer], file.name.replace(/\.[^.]+$/, "") + "_normalized.mp4", { type: "video/mp4" });
+}
+
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
   view_post: { icon: Eye, color: "bg-brand-green/10 text-brand-green" },
