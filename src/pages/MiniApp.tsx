@@ -160,6 +160,8 @@ export default function MiniApp() {
       if (!data?.video) { setStatus("no_video"); return; }
       setVideo(data.video);
       setPosterUrl(null);
+      setPlaybackDuration(data.video.duration_seconds);
+      setIsBuffering(false);
       setStatus("ready");
 
     } catch (e: any) {
@@ -168,6 +170,11 @@ export default function MiniApp() {
     }
   }, [telegramId]);
   useEffect(() => { loadVideo(); }, [loadVideo]);
+
+  useEffect(() => {
+    setPlaybackDuration(video?.duration_seconds ?? 0);
+    setIsBuffering(false);
+  }, [video?.id, video?.duration_seconds]);
 
   // Load bot tasks (subscribe / survey / view_post)
   const loadBotTasks = useCallback(() => {
