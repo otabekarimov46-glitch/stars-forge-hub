@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical, Newspaper, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -16,12 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
-  view_post: { icon: Eye, color: "bg-brand-green/10 text-brand-green" },
+  view_post: { icon: Newspaper, color: "bg-brand-green/10 text-brand-green" },
+  view_story: { icon: Camera, color: "bg-brand-gold/10 text-brand-gold" },
   survey: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
   video: { icon: Film, color: "bg-brand-purple/10 text-brand-purple" },
 };
 
-type ContentKind = "video" | "subscribe" | "view_post" | "survey";
+type ContentKind = "video" | "subscribe" | "view_post" | "view_story" | "survey";
 
 export default function ContentPage() {
   const { t } = useTranslation();
