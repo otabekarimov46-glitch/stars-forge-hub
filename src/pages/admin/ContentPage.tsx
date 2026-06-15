@@ -265,7 +265,8 @@ export default function ContentPage() {
   const taskTypeLabel = (type: string) => {
     const map: Record<string, string> = {
       subscribe: t("task.subscribe"),
-      view_post: t("task.view_post"),
+      view_post: "Посмотреть пост",
+      view_story: "Посмотреть историю",
       survey: t("task.survey"),
       video: "Видеореклама",
     };
