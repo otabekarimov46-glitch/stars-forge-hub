@@ -86,6 +86,7 @@ export default function ContentPage() {
       post_url: ta.post_url || "",
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
+      min_seconds_away: String(ta.min_seconds_away ?? "2"),
     });
     setContentDialogOpen(true);
   };
