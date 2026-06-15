@@ -820,8 +820,9 @@ export default function MiniApp() {
       <section className="px-4 mt-3 pb-8 space-y-2.5">
         <div className="max-w-md mx-auto space-y-2.5">
           {categoryTile("subscribe")}
-          {categoryTile("survey")}
+          {categoryTile("view_story")}
           {categoryTile("view_post")}
+          {categoryTile("survey")}
         </div>
       </section>
 
