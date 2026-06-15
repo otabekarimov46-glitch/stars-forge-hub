@@ -517,8 +517,9 @@ Deno.serve(async (req) => {
               failReason = "network_error";
             }
           }
-        } else if (task.type === "view_post" || task.type === "survey") {
-          // Time-based check: user must have opened the link >= 4s ago (within last hour)
+        } else if (task.type === "view_post" || task.type === "view_story" || task.type === "survey") {
+          // Time-based check: user must have been away for >= min_seconds_away (default 2s), within last hour.
+          const minMs = Math.max(1, Number(task.min_seconds_away ?? 2)) * 1000;
           const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
           const { data: started } = await supabase
             .from("logs_activity")
@@ -532,7 +533,7 @@ Deno.serve(async (req) => {
           const startedAt = started?.[0]?.created_at;
           if (!startedAt) {
             failReason = "not_started";
-          } else if (Date.now() - new Date(startedAt).getTime() < 4000) {
+          } else if (Date.now() - new Date(startedAt).getTime() < minMs) {
             failReason = "too_fast";
           } else {
             completed = true;
