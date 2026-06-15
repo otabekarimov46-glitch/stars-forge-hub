@@ -106,6 +106,7 @@ export default function ContentPage() {
           post_url: taskForm.post_url || null,
           max_completions: Number(taskForm.max_completions) || 0,
           hold_days: Number(taskForm.hold_days) || 5,
+          min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
         });
         toast.success("Задание обновлено");
       } else {
@@ -119,6 +120,7 @@ export default function ContentPage() {
           post_url: taskForm.post_url || null,
           max_completions: Number(taskForm.max_completions) || 0,
           hold_days: Number(taskForm.hold_days) || 5,
+          min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
         });
         toast.success(t("content.taskCreated"));
       }
