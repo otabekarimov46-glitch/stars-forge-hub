@@ -550,6 +550,13 @@ export default function ContentPage() {
                             <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
                             <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
                           </div>
+                          {showMinSeconds && (
+                            <div>
+                              <Label>Сколько секунд пользователь должен пробыть вне Mini App</Label>
+                              <Input className="rounded-xl" type="number" min={1} max={600} value={taskForm.min_seconds_away} onChange={e => setTaskForm((f: any) => ({ ...f, min_seconds_away: e.target.value }))} />
+                              <p className="text-xs text-muted-foreground mt-1">Если вернулся раньше — задание не засчитывается, кнопка вернётся. Если вернулся во время или позже — задание выполнено.</p>
+                            </div>
+                          )}
                           <Button onClick={submitTask} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
                             {editingTaskId ? "Сохранить" : t("common.create")}
                           </Button>
