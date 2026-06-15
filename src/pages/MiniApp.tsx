@@ -594,7 +594,7 @@ export default function MiniApp() {
     return "Задание";
   };
 
-  const categoryTile = (kind: "subscribe" | "survey" | "view_post") => {
+  const categoryTile = (kind: "subscribe" | "survey" | "view_post" | "view_story") => {
     const cfg = SHEET_CONFIG[kind];
     const Icon = cfg.icon;
     const list = (tasksByType[kind] || []).filter((t) => taskState[t.id] !== "done");
