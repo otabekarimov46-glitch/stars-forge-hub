@@ -462,7 +462,8 @@ export default function ContentPage() {
                           <SelectContent>
                             <SelectItem value="video">🎬 Видеореклама (Mini App)</SelectItem>
                             <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
-                            <SelectItem value="view_post">{t("task.view_post")}</SelectItem>
+                            <SelectItem value="view_post">📰 Посмотреть пост</SelectItem>
+                            <SelectItem value="view_story">📸 Посмотреть историю</SelectItem>
                             <SelectItem value="survey">{t("task.survey")}</SelectItem>
                           </SelectContent>
                         </Select>
