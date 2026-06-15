@@ -285,7 +285,8 @@ export default function ContentPage() {
   const totalAdvItems = advTasks.length + advVideos.length;
 
   const showChannelFields = contentKind === "subscribe";
-  const showPostUrl = contentKind === "view_post" || contentKind === "survey";
+  const showPostUrl = contentKind === "view_post" || contentKind === "view_story" || contentKind === "survey";
+  const showMinSeconds = contentKind === "view_post" || contentKind === "view_story";
   const isVideoKind = contentKind === "video";
 
   return (
