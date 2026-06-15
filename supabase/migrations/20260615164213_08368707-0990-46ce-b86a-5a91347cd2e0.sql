@@ -1,0 +1,2 @@
+ALTER TYPE task_type ADD VALUE IF NOT EXISTS 'view_story';
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS min_seconds_away INTEGER NOT NULL DEFAULT 2;
