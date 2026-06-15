@@ -231,7 +231,7 @@ export default function MiniApp() {
   // to keep hook order stable across renders. Tasks completed in this session
   // stay visible (with a check) until the sheet closes and the list refreshes.
   const tasksByType = useMemo(() => {
-    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
+    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [], view_story: [] };
     for (const t of botTasks) {
       if (m[t.type]) m[t.type].push(t);
     }
