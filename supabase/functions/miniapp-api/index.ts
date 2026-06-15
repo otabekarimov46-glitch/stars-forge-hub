@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
         }
         const { data: tasks } = await supabase
           .from("tasks")
-          .select("id, type, title, channel_username, channel_id, post_url, reward_pt, max_completions, current_completions")
+          .select("id, type, title, channel_username, channel_id, post_url, reward_pt, max_completions, current_completions, min_seconds_away")
           .eq("is_active", true)
           .neq("type", "video")
           .order("created_at", { ascending: false });
@@ -472,7 +472,7 @@ Deno.serve(async (req) => {
 
         const { data: task } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away")
           .eq("id", task_id).single();
         if (!task || !task.is_active) throw new Error("Task unavailable");
         if (task.max_completions && task.current_completions >= task.max_completions) {
@@ -517,8 +517,9 @@ Deno.serve(async (req) => {
               failReason = "network_error";
             }
           }
-        } else if (task.type === "view_post" || task.type === "survey") {
-          // Time-based check: user must have opened the link >= 4s ago (within last hour)
+        } else if (task.type === "view_post" || task.type === "view_story" || task.type === "survey") {
+          // Time-based check: user must have been away for >= min_seconds_away (default 2s), within last hour.
+          const minMs = Math.max(1, Number(task.min_seconds_away ?? 2)) * 1000;
           const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
           const { data: started } = await supabase
             .from("logs_activity")
@@ -532,7 +533,7 @@ Deno.serve(async (req) => {
           const startedAt = started?.[0]?.created_at;
           if (!startedAt) {
             failReason = "not_started";
-          } else if (Date.now() - new Date(startedAt).getTime() < 4000) {
+          } else if (Date.now() - new Date(startedAt).getTime() < minMs) {
             failReason = "too_fast";
           } else {
             completed = true;

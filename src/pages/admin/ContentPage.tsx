@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical, Newspaper, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -16,12 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
-  view_post: { icon: Eye, color: "bg-brand-green/10 text-brand-green" },
+  view_post: { icon: Newspaper, color: "bg-brand-green/10 text-brand-green" },
+  view_story: { icon: Camera, color: "bg-brand-gold/10 text-brand-gold" },
   survey: { icon: Heart, color: "bg-brand-gold/10 text-brand-gold" },
   video: { icon: Film, color: "bg-brand-purple/10 text-brand-purple" },
 };
 
-type ContentKind = "video" | "subscribe" | "view_post" | "survey";
+type ContentKind = "video" | "subscribe" | "view_post" | "view_story" | "survey";
 
 export default function ContentPage() {
   const { t } = useTranslation();
@@ -33,7 +34,7 @@ export default function ContentPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5" };
+  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2" };
   const emptyVideoForm = { title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
 
   const [contentDialogOpen, setContentDialogOpen] = useState(false);
@@ -85,6 +86,7 @@ export default function ContentPage() {
       post_url: ta.post_url || "",
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
+      min_seconds_away: String(ta.min_seconds_away ?? "2"),
     });
     setContentDialogOpen(true);
   };
@@ -104,6 +106,7 @@ export default function ContentPage() {
           post_url: taskForm.post_url || null,
           max_completions: Number(taskForm.max_completions) || 0,
           hold_days: Number(taskForm.hold_days) || 5,
+          min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
         });
         toast.success("Задание обновлено");
       } else {
@@ -117,6 +120,7 @@ export default function ContentPage() {
           post_url: taskForm.post_url || null,
           max_completions: Number(taskForm.max_completions) || 0,
           hold_days: Number(taskForm.hold_days) || 5,
+          min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
         });
         toast.success(t("content.taskCreated"));
       }
@@ -261,7 +265,8 @@ export default function ContentPage() {
   const taskTypeLabel = (type: string) => {
     const map: Record<string, string> = {
       subscribe: t("task.subscribe"),
-      view_post: t("task.view_post"),
+      view_post: "Посмотреть пост",
+      view_story: "Посмотреть историю",
       survey: t("task.survey"),
       video: "Видеореклама",
     };
@@ -280,7 +285,8 @@ export default function ContentPage() {
   const totalAdvItems = advTasks.length + advVideos.length;
 
   const showChannelFields = contentKind === "subscribe";
-  const showPostUrl = contentKind === "view_post" || contentKind === "survey";
+  const showPostUrl = contentKind === "view_post" || contentKind === "view_story" || contentKind === "survey";
+  const showMinSeconds = contentKind === "view_post" || contentKind === "view_story";
   const isVideoKind = contentKind === "video";
 
   return (
@@ -456,7 +462,8 @@ export default function ContentPage() {
                           <SelectContent>
                             <SelectItem value="video">🎬 Видеореклама (Mini App)</SelectItem>
                             <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
-                            <SelectItem value="view_post">{t("task.view_post")}</SelectItem>
+                            <SelectItem value="view_post">📰 Посмотреть пост</SelectItem>
+                            <SelectItem value="view_story">📸 Посмотреть историю</SelectItem>
                             <SelectItem value="survey">{t("task.survey")}</SelectItem>
                           </SelectContent>
                         </Select>
@@ -543,6 +550,13 @@ export default function ContentPage() {
                             <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
                             <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
                           </div>
+                          {showMinSeconds && (
+                            <div>
+                              <Label>Сколько секунд пользователь должен пробыть вне Mini App</Label>
+                              <Input className="rounded-xl" type="number" min={1} max={600} value={taskForm.min_seconds_away} onChange={e => setTaskForm((f: any) => ({ ...f, min_seconds_away: e.target.value }))} />
+                              <p className="text-xs text-muted-foreground mt-1">Если вернулся раньше — задание не засчитывается, кнопка вернётся. Если вернулся во время или позже — задание выполнено.</p>
+                            </div>
+                          )}
                           <Button onClick={submitTask} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
                             {editingTaskId ? "Сохранить" : t("common.create")}
                           </Button>

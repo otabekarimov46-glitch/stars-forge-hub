@@ -253,6 +253,7 @@ Deno.serve(async (req) => {
           is_active: true,
           max_completions: params.max_completions || 0,
           hold_days: params.hold_days || 5,
+          min_seconds_away: params.min_seconds_away ?? 2,
         }).select();
         data = res.data;
         error = res.error;
@@ -260,7 +261,7 @@ Deno.serve(async (req) => {
       }
       case "update_task": {
         const patch: Record<string, any> = {};
-        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "hold_days", "type"].forEach((k) => {
+        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "hold_days", "type", "min_seconds_away"].forEach((k) => {
           if (params[k] !== undefined) patch[k] = params[k];
         });
         if (params.channel_id !== undefined) patch.channel_id = params.channel_id ? Number(params.channel_id) : null;

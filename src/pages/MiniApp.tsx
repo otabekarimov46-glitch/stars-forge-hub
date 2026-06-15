@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Eye, ChevronRight, X } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
@@ -87,7 +87,7 @@ export default function MiniApp() {
 
   // Bot tasks for category sheets
   const [botTasks, setBotTasks] = useState<BotTask[]>([]);
-  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post">(null);
+  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post" | "view_story">(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -231,7 +231,7 @@ export default function MiniApp() {
   // to keep hook order stable across renders. Tasks completed in this session
   // stay visible (with a check) until the sheet closes and the list refreshes.
   const tasksByType = useMemo(() => {
-    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [] };
+    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [], view_story: [] };
     for (const t of botTasks) {
       if (m[t.type]) m[t.type].push(t);
     }
@@ -573,9 +573,10 @@ export default function MiniApp() {
 
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
-    subscribe: { title: "Подписаться на канал", icon: Send, empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
-    survey:    { title: "Пройти опрос",         icon: ClipboardList, empty: "Пока нет доступных опросов", ctaLabel: "Пройти" },
-    view_post: { title: "Посмотреть публикацию", icon: Eye, empty: "Пока нет публикаций", ctaLabel: "Открыть" },
+    subscribe:  { title: "Подписаться на канал",  icon: Send,          empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
+    survey:     { title: "Пройти опрос",          icon: ClipboardList, empty: "Пока нет доступных опросов",     ctaLabel: "Пройти" },
+    view_story: { title: "Посмотреть историю",    icon: Camera,        empty: "Пока нет историй",                ctaLabel: "Открыть" },
+    view_post:  { title: "Посмотреть пост",       icon: Newspaper,     empty: "Пока нет публикаций",             ctaLabel: "Открыть" },
   };
 
   const taskLink = (t: BotTask) => {
@@ -593,7 +594,7 @@ export default function MiniApp() {
     return "Задание";
   };
 
-  const categoryTile = (kind: "subscribe" | "survey" | "view_post") => {
+  const categoryTile = (kind: "subscribe" | "survey" | "view_post" | "view_story") => {
     const cfg = SHEET_CONFIG[kind];
     const Icon = cfg.icon;
     const list = (tasksByType[kind] || []).filter((t) => taskState[t.id] !== "done");
@@ -819,8 +820,9 @@ export default function MiniApp() {
       <section className="px-4 mt-3 pb-8 space-y-2.5">
         <div className="max-w-md mx-auto space-y-2.5">
           {categoryTile("subscribe")}
-          {categoryTile("survey")}
+          {categoryTile("view_story")}
           {categoryTile("view_post")}
+          {categoryTile("survey")}
         </div>
       </section>
 

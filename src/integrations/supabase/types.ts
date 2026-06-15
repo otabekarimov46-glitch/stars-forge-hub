@@ -215,6 +215,7 @@ export type Database = {
           id: string
           is_active: boolean
           max_completions: number | null
+          min_seconds_away: number
           post_url: string | null
           reaction_emoji: string | null
           reward_pt: number
@@ -231,6 +232,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_completions?: number | null
+          min_seconds_away?: number
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
@@ -247,6 +249,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_completions?: number | null
+          min_seconds_away?: number
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
@@ -504,7 +507,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      task_type: "subscribe" | "video" | "view_post" | "reaction"
+      task_type: "subscribe" | "video" | "view_post" | "reaction" | "view_story"
       withdrawal_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -633,7 +636,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      task_type: ["subscribe", "video", "view_post", "reaction"],
+      task_type: ["subscribe", "video", "view_post", "reaction", "view_story"],
       withdrawal_status: ["pending", "approved", "rejected"],
     },
   },
