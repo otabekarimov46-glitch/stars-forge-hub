@@ -718,15 +718,26 @@ export default function MiniApp() {
           )}
 
           {status === "no_video" && (
-            <div className="rounded-3xl flex flex-col items-center gap-3 py-10 text-center"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-              <CheckCircle className="w-10 h-10 text-emerald-300" />
-              <p className="text-white/80 text-sm">Новых видео пока нет. Загляните чуть позже.</p>
-              <button onClick={loadVideo}
-                className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm transition-all hover:bg-white/10 active:scale-95">
-                Обновить
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => { /* no-op — press feedback only */ }}
+              className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left opacity-50 transition-all duration-200"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.09)",
+                backdropFilter: "blur(14px)",
+              }}
+              aria-disabled="true"
+            >
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center shrink-0">
+                <Play className="w-5 h-5 text-white/60" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14.5px] font-medium text-white/85 leading-tight">Видеореклама</div>
+                <div className="text-[11.5px] text-white/50 mt-0.5">сейчас недоступно</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
+            </button>
           )}
 
           {status === "ready" && video && (
