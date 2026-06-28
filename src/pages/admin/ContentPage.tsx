@@ -33,6 +33,7 @@ export default function ContentPage() {
   const [activeAdvertiser, setActiveAdvertiser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2" };
