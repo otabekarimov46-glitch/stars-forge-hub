@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X, ClipboardCheck, BarChart3, Gamepad2, Home, User, Star, Sparkles, Inbox } from "lucide-react";
+import logoImg from "@/assets/starment-logo.png";
+import starIcon from "@/assets/starment-star.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -85,9 +86,17 @@ export default function MiniApp() {
   // Category sheet snap points (collapses below ~70%)
   const [snap, setSnap] = useState<string | number | null>(0.97);
 
-  // Bot tasks for category sheets
+  // Bot tasks for category sheets (non-extra pool)
   const [botTasks, setBotTasks] = useState<BotTask[]>([]);
+  // Доп. задания pool
+  const [extraTasks, setExtraTasks] = useState<BotTask[]>([]);
   const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post" | "view_story">(null);
+  // Quick-action sheets opened from the 2x2 grid
+  const [quickSheet, setQuickSheet] = useState<null | "tasks" | "ads" | "surveys" | "games">(null);
+  // Hero carousel index
+  const [heroIdx, setHeroIdx] = useState(0);
+  // Active bottom tab (purely visual for now)
+  const [activeTab, setActiveTab] = useState<"earn" | "home" | "games" | "wallet" | "profile">("home");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -176,14 +185,23 @@ export default function MiniApp() {
     setIsBuffering(false);
   }, [video?.id, video?.duration_seconds]);
 
-  // Load bot tasks (subscribe / survey / view_post)
+  // Load bot tasks (non-extra) and extra tasks separately
   const loadBotTasks = useCallback(() => {
     if (!telegramId) return;
-    miniAppApi("list_tasks", { telegram_id: telegramId })
+    miniAppApi("list_tasks", { telegram_id: telegramId, is_extra: false })
       .then((d) => setBotTasks(Array.isArray(d?.tasks) ? d.tasks : []))
+      .catch(() => {});
+    miniAppApi("list_tasks", { telegram_id: telegramId, is_extra: true })
+      .then((d) => setExtraTasks(Array.isArray(d?.tasks) ? d.tasks : []))
       .catch(() => {});
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
+
+  // Rotate hero banner every 4.5s
+  useEffect(() => {
+    const id = setInterval(() => setHeroIdx((i) => (i + 1) % 5), 4500);
+    return () => clearInterval(id);
+  }, []);
 
   // Per-task UI state for subscribe verification
   // 'idle' | 'checking' | 'done' | 'failed'
@@ -594,94 +612,202 @@ export default function MiniApp() {
     return "Задание";
   };
 
-  const categoryTile = (kind: "subscribe" | "survey" | "view_post" | "view_story") => {
-    const cfg = SHEET_CONFIG[kind];
+  // ---- Render a single task row (used in sheets + extra list) ----
+  const TaskRow = ({ t }: { t: BotTask }) => {
+    const link = taskLink(t);
+    const state = taskState[t.id] || "idle";
+    const cfg = SHEET_CONFIG[t.type as keyof typeof SHEET_CONFIG] || SHEET_CONFIG.subscribe;
     const Icon = cfg.icon;
-    const list = (tasksByType[kind] || []).filter((t) => taskState[t.id] !== "done");
-    const disabled = list.length === 0;
-    return (
-      <button
-        key={kind}
-        disabled={disabled}
-        onClick={() => !disabled && setActiveSheet(kind)}
-        className={
-          "press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 " +
-          (disabled
-            ? "opacity-45 cursor-not-allowed"
-            : "hover:bg-white/[0.09] active:scale-[0.985]")
+
+    const iconBg: Record<string, string> = {
+      subscribe:  "from-sky-500 to-blue-600",
+      survey:     "from-emerald-500 to-teal-600",
+      view_post:  "from-rose-500 to-pink-600",
+      view_story: "from-orange-500 to-red-600",
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (!link) return;
+      pendingVerifyRef.current.add(t.id);
+      setTaskState((s) => ({ ...s, [t.id]: "checking" }));
+      if (telegramId) {
+        miniAppApi("start_task", { telegram_id: telegramId, task_id: t.id }).catch(() => {});
+      }
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(link)) {
+          e.preventDefault(); tg.openTelegramLink(link); return;
         }
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          backdropFilter: "blur(14px)",
-        }}
+        if (tg?.openLink) { e.preventDefault(); tg.openLink(link); return; }
+      } catch {}
+    };
+
+    let cta: React.ReactNode;
+    if (state === "checking") {
+      cta = (
+        <span className="px-4 h-9 inline-flex items-center justify-center rounded-xl bg-white/8 border border-white/10">
+          <Loader2 className="w-4 h-4 animate-spin text-white/80" />
+        </span>
+      );
+    } else if (state === "done") {
+      cta = (
+        <span className="px-4 h-9 inline-flex items-center gap-1 rounded-xl bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 text-[12px] font-medium animate-scale-in">
+          <CheckCircle className="w-3.5 h-3.5" /> Готово
+        </span>
+      );
+    } else {
+      cta = (
+        <span className="press-cta px-5 h-9 inline-flex items-center justify-center rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-md shadow-indigo-900/30">
+          Старт
+        </span>
+      );
+    }
+
+    const disabled = state === "checking" || state === "done";
+
+    const inner = (
+      <div
+        className={
+          "rounded-2xl p-3 flex items-center gap-3 transition-all duration-200 " +
+          (disabled ? "opacity-70" : "hover:bg-white/[0.06] active:scale-[0.985]")
+        }
+        style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.07)" }}
       >
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-sky-200" />
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${iconBg[t.type] || iconBg.subscribe} shadow-lg flex items-center justify-center shrink-0`}>
+          <Icon className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[14.5px] font-medium text-white/95 leading-tight">{cfg.title}</div>
-          <div className="text-[11.5px] text-white/50 mt-0.5">
-            {disabled ? "нет заданий" : `${list.length} ${list.length === 1 ? "задание" : list.length < 5 ? "задания" : "заданий"}`}
-          </div>
+          <div className="text-[14px] font-medium text-white truncate">{taskTitle(t)}</div>
+          <div className={
+            "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
+            (state === "done" ? "text-emerald-400 line-through" : "text-white/55")
+          }>+{t.reward_pt.toFixed(2)} PT</div>
         </div>
-        <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
-      </button>
+        {cta}
+      </div>
+    );
+
+    if (disabled || !link) return <div className="pointer-events-none">{inner}</div>;
+    return (
+      <a href={link} target="_blank" rel="noopener noreferrer" className="block press" onClick={handleClick}>
+        {inner}
+      </a>
     );
   };
 
+  // ---- Per-quick-sheet random pick (stable while open) ----
+  const [quickPickId, setQuickPickId] = useState<string | null>(null);
+  const quickPool = useMemo(() => {
+    if (!quickSheet) return [] as BotTask[];
+    const notDone = (t: BotTask) => taskState[t.id] !== "done";
+    if (quickSheet === "tasks")   return botTasks.filter(t => ["subscribe","view_post","view_story"].includes(t.type) && notDone(t));
+    if (quickSheet === "surveys") return botTasks.filter(t => t.type === "survey" && notDone(t));
+    return [] as BotTask[];
+  }, [quickSheet, botTasks, taskState]);
+  useEffect(() => {
+    if (!quickSheet) { setQuickPickId(null); return; }
+    if (quickPool.length === 0) { setQuickPickId(null); return; }
+    if (quickPickId && quickPool.some(t => t.id === quickPickId)) return;
+    const t = quickPool[Math.floor(Math.random() * quickPool.length)];
+    setQuickPickId(t.id);
+  }, [quickSheet, quickPool, quickPickId]);
+  const quickPick = quickPool.find(t => t.id === quickPickId) || null;
+
+  // ---- Hero banner content ----
+  const heroBanners = [
+    { title: "Супер задания", subtitle: "Выполняй и зарабатывай больше!" },
+    { title: "Приглашай друзей",  subtitle: "Получай % с их заработка" },
+    { title: "Ежедневная серия",  subtitle: "Заходи каждый день и копи PT" },
+    { title: "Топ недели",        subtitle: "Соревнуйся и побеждай" },
+    { title: "Скоро новые задания", subtitle: "Следи за обновлениями" },
+  ];
+
+  // ---- Quick-action tiles config ----
+  const quickTiles: Array<{ id: "tasks"|"ads"|"surveys"|"games"; label: string; sub: string; icon: React.ReactNode; bg: string }> = [
+    { id: "tasks",   label: "Задания", sub: "~0.06 PT", icon: <ClipboardCheck className="w-7 h-7 text-white drop-shadow" />, bg: "from-orange-400 to-amber-600" },
+    { id: "ads",     label: "Реклама", sub: "~0.10 PT", icon: <Play className="w-7 h-7 text-white drop-shadow" />,            bg: "from-fuchsia-500 to-purple-700" },
+    { id: "surveys", label: "Опросы",  sub: "~0.15 PT", icon: <BarChart3 className="w-7 h-7 text-white drop-shadow" />,       bg: "from-emerald-400 to-green-700" },
+    { id: "games",   label: "Игры",    sub: "Играй",     icon: <Gamepad2 className="w-7 h-7 text-white drop-shadow" />,        bg: "from-indigo-500 to-purple-700" },
+  ];
+
   return (
-    <div className="min-h-screen text-white flex flex-col fade-in"
+    <div className="min-h-screen text-white flex flex-col fade-in pb-28"
          style={{ background: "radial-gradient(120% 80% at 50% 0%, #1a0a3a 0%, #0b0820 55%, #050314 100%)" }}>
 
       {/* ===== Header ===== */}
-      <header className="px-4 pt-5 pb-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <img src={logoImg} alt="" className="w-9 h-9 rounded-xl shadow-lg shrink-0" />
-          <span className="font-semibold text-[17px] tracking-tight truncate">Starment</span>
-        </div>
+      <header className="px-4 pt-4 pb-3 flex items-center justify-between gap-3">
+        <img src={logoImg} alt="Starment" className="h-9 w-auto shrink-0 select-none" draggable={false} />
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold">
-            {tgUser.photo ? (
-              <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
-            ) : (initial)}
+          <div className="relative w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold">
+            {tgUser.photo ? (<img src={tgUser.photo} alt="" className="w-full h-full object-cover" />) : initial}
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0b0820]" />
           </div>
           <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
-               style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
+               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
             <Wallet className="w-3.5 h-3.5 text-white/75" />
-            <span className="font-semibold tabular-nums text-[14px]">
-              {user ? user.balance_pt.toFixed(1) : "…"}
-            </span>
+            <span className="font-semibold tabular-nums text-[14px]">{user ? user.balance_pt.toFixed(1) : "…"}</span>
             <span className="text-[11px] text-white/60">PT</span>
           </div>
         </div>
       </header>
 
-      {/* ===== Daily bonus ===== */}
-      <section className="px-4 mt-2">
+      {/* ===== Hero carousel: Супер задания ===== */}
+      <section className="px-4">
         <button
-          onClick={() => { if (!bonusClaimed) claimDailyBonus(); else setBonusToast({ kind: "wait", hours: Math.ceil(bonusCountdownMs / 3600000) }); }}
-          className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}
+          onClick={() => { /* press-feedback only */ }}
+          className="press w-full rounded-2xl p-4 flex items-center gap-4 text-left overflow-hidden relative"
+          style={{
+            background: "linear-gradient(110deg, #2a1356 0%, #4a1668 55%, #6b1e6c 100%)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            boxShadow: "0 10px 40px -10px rgba(120, 40, 200, 0.45)",
+          }}
         >
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
-            <Gift className="w-5 h-5 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-300 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-700/40 shrink-0">
+            <Star className="w-8 h-8 text-white fill-white drop-shadow" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold tracking-wide text-white/90">DAILY BONUS</div>
-            <div className="text-[12px] text-white/60 flex items-center gap-1.5 tabular-nums">
-              <Clock className="w-3 h-3" />
-              {bonusClaimed ? formatCountdown(bonusCountdownMs) : "Доступен"}
+            <div className="text-[17px] font-semibold tracking-tight">{heroBanners[heroIdx].title}</div>
+            <div className="text-[12.5px] text-white/70 mt-0.5 truncate">{heroBanners[heroIdx].subtitle}</div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
+        </button>
+        <div className="flex items-center justify-center gap-1.5 mt-2.5">
+          {heroBanners.map((_, i) => (
+            <span key={i} className={"h-1.5 rounded-full transition-all duration-300 " + (i === heroIdx ? "w-5 bg-indigo-400" : "w-1.5 bg-white/25")} />
+          ))}
+        </div>
+      </section>
+
+      {/* ===== Daily bonus (как раньше) ===== */}
+      <section className="px-4 mt-4">
+        <button
+          onClick={() => { if (!bonusClaimed) claimDailyBonus(); else setBonusToast({ kind: "wait", hours: Math.ceil(bonusCountdownMs / 3600000) }); }}
+          className="press w-full rounded-2xl p-4 flex items-center gap-3 text-left transition-all relative overflow-hidden"
+          style={{
+            background: "linear-gradient(120deg, #1c1245 0%, #2a1962 100%)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="text-[18px] font-semibold tracking-tight">Ежедневный бонус</div>
+            <div className="text-[13px] text-white/65 mt-0.5 tabular-nums flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              {bonusClaimed ? formatCountdown(bonusCountdownMs) : "Доступен сейчас"}
+            </div>
+            <span className={"mt-3 inline-flex px-4 h-8 items-center rounded-full text-[12.5px] font-semibold " +
+              (bonusClaimed
+                ? "bg-white/8 text-white/60 border border-white/10"
+                : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black shadow-md shadow-orange-700/40")}>
+              {bonusClaimed ? "Получено" : "Получить"}
+            </span>
+          </div>
+          <div className="shrink-0 w-24 h-24 -my-2 -mr-1 flex items-center justify-center text-5xl select-none" aria-hidden>
+            <div className="relative">
+              <Gift className="w-20 h-20 text-orange-400 drop-shadow-[0_0_20px_rgba(255,120,40,0.5)]" />
+              <Sparkles className="absolute -top-1 -right-1 w-5 h-5 text-pink-300 animate-pulse" />
             </div>
           </div>
-          <span className={"px-3 h-7 inline-flex items-center rounded-full text-[11px] font-semibold tracking-wide " +
-            (bonusClaimed
-              ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
-              : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black")}>
-            {bonusClaimed ? "Получено" : "Получить"}
-          </span>
         </button>
-
         {bonusToast && (
           <div className="mt-2 text-center text-[12px] text-white/75 fade-in">
             {bonusToast.kind === "got"
@@ -691,157 +817,99 @@ export default function MiniApp() {
         )}
       </section>
 
-      {/* ===== Watch ad card (always visible, no grabber) ===== */}
-      <section className="px-4 mt-4">
-        <div className="max-w-md mx-auto">
-          {status === "loading" && (
-            <div className="rounded-3xl overflow-hidden"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-              <div className="relative aspect-video skeleton-shimmer" />
-              <div className="p-4 space-y-3.5">
-                <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
-                <div className="h-12 rounded-2xl skeleton-shimmer" />
-              </div>
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="rounded-3xl flex flex-col items-center gap-3 py-10 text-center"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-              <AlertTriangle className="w-10 h-10 text-red-400" />
-              <p className="text-red-200 text-sm px-4">{error}</p>
-              <button onClick={loadVideo}
-                className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm transition-all hover:bg-white/10 active:scale-95">
-                Попробовать снова
-              </button>
-            </div>
-          )}
-
-          {status === "no_video" && (
+      {/* ===== Quick actions ===== */}
+      <section className="px-4 mt-6">
+        <div className="text-[15px] font-semibold mb-3 text-white/90">Быстрые действия</div>
+        <div className="grid grid-cols-4 gap-2.5">
+          {quickTiles.map(tile => (
             <button
-              type="button"
-              onClick={() => { /* no-op — press feedback only */ }}
-              className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left opacity-50 transition-all duration-200"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.09)",
-                backdropFilter: "blur(14px)",
-              }}
-              aria-disabled="true"
+              key={tile.id}
+              onClick={() => setQuickSheet(tile.id)}
+              className="press relative rounded-2xl p-3 flex flex-col items-center text-center transition-all active:scale-[0.96]"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
             >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center shrink-0">
-                <Play className="w-5 h-5 text-white/60" />
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${tile.bg} flex items-center justify-center shadow-lg mb-2`}>
+                {tile.icon}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[14.5px] font-medium text-white/85 leading-tight">Видеореклама</div>
-                <div className="text-[11.5px] text-white/50 mt-0.5">сейчас недоступно</div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
+              <div className="text-[12.5px] font-medium text-white">{tile.label}</div>
+              <div className="text-[10.5px] text-white/50 mt-0.5 tabular-nums">{tile.sub}</div>
             </button>
-          )}
-
-          {status === "ready" && video && (
-            <div key={video.id} className="screen-enter">
-              <div className="rounded-3xl overflow-hidden"
-                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                <div className="relative aspect-video bg-black/40 overflow-hidden">
-                  {posterUrl || video.media_type === "image" ? (
-                    <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
-                  )}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-2xl shadow-purple-900/40 font-bold text-lg tabular-nums">
-                    +{video.reward_pt} PT
-                  </div>
-                  <div className="absolute right-2 bottom-2 px-2.5 py-1 rounded-full text-[11px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {video.duration_seconds}с
-                  </div>
-                </div>
-                <div className="p-4 space-y-3.5">
-                  <h2 className="text-[15px] font-medium text-center text-white/95 leading-snug">{video.title}</h2>
-                  <button
-                    onClick={startWatching}
-                    className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
-                      transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
-                  >
-                    <Play className="w-4 h-4" /> СМОТРЕТЬ
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {status === "completed" && lastFinished && (
-            <div className="screen-enter">
-              <div className="rounded-3xl overflow-hidden text-center"
-                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                <div className="px-6 pt-6 pb-2 flex flex-col items-center gap-2">
-                  {lastFinished.rewarded ? (
-                    <>
-                      <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
-                        <CheckCircle className="w-7 h-7 text-emerald-300" />
-                      </div>
-                      <div className="text-[15px] text-white/90">Видео просмотрено</div>
-                      <div className="text-2xl font-bold tabular-nums">
-                        +<span className="text-yellow-300">{lastFinished.reward} PT</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-14 h-14 rounded-full bg-red-400/15 border border-red-400/30 flex items-center justify-center">
-                        <XCircle className="w-7 h-7 text-red-300" />
-                      </div>
-                      <div className="text-[15px] text-white/90">Просмотр не засчитан</div>
-                      <div className="text-[12px] text-white/60 max-w-xs">
-                        Видео было прервано или закрыто слишком рано. Попробуйте ещё раз — досмотрите до конца.
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="p-4 space-y-3">
-                  <button
-                    onClick={watchNext}
-                    className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
-                      transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
-                  >
-                    <Play className="w-4 h-4" />
-                    {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
-                  </button>
-
-                  {lastFinished.video.external_link_url && (
-                    <a href={lastFinished.video.external_link_url} target="_blank" rel="noopener noreferrer"
-                       className="press-soft mx-auto inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5 transition-all hover:bg-white/10">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      {lastFinished.video.external_link_label || "Перейти к рекламодателю"}
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          ))}
         </div>
       </section>
 
-      {/* ===== Category tiles (scrollable list under watch card) ===== */}
-      <section className="px-4 mt-3 pb-8 space-y-2.5">
-        <div className="max-w-md mx-auto space-y-2.5">
-          {categoryTile("subscribe")}
-          {categoryTile("view_story")}
-          {categoryTile("view_post")}
-          {categoryTile("survey")}
-        </div>
+      {/* ===== Доп. задания (extra pool only) ===== */}
+      <section className="px-4 mt-6">
+        <div className="text-[15px] font-semibold mb-3 text-white/90">Доп. задания</div>
+        {extraTasks.filter(t => taskState[t.id] !== "done").length === 0 ? (
+          <div className="rounded-2xl py-10 flex flex-col items-center text-white/45 text-[13px] gap-2"
+               style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+            <Inbox className="w-7 h-7 text-white/30" />
+            Тут пусто
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {extraTasks.map(t => <TaskRow key={t.id} t={t} />)}
+          </div>
+        )}
       </section>
 
-      {/* ===== Category bottom sheet (full-screen w/ grabber) ===== */}
+      {/* ===== Bottom Tab Bar ===== */}
+      <nav className="fixed bottom-0 inset-x-0 z-30 px-3 pb-3 pt-1 pointer-events-none">
+        <div
+          className="pointer-events-auto max-w-md mx-auto h-16 rounded-[28px] flex items-end justify-around px-2 relative"
+          style={{
+            background: "rgba(12,7,30,0.92)",
+            border: "1px solid rgba(120,90,255,0.25)",
+            boxShadow: "0 0 30px rgba(120,90,255,0.15), 0 10px 30px -10px rgba(0,0,0,0.6)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          {([
+            { id: "earn",    label: "Заработок", icon: <ClipboardCheck className="w-6 h-6" />, color: "text-orange-400" },
+            { id: "home",    label: "Главная",   icon: <Home className="w-6 h-6" />,          color: "text-indigo-300" },
+            { id: "games",   label: "Игры",      icon: null,                                   color: "" },
+            { id: "wallet",  label: "Кошелёк",   icon: <Wallet className="w-6 h-6" />,        color: "text-indigo-300" },
+            { id: "profile", label: "Профиль",   icon: <User className="w-6 h-6" />,          color: "text-indigo-300" },
+          ] as const).map((t, idx) => {
+            const isCenter = t.id === "games";
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={"press flex-1 h-full flex flex-col items-center justify-end gap-1 pb-2 relative transition-all " +
+                  (isCenter ? "" : "active:scale-[0.92]")}
+              >
+                {isCenter ? (
+                  <div className="flex flex-col items-center -mt-7">
+                    <img src={starIcon} alt="" className="w-14 h-14 drop-shadow-[0_0_18px_rgba(255,180,60,0.55)] transition-transform active:scale-95" draggable={false} />
+                    <span className={"text-[10.5px] mt-0.5 " + (isActive ? "text-white" : "text-white/70")}>{t.label}</span>
+                  </div>
+                ) : (
+                  <>
+                    <span className={(isActive ? "text-orange-400 drop-shadow-[0_0_8px_rgba(255,140,40,0.6)]" : "text-indigo-300/80") + " transition-all"}>
+                      {t.icon}
+                    </span>
+                    <span className={"text-[10.5px] " + (isActive ? "text-white" : "text-white/55")}>{t.label}</span>
+                    {isActive && <span className="absolute bottom-0 h-[3px] w-7 rounded-full bg-orange-400 shadow-[0_0_10px_rgba(255,140,40,0.7)]" />}
+                  </>
+                )}
+                {idx === 0 && <span className="absolute right-0 top-3 bottom-3 w-px bg-white/8" />}
+                {idx === 1 && <span className="absolute right-0 top-3 bottom-3 w-px bg-white/8" />}
+                {idx === 2 && <span className="absolute right-0 top-3 bottom-3 w-px bg-white/8" />}
+                {idx === 3 && <span className="absolute right-0 top-3 bottom-3 w-px bg-white/8" />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ===== Quick-action bottom sheet ===== */}
       <Vaul.Root
-        open={activeSheet !== null}
-        onOpenChange={(o) => { if (!o) { setActiveSheet(null); loadBotTasks(); } else setSnap(0.97); }}
-        snapPoints={[0.7, 0.97]}
+        open={quickSheet !== null}
+        onOpenChange={(o) => { if (!o) { setQuickSheet(null); loadBotTasks(); } else setSnap(0.7); }}
+        snapPoints={[0.55, 0.9]}
         activeSnapPoint={snap}
         setActiveSnapPoint={setSnap}
         dismissible
@@ -851,133 +919,159 @@ export default function MiniApp() {
           <Vaul.Content
             className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
             style={{
-              background: "rgba(15,8,40,0.96)",
+              background: "rgba(15,8,40,0.97)",
               borderTop: "1px solid rgba(255,255,255,0.10)",
               backdropFilter: "blur(28px)",
-              maxHeight: "97vh",
-              height: "97vh",
+              maxHeight: "92vh",
             }}
           >
-            {/* Grabber */}
             <div className="pt-2.5 pb-2 flex items-center justify-center">
               <div className="h-1.5 w-12 rounded-full bg-white/35" />
             </div>
-
-            {/* Header */}
             <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
               <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white">
-                {activeSheet ? SHEET_CONFIG[activeSheet].title : ""}
+                {quickSheet === "tasks"   && "Задание"}
+                {quickSheet === "ads"     && "Реклама"}
+                {quickSheet === "surveys" && "Опрос"}
+                {quickSheet === "games"   && "Игры"}
               </Vaul.Title>
               <button
-                onClick={() => setActiveSheet(null)}
+                onClick={() => setQuickSheet(null)}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
-                aria-label="Закрыть"
               >
                 <X className="w-4 h-4 text-white/80" />
               </button>
             </div>
 
-            {/* List */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10">
-              <div className="max-w-md mx-auto space-y-2.5">
-                {activeSheet && tasksByType[activeSheet].length === 0 && (
-                  <div className="text-center text-white/55 text-sm py-16">
-                    {SHEET_CONFIG[activeSheet].empty}
+              <div className="max-w-md mx-auto">
+
+                {/* ---- TASKS / SURVEYS: one random task at a time ---- */}
+                {(quickSheet === "tasks" || quickSheet === "surveys") && (
+                  quickPick ? (
+                    <div className="space-y-3">
+                      <div className="text-[12px] text-white/55 px-1">
+                        Выполни текущее задание, чтобы получить следующее.
+                      </div>
+                      <TaskRow t={quickPick} />
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl py-12 flex flex-col items-center text-white/55 text-sm gap-2"
+                         style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+                      <CheckCircle className="w-8 h-8 text-emerald-400/70" />
+                      Все задания выполнены
+                    </div>
+                  )
+                )}
+
+                {/* ---- ADS: video card ---- */}
+                {quickSheet === "ads" && (
+                  <>
+                    {status === "loading" && (
+                      <div className="rounded-3xl overflow-hidden"
+                           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                        <div className="relative aspect-video skeleton-shimmer" />
+                        <div className="p-4 space-y-3.5">
+                          <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
+                          <div className="h-12 rounded-2xl skeleton-shimmer" />
+                        </div>
+                      </div>
+                    )}
+
+                    {status === "error" && (
+                      <div className="rounded-3xl flex flex-col items-center gap-3 py-10 text-center"
+                           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                        <AlertTriangle className="w-10 h-10 text-red-400" />
+                        <p className="text-red-200 text-sm px-4">{error}</p>
+                        <button onClick={loadVideo} className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm">
+                          Попробовать снова
+                        </button>
+                      </div>
+                    )}
+
+                    {status === "no_video" && (
+                      <div className="rounded-2xl py-12 flex flex-col items-center text-white/55 text-sm gap-2"
+                           style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+                        <Play className="w-8 h-8 text-white/35" />
+                        Видеореклама сейчас недоступна
+                      </div>
+                    )}
+
+                    {status === "ready" && video && (
+                      <div key={video.id} className="screen-enter">
+                        <div className="rounded-3xl overflow-hidden"
+                             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                          <div className="relative aspect-video bg-black/40 overflow-hidden">
+                            {posterUrl || video.media_type === "image" ? (
+                              <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
+                            )}
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-2xl font-bold text-lg tabular-nums">
+                              +{video.reward_pt} PT
+                            </div>
+                            <div className="absolute right-2 bottom-2 px-2.5 py-1 rounded-full text-[11px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {video.duration_seconds}с
+                            </div>
+                          </div>
+                          <div className="p-4 space-y-3.5">
+                            <h2 className="text-[15px] font-medium text-center text-white/95 leading-snug">{video.title}</h2>
+                            <button onClick={startWatching}
+                              className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-lg shadow-purple-900/30
+                                flex items-center justify-center gap-2 active:scale-[0.97] hover:brightness-110">
+                              <Play className="w-4 h-4" /> СМОТРЕТЬ
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {status === "completed" && lastFinished && (
+                      <div className="screen-enter">
+                        <div className="rounded-3xl overflow-hidden text-center"
+                             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                          <div className="px-6 pt-6 pb-2 flex flex-col items-center gap-2">
+                            {lastFinished.rewarded ? (
+                              <>
+                                <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
+                                  <CheckCircle className="w-7 h-7 text-emerald-300" />
+                                </div>
+                                <div className="text-[15px] text-white/90">Видео просмотрено</div>
+                                <div className="text-2xl font-bold tabular-nums">+<span className="text-yellow-300">{lastFinished.reward} PT</span></div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-14 h-14 rounded-full bg-red-400/15 border border-red-400/30 flex items-center justify-center">
+                                  <XCircle className="w-7 h-7 text-red-300" />
+                                </div>
+                                <div className="text-[15px] text-white/90">Просмотр не засчитан</div>
+                              </>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <button onClick={watchNext}
+                              className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-lg
+                                flex items-center justify-center gap-2 active:scale-[0.97] hover:brightness-110">
+                              <Play className="w-4 h-4" /> {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ---- GAMES placeholder ---- */}
+                {quickSheet === "games" && (
+                  <div className="rounded-2xl py-14 flex flex-col items-center text-white/55 text-sm gap-3"
+                       style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+                    <Gamepad2 className="w-9 h-9 text-indigo-300/70" />
+                    Игры скоро появятся
                   </div>
                 )}
-                {activeSheet && tasksByType[activeSheet].map((t) => {
-                  const link = taskLink(t);
-                  const cfg = SHEET_CONFIG[activeSheet];
-                  const Icon = cfg.icon;
-                  const state = taskState[t.id] || "idle";
 
-                  const handleClick = (e: React.MouseEvent) => {
-                    if (!link) return;
-                    // Mark as pending, log the click server-side, open the link,
-                    // verification happens automatically when the user returns.
-                    pendingVerifyRef.current.add(t.id);
-                    setTaskState((s) => ({ ...s, [t.id]: "checking" }));
-                    if (telegramId) {
-                      miniAppApi("start_task", { telegram_id: telegramId, task_id: t.id }).catch(() => {});
-                    }
-                    try {
-                      const tg = (window as any).Telegram?.WebApp;
-                      if (tg?.openTelegramLink && /^https?:\/\/t\.me\//.test(link)) {
-                        e.preventDefault();
-                        tg.openTelegramLink(link);
-                        return;
-                      }
-                      if (tg?.openLink) {
-                        e.preventDefault();
-                        tg.openLink(link);
-                        return;
-                      }
-                    } catch {}
-                    // Fallback: let the <a> open normally in a new tab
-                  };
-
-                  let cta: React.ReactNode;
-                  if (state === "checking") {
-                    cta = (
-                      <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-white/8 border border-white/10">
-                        <Loader2 className="w-4 h-4 animate-spin text-white/80" />
-                      </span>
-                    );
-                  } else if (state === "done") {
-                    cta = (
-                      <span className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-emerald-400/20 border border-emerald-400/40 animate-scale-in">
-                        <CheckCircle className="w-4 h-4 text-emerald-300" />
-                      </span>
-                    );
-                  } else {
-                    cta = (
-                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
-                        {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
-                      </span>
-                    );
-                  }
-
-                  const disabled = state === "checking" || state === "done";
-                  const content = (
-                    <div
-                      className={
-                        "rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 " +
-                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
-                      }
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
-                    >
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                        <Icon className="w-5 h-5 text-sky-200" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
-                        <div className={
-                          "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
-                          (state === "done" ? "text-emerald-400 line-through" : "text-yellow-300/90")
-                        }>+{t.reward_pt} PT</div>
-                      </div>
-                      {cta}
-                    </div>
-                  );
-
-                  if (disabled) {
-                    return <div key={t.id} className="pointer-events-none">{content}</div>;
-                  }
-                  return link ? (
-                    <a
-                      key={t.id}
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                      onClick={handleClick}
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <div key={t.id}>{content}</div>
-                  );
-                })}
               </div>
             </div>
           </Vaul.Content>
@@ -986,4 +1080,5 @@ export default function MiniApp() {
     </div>
   );
 }
+
 
