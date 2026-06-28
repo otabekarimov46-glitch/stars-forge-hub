@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import * as tus from "tus-js-client";
 
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
@@ -32,6 +33,7 @@ export default function ContentPage() {
   const [activeAdvertiser, setActiveAdvertiser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2" };
@@ -187,21 +189,60 @@ export default function ContentPage() {
       v.src = url;
     });
 
+  const uploadResumable = (file: File, fileName: string): Promise<string> =>
+    new Promise(async (resolve, reject) => {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const upload = new tus.Upload(file, {
+        endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+        retryDelays: [0, 1000, 3000, 5000, 10000],
+        headers: {
+          authorization: `Bearer ${token}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: "video-ads",
+          objectName: fileName,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "31536000",
+        },
+        onError: (err) => reject(err),
+        onProgress: (sent, total) => {
+          setUploadProgress(Math.round((sent / total) * 100));
+        },
+        onSuccess: () => resolve(fileName),
+      });
+      const previousUploads = await upload.findPreviousUploads();
+      if (previousUploads.length) upload.resumeFromPreviousUpload(previousUploads[0]);
+      upload.start();
+    });
+
   const handleVideoUpload = async (file: File) => {
     setUploading(true);
+    setUploadProgress(0);
     try {
       const isImage = file.type.startsWith("image/");
       const mediaType: "video" | "image" = isImage ? "image" : "video";
-      const sizeMb = file.size / (1024 * 1024);
-      if (!isImage && sizeMb > 6) {
-        toast.warning(`Видео ${sizeMb.toFixed(1)} МБ. Рекомендуем 720p и 3–5 МБ для мгновенной загрузки в Mini App.`);
-      }
       const fileName = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, "_")}`;
-      const { error } = await supabase.storage.from("video-ads").upload(fileName, file, {
-        contentType: file.type,
-        cacheControl: "31536000",
-      });
-      if (error) throw error;
+
+      // Use resumable (TUS) for files > 6MB or any video — bypasses 50MB single-request limit.
+      const useResumable = file.size > 6 * 1024 * 1024;
+      if (useResumable) {
+        await uploadResumable(file, fileName);
+      } else {
+        const { error } = await supabase.storage.from("video-ads").upload(fileName, file, {
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "31536000",
+          upsert: true,
+        });
+        if (error) throw error;
+        setUploadProgress(100);
+      }
+
       const { data: urlData } = supabase.storage.from("video-ads").getPublicUrl(fileName);
       const dur = isImage ? 30 : (await detectDuration(file)) ?? 30;
       setVideoForm((f: any) => ({
@@ -212,7 +253,8 @@ export default function ContentPage() {
       }));
       toast.success(t("content.videoUploaded"));
     } catch (e: any) {
-      toast.error(e.message);
+      console.error("upload error", e);
+      toast.error(e?.message || "Не удалось загрузить файл");
     } finally {
       setUploading(false);
     }
@@ -482,7 +524,7 @@ export default function ContentPage() {
                               <input ref={fileInputRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleVideoUpload(file); }} />
                               <Button variant="outline" className="rounded-xl gap-1" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                                 <Upload className="h-4 w-4" />
-                                {uploading ? "..." : t("content.uploadVideo")}
+                                {uploading ? (uploadProgress > 0 ? `${uploadProgress}%` : "...") : t("content.uploadVideo")}
                               </Button>
                             </div>
                             {videoForm.video_url && (
