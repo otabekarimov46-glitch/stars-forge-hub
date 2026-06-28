@@ -417,7 +417,7 @@ Deno.serve(async (req) => {
       }
 
       case "list_tasks": {
-        const { telegram_id } = params;
+        const { telegram_id, is_extra } = params;
         let completedIds = new Set<string>();
         if (telegram_id) {
           const { data: user } = await supabase
@@ -428,12 +428,14 @@ Deno.serve(async (req) => {
             completedIds = new Set((done || []).map((d: any) => d.task_id));
           }
         }
-        const { data: tasks } = await supabase
+        let q = supabase
           .from("tasks")
-          .select("id, type, title, channel_username, channel_id, post_url, reward_pt, max_completions, current_completions, min_seconds_away")
+          .select("id, type, title, channel_username, channel_id, post_url, reward_pt, max_completions, current_completions, min_seconds_away, is_extra")
           .eq("is_active", true)
           .neq("type", "video")
           .order("created_at", { ascending: false });
+        if (typeof is_extra === "boolean") q = q.eq("is_extra", is_extra);
+        const { data: tasks } = await q;
         const filtered = (tasks || []).filter((t: any) => !completedIds.has(t.id));
         return jsonResponse({ data: { tasks: filtered } });
       }
