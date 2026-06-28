@@ -214,6 +214,7 @@ export type Database = {
           hold_days: number | null
           id: string
           is_active: boolean
+          is_extra: boolean
           max_completions: number | null
           min_seconds_away: number
           post_url: string | null
@@ -231,6 +232,7 @@ export type Database = {
           hold_days?: number | null
           id?: string
           is_active?: boolean
+          is_extra?: boolean
           max_completions?: number | null
           min_seconds_away?: number
           post_url?: string | null
@@ -248,6 +250,7 @@ export type Database = {
           hold_days?: number | null
           id?: string
           is_active?: boolean
+          is_extra?: boolean
           max_completions?: number | null
           min_seconds_away?: number
           post_url?: string | null
@@ -366,6 +369,7 @@ export type Database = {
           external_link_url: string | null
           id: string
           is_active: boolean
+          is_extra: boolean
           media_type: string
           reward_pt: number
           title: string
@@ -379,6 +383,7 @@ export type Database = {
           external_link_url?: string | null
           id?: string
           is_active?: boolean
+          is_extra?: boolean
           media_type?: string
           reward_pt?: number
           title: string
@@ -392,6 +397,7 @@ export type Database = {
           external_link_url?: string | null
           id?: string
           is_active?: boolean
+          is_extra?: boolean
           media_type?: string
           reward_pt?: number
           title?: string
