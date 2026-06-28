@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X, ClipboardCheck, BarChart3, Gamepad2, Home, User, Star, Sparkles, Inbox } from "lucide-react";
 import logoImg from "@/assets/starment-logo.png";
 import starIcon from "@/assets/starment-star.png";
+import giftImg from "@/assets/gift-box.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -657,7 +658,7 @@ export default function MiniApp() {
       );
     } else {
       cta = (
-        <span className="press-cta px-5 h-9 inline-flex items-center justify-center rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 shadow-md shadow-indigo-900/30">
+        <span className="press-cta px-5 h-9 inline-flex items-center justify-center rounded-xl text-[13px] font-semibold text-white border border-white/10 bg-white/[0.06] transition-all hover:bg-white/[0.10]">
           Старт
         </span>
       );
@@ -801,12 +802,15 @@ export default function MiniApp() {
               {bonusClaimed ? "Получено" : "Получить"}
             </span>
           </div>
-          <div className="shrink-0 w-24 h-24 -my-2 -mr-1 flex items-center justify-center text-5xl select-none" aria-hidden>
-            <div className="relative">
-              <Gift className="w-20 h-20 text-orange-400 drop-shadow-[0_0_20px_rgba(255,120,40,0.5)]" />
-              <Sparkles className="absolute -top-1 -right-1 w-5 h-5 text-pink-300 animate-pulse" />
-            </div>
+          <div className="shrink-0 w-28 h-28 -my-3 -mr-1 flex items-center justify-center select-none" aria-hidden>
+            <img
+              src={giftImg}
+              alt=""
+              className="w-full h-full object-contain drop-shadow-[0_0_24px_rgba(180,80,255,0.45)]"
+              draggable={false}
+            />
           </div>
+
         </button>
         {bonusToast && (
           <div className="mt-2 text-center text-[12px] text-white/75 fade-in">
