@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X, ClipboardCheck, BarChart3, Gamepad2, Home, User, Star, Sparkles, Inbox } from "lucide-react";
 import logoImg from "@/assets/starment-logo.png";
 import starIcon from "@/assets/starment-star.png";
+import giftImg from "@/assets/gift-box.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
