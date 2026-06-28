@@ -2,23 +2,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
 import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X, ClipboardCheck, BarChart3, Gamepad2, Home, User, Star, Sparkles, Inbox } from "lucide-react";
-import logoImg from "@/assets/starment-logo-full.png";
-import starIcon from "@/assets/starment-star-real.png";
+import logoImg from "@/assets/starment-logo.png";
+import starIcon from "@/assets/starment-star.png";
 import giftImg from "@/assets/gift-box.png";
-import iconTasks from "@/assets/icon-tasks.png";
-import iconAds from "@/assets/icon-ads.png";
-import iconSurveys from "@/assets/icon-surveys.png";
-import iconGames from "@/assets/icon-games.png";
-import iconEye from "@/assets/icon-eye.png";
-import iconTelegram from "@/assets/icon-telegram.png";
-import iconBook from "@/assets/icon-book.png";
-import iconHeart from "@/assets/icon-heart.png";
-import iconSurvey from "@/assets/icon-survey.png";
-import superStarImg from "@/assets/super-star.png";
-import tabEarn from "@/assets/tab-earn.png";
-import tabHome from "@/assets/tab-home.png";
-import tabWallet from "@/assets/tab-wallet.png";
-import tabProfile from "@/assets/tab-profile.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -688,18 +674,8 @@ export default function MiniApp() {
         }
         style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.07)" }}
       >
-        <div className="w-11 h-11 shrink-0 flex items-center justify-center">
-          <img
-            src={
-              t.type === "subscribe" ? iconTelegram :
-              t.type === "survey"    ? iconSurvey   :
-              t.type === "view_story"? iconBook     :
-              t.type === "view_post" ? iconHeart    : iconEye
-            }
-            alt=""
-            className="w-11 h-11 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.45)]"
-            loading="lazy" width={44} height={44} draggable={false}
-          />
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${iconBg[t.type] || iconBg.subscribe} shadow-lg flex items-center justify-center shrink-0`}>
+          <Icon className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[14px] font-medium text-white truncate">{taskTitle(t)}</div>
@@ -748,11 +724,11 @@ export default function MiniApp() {
   ];
 
   // ---- Quick-action tiles config ----
-  const quickTiles: Array<{ id: "tasks"|"ads"|"surveys"|"games"; label: string; sub: string; img: string }> = [
-    { id: "tasks",   label: "Задания", sub: "~0.06 PT", img: iconTasks   },
-    { id: "ads",     label: "Реклама", sub: "~0.10 PT", img: iconAds     },
-    { id: "surveys", label: "Опросы",  sub: "~0.15 PT", img: iconSurveys },
-    { id: "games",   label: "Игры",    sub: "Играй",    img: iconGames   },
+  const quickTiles: Array<{ id: "tasks"|"ads"|"surveys"|"games"; label: string; sub: string; icon: React.ReactNode; bg: string }> = [
+    { id: "tasks",   label: "Задания", sub: "~0.06 PT", icon: <ClipboardCheck className="w-7 h-7 text-white drop-shadow" />, bg: "from-orange-400 to-amber-600" },
+    { id: "ads",     label: "Реклама", sub: "~0.10 PT", icon: <Play className="w-7 h-7 text-white drop-shadow" />,            bg: "from-fuchsia-500 to-purple-700" },
+    { id: "surveys", label: "Опросы",  sub: "~0.15 PT", icon: <BarChart3 className="w-7 h-7 text-white drop-shadow" />,       bg: "from-emerald-400 to-green-700" },
+    { id: "games",   label: "Игры",    sub: "Играй",     icon: <Gamepad2 className="w-7 h-7 text-white drop-shadow" />,        bg: "from-indigo-500 to-purple-700" },
   ];
 
   return (
@@ -761,7 +737,7 @@ export default function MiniApp() {
 
       {/* ===== Header ===== */}
       <header className="px-4 pt-4 pb-3 flex items-center justify-between gap-3">
-        <img src={logoImg} alt="Starment" className="h-10 w-auto shrink-0 select-none -ml-1" draggable={false} />
+        <img src={logoImg} alt="Starment" className="h-9 w-auto shrink-0 select-none" draggable={false} />
         <div className="flex items-center gap-2 shrink-0">
           <div className="relative w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold">
             {tgUser.photo ? (<img src={tgUser.photo} alt="" className="w-full h-full object-cover" />) : initial}
@@ -787,7 +763,9 @@ export default function MiniApp() {
             boxShadow: "0 10px 40px -10px rgba(120, 40, 200, 0.45)",
           }}
         >
-          <img src={superStarImg} alt="" className="w-16 h-16 object-contain shrink-0 drop-shadow-[0_0_18px_rgba(255,180,60,0.55)]" loading="lazy" width={64} height={64} draggable={false} />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-300 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-700/40 shrink-0">
+            <Star className="w-8 h-8 text-white fill-white drop-shadow" />
+          </div>
           <div className="flex-1 min-w-0">
             <div className="text-[17px] font-semibold tracking-tight">{heroBanners[heroIdx].title}</div>
             <div className="text-[12.5px] text-white/70 mt-0.5 truncate">{heroBanners[heroIdx].subtitle}</div>
@@ -854,8 +832,8 @@ export default function MiniApp() {
               className="press relative rounded-2xl p-3 flex flex-col items-center text-center transition-all active:scale-[0.96]"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
             >
-              <div className="w-14 h-14 flex items-center justify-center mb-1.5">
-                <img src={tile.img} alt="" className="w-14 h-14 object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.55)]" loading="lazy" width={56} height={56} draggable={false} />
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${tile.bg} flex items-center justify-center shadow-lg mb-2`}>
+                {tile.icon}
               </div>
               <div className="text-[12.5px] font-medium text-white">{tile.label}</div>
               <div className="text-[10.5px] text-white/50 mt-0.5 tabular-nums">{tile.sub}</div>
@@ -892,11 +870,11 @@ export default function MiniApp() {
           }}
         >
           {([
-            { id: "earn",    label: "Заработок", img: tabEarn },
-            { id: "home",    label: "Главная",   img: tabHome },
-            { id: "games",   label: "Игры",      img: null    },
-            { id: "wallet",  label: "Кошелёк",   img: tabWallet },
-            { id: "profile", label: "Профиль",   img: tabProfile },
+            { id: "earn",    label: "Заработок", icon: <ClipboardCheck className="w-6 h-6" />, color: "text-orange-400" },
+            { id: "home",    label: "Главная",   icon: <Home className="w-6 h-6" />,          color: "text-indigo-300" },
+            { id: "games",   label: "Игры",      icon: null,                                   color: "" },
+            { id: "wallet",  label: "Кошелёк",   icon: <Wallet className="w-6 h-6" />,        color: "text-indigo-300" },
+            { id: "profile", label: "Профиль",   icon: <User className="w-6 h-6" />,          color: "text-indigo-300" },
           ] as const).map((t, idx) => {
             const isCenter = t.id === "games";
             const isActive = activeTab === t.id;
@@ -914,12 +892,9 @@ export default function MiniApp() {
                   </div>
                 ) : (
                   <>
-                    <img
-                      src={t.img!}
-                      alt=""
-                      className={"w-7 h-7 object-contain transition-all " + (isActive ? "drop-shadow-[0_0_10px_rgba(255,140,40,0.75)]" : "opacity-85")}
-                      loading="lazy" width={28} height={28} draggable={false}
-                    />
+                    <span className={(isActive ? "text-orange-400 drop-shadow-[0_0_8px_rgba(255,140,40,0.6)]" : "text-indigo-300/80") + " transition-all"}>
+                      {t.icon}
+                    </span>
                     <span className={"text-[10.5px] " + (isActive ? "text-white" : "text-white/55")}>{t.label}</span>
                     {isActive && <span className="absolute bottom-0 h-[3px] w-7 rounded-full bg-orange-400 shadow-[0_0_10px_rgba(255,140,40,0.7)]" />}
                   </>
