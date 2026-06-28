@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import * as tus from "tus-js-client";
 
 const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
   subscribe: { icon: UsersIcon, color: "bg-brand-blue/10 text-brand-blue" },
