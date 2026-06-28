@@ -185,14 +185,23 @@ export default function MiniApp() {
     setIsBuffering(false);
   }, [video?.id, video?.duration_seconds]);
 
-  // Load bot tasks (subscribe / survey / view_post)
+  // Load bot tasks (non-extra) and extra tasks separately
   const loadBotTasks = useCallback(() => {
     if (!telegramId) return;
-    miniAppApi("list_tasks", { telegram_id: telegramId })
+    miniAppApi("list_tasks", { telegram_id: telegramId, is_extra: false })
       .then((d) => setBotTasks(Array.isArray(d?.tasks) ? d.tasks : []))
+      .catch(() => {});
+    miniAppApi("list_tasks", { telegram_id: telegramId, is_extra: true })
+      .then((d) => setExtraTasks(Array.isArray(d?.tasks) ? d.tasks : []))
       .catch(() => {});
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
+
+  // Rotate hero banner every 4.5s
+  useEffect(() => {
+    const id = setInterval(() => setHeroIdx((i) => (i + 1) % 5), 4500);
+    return () => clearInterval(id);
+  }, []);
 
   // Per-task UI state for subscribe verification
   // 'idle' | 'checking' | 'done' | 'failed'
