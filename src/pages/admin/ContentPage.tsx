@@ -524,7 +524,7 @@ export default function ContentPage() {
                               <input ref={fileInputRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleVideoUpload(file); }} />
                               <Button variant="outline" className="rounded-xl gap-1" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                                 <Upload className="h-4 w-4" />
-                                {uploading ? "..." : t("content.uploadVideo")}
+                                {uploading ? (uploadProgress > 0 ? `${uploadProgress}%` : "...") : t("content.uploadVideo")}
                               </Button>
                             </div>
                             {videoForm.video_url && (
