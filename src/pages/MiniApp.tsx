@@ -86,9 +86,17 @@ export default function MiniApp() {
   // Category sheet snap points (collapses below ~70%)
   const [snap, setSnap] = useState<string | number | null>(0.97);
 
-  // Bot tasks for category sheets
+  // Bot tasks for category sheets (non-extra pool)
   const [botTasks, setBotTasks] = useState<BotTask[]>([]);
+  // Доп. задания pool
+  const [extraTasks, setExtraTasks] = useState<BotTask[]>([]);
   const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post" | "view_story">(null);
+  // Quick-action sheets opened from the 2x2 grid
+  const [quickSheet, setQuickSheet] = useState<null | "tasks" | "ads" | "surveys" | "games">(null);
+  // Hero carousel index
+  const [heroIdx, setHeroIdx] = useState(0);
+  // Active bottom tab (purely visual for now)
+  const [activeTab, setActiveTab] = useState<"earn" | "home" | "games" | "wallet" | "profile">("home");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
