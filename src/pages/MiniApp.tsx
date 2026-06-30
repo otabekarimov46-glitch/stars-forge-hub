@@ -22,6 +22,7 @@ interface BotTask {
 interface VideoAd {
   id: string;
   title: string;
+  description?: string | null;
   video_url: string;
   duration_seconds: number;
   reward_pt: number;
