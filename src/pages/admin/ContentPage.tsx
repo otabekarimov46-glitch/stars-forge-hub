@@ -79,6 +79,8 @@ export default function ContentPage() {
   const openEditTask = (ta: any) => {
     setEditingTaskId(ta.id);
     setContentKind(ta.type);
+    const mins = Number(ta.recheck_delay_minutes ?? 60);
+    const useHours = mins === 0 ? false : mins % 60 === 0;
     setTaskForm({
       type: ta.type,
       title: ta.title || "",
@@ -89,40 +91,41 @@ export default function ContentPage() {
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
       min_seconds_away: String(ta.min_seconds_away ?? "2"),
+      recheck_value: String(useHours ? mins / 60 : mins),
+      recheck_unit: useHours ? "hours" : "minutes",
     });
     setContentDialogOpen(true);
+  };
+
+  const recheckMinutes = () => {
+    const v = Math.max(0, Number(taskForm.recheck_value) || 0);
+    return taskForm.recheck_unit === "hours" ? v * 60 : v;
   };
 
   const submitTask = async () => {
     if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
     if (!taskForm.title.trim()) { toast.error("Введите название задания"); return; }
     try {
+      const payload = {
+        type: contentKind,
+        title: taskForm.title.trim(),
+        channel_username: taskForm.channel_username || null,
+        channel_id: taskForm.channel_id || null,
+        reward_pt: Number(taskForm.reward_pt),
+        post_url: taskForm.post_url || null,
+        max_completions: Number(taskForm.max_completions) || 0,
+        hold_days: Number(taskForm.hold_days) || 5,
+        min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
+        recheck_delay_minutes: recheckMinutes(),
+      };
       if (editingTaskId) {
-        await adminApi("update_task", {
-          task_id: editingTaskId,
-          type: contentKind,
-          title: taskForm.title.trim(),
-          channel_username: taskForm.channel_username || null,
-          channel_id: taskForm.channel_id || null,
-          reward_pt: Number(taskForm.reward_pt),
-          post_url: taskForm.post_url || null,
-          max_completions: Number(taskForm.max_completions) || 0,
-          hold_days: Number(taskForm.hold_days) || 5,
-          min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
-        });
+        await adminApi("update_task", { task_id: editingTaskId, ...payload, channel_id: payload.channel_id });
         toast.success("Задание обновлено");
       } else {
         await adminApi("create_task", {
-          type: contentKind,
-          title: taskForm.title.trim(),
+          ...payload,
           advertiser_id: activeAdvertiser.id,
-          channel_username: taskForm.channel_username || null,
           channel_id: taskForm.channel_id ? Number(taskForm.channel_id) : null,
-          reward_pt: Number(taskForm.reward_pt),
-          post_url: taskForm.post_url || null,
-          max_completions: Number(taskForm.max_completions) || 0,
-          hold_days: Number(taskForm.hold_days) || 5,
-          min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
         });
         toast.success(t("content.taskCreated"));
       }
@@ -132,6 +135,7 @@ export default function ContentPage() {
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
+
 
   const submitAdvertiser = async () => {
     if (!advForm.name.trim()) { toast.error("Введите название"); return; }
