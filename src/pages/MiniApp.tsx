@@ -1020,29 +1020,6 @@ export default function MiniApp() {
       </Vaul.Root>
 
 
-                  if (disabled) {
-                    return <div key={t.id} className="pointer-events-none">{content}</div>;
-                  }
-                  return link ? (
-                    <a
-                      key={t.id}
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                      onClick={handleClick}
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <div key={t.id}>{content}</div>
-                  );
-                })}
-              </div>
-            </div>
-          </Vaul.Content>
-        </Vaul.Portal>
-      </Vaul.Root>
     </div>
   );
 }
