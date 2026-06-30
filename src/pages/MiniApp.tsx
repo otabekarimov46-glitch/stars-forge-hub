@@ -20,12 +20,14 @@ interface BotTask {
 interface VideoAd {
   id: string;
   title: string;
+  description?: string | null;
   video_url: string;
   duration_seconds: number;
   reward_pt: number;
   external_link_url?: string;
   external_link_label?: string;
   media_type?: "video" | "image";
+  advertiser_name?: string | null;
 }
 interface UserSnap {
   balance_pt: number;
