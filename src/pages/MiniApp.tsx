@@ -22,7 +22,6 @@ interface BotTask {
 interface VideoAd {
   id: string;
   title: string;
-  description?: string | null;
   video_url: string;
   duration_seconds: number;
   reward_pt: number;
@@ -543,91 +542,49 @@ export default function MiniApp() {
 
   // ===== Fullscreen player =====
   if (status === "playing" && video) {
-    const hasLink = !!video.external_link_url;
-    const hasDescription = !!(video.description && video.description.trim());
-    const ctaLabel = video.external_link_label?.trim() || "Перейти";
     return (
       <div className="fixed inset-0 bg-black flex flex-col z-50 fade-in">
-        {/* Top status bar */}
-        <div className="px-4 pt-3 pb-2 flex items-center gap-3">
-          <div className="flex-1 flex items-center gap-1.5">
-            <div className="h-1 flex-1 rounded-full bg-white/15 overflow-hidden">
-              <div
-                className="h-full bg-white transition-[width] duration-200 ease-linear"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-          <div className="text-[13px] font-medium text-white/90 tabular-nums">
-            {Math.max(0, Math.ceil((playbackDuration || video.duration_seconds) - elapsed))
-              .toString()
-              .padStart(2, "0")}
-            с
-          </div>
-        </div>
-
-        {/* Media */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden px-3">
-          <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black flex items-center justify-center">
-            {video.media_type === "image" ? (
-              <img src={video.video_url} alt={video.title} className="max-w-full max-h-full object-contain" />
-            ) : (
-              <video
-                ref={videoRef} src={video.video_url} poster={posterUrl || undefined}
-                className="max-w-full max-h-full" playsInline autoPlay preload="metadata"
-                controls={false} disablePictureInPicture
-                onContextMenu={(e) => e.preventDefault()}
-                onLoadedMetadata={(e) => { syncPlaybackDuration(e.currentTarget); setIsBuffering(false); }}
-                onDurationChange={(e) => { syncPlaybackDuration(e.currentTarget); }}
-                onCanPlay={() => setIsBuffering(false)}
-                onPlaying={() => setIsBuffering(false)}
-                onTimeUpdate={(e) => { setElapsed(e.currentTarget.currentTime); if (isBuffering) setIsBuffering(false); }}
-                onEnded={() => {
-                  const naturalDuration = syncPlaybackDuration(videoRef.current);
-                  setElapsed(naturalDuration || video.duration_seconds);
-                  if (!finishedRef.current) finishWatching(naturalDuration || video.duration_seconds);
-                }}
-                onStalled={() => setIsBuffering(true)}
-                onSuspend={() => setIsBuffering(false)}
-                onWaiting={() => setIsBuffering(true)}
-                onError={() => setIsBuffering(false)}
-              />
-            )}
-            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md text-[11px] font-semibold text-yellow-300 border border-white/10">
-              +{video.reward_pt} PT
-            </div>
-          </div>
-        </div>
-
-        {/* Info card + CTA */}
-        <div className="px-3 pt-3 pb-4 space-y-2.5">
-          {hasDescription && (
-            <div className="rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-xl p-3.5">
-              <h2 className="text-[15px] font-semibold text-white leading-tight">{video.title}</h2>
-              <p className="mt-1.5 text-[13.5px] leading-snug text-white/75 whitespace-pre-line">
-                {video.description}
-              </p>
-              <div className="mt-2 text-[10.5px] uppercase tracking-wider text-white/40">Ad · 18+</div>
-            </div>
+        <div className="flex-1 flex items-center justify-center overflow-hidden">
+          {video.media_type === "image" ? (
+            <img src={video.video_url} alt={video.title} className="max-w-full max-h-full object-contain" />
+          ) : (
+            <video
+              ref={videoRef} src={video.video_url} poster={posterUrl || undefined}
+              className="max-w-full max-h-full" playsInline autoPlay preload="metadata"
+              controls={false} disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+              onLoadedMetadata={(e) => {
+                syncPlaybackDuration(e.currentTarget);
+                setIsBuffering(false);
+              }}
+              onDurationChange={(e) => {
+                syncPlaybackDuration(e.currentTarget);
+              }}
+              onCanPlay={() => setIsBuffering(false)}
+              onPlaying={() => setIsBuffering(false)}
+              onTimeUpdate={(e) => {
+                setElapsed(e.currentTarget.currentTime);
+                if (isBuffering) setIsBuffering(false);
+              }}
+              onEnded={() => {
+                const naturalDuration = syncPlaybackDuration(videoRef.current);
+                setElapsed(naturalDuration || video.duration_seconds);
+                if (!finishedRef.current) finishWatching(naturalDuration || video.duration_seconds);
+              }}
+              onStalled={() => setIsBuffering(true)}
+              onSuspend={() => setIsBuffering(false)}
+              onWaiting={() => setIsBuffering(true)}
+              onError={() => setIsBuffering(false)}
+            />
           )}
-
-          {hasLink && (
-            <a
-              href={video.external_link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="press-cta flex items-center justify-center gap-2 w-full h-13 py-3.5 rounded-2xl
-                         bg-gradient-to-r from-brand-blue to-brand-green text-white text-[15.5px] font-semibold
-                         shadow-[0_8px_24px_-8px_rgba(59,130,246,0.55)] active:scale-[0.985] transition"
-            >
-              {ctaLabel}
-              <ExternalLink className="w-4 h-4 opacity-90" />
-            </a>
-          )}
-
-          <p className="text-center text-[11px] text-white/55">
-            {isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}
-          </p>
+        </div>
+        <div className="p-4 bg-black/80 backdrop-blur space-y-2">
+          <div className="flex justify-between text-xs text-white">
+            <span className="tabular-nums">{Math.min(playbackDuration || video.duration_seconds, elapsed).toFixed(1)}с / {(playbackDuration || video.duration_seconds).toFixed(1)}с</span>
+            <span className="text-yellow-300">+{video.reward_pt} PT</span>
+          </div>
+          <Progress value={progressPercent} className="h-1.5" />
+          <p className="text-center text-[11px] text-white/70">{isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}</p>
         </div>
       </div>
     );

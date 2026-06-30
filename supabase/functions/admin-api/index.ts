@@ -303,7 +303,6 @@ Deno.serve(async (req) => {
       case "create_video_ad": {
         const res = await supabase.from("video_ads").insert({
           title: params.title,
-          description: params.description || null,
           video_url: params.video_url,
           duration_seconds: params.duration_seconds,
           reward_pt: params.reward_pt,

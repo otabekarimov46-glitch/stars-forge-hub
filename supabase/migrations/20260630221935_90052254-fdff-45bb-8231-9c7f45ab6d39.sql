@@ -1,1 +1,0 @@
-ALTER TABLE public.video_ads ADD COLUMN IF NOT EXISTS description TEXT;
