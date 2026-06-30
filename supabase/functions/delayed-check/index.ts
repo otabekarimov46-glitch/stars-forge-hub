@@ -134,9 +134,8 @@ Deno.serve(async (req) => {
 
         deducted++;
       } else {
-        await supabase.from("delayed_checks")
-          .update({ checked: true, reward_deducted: false, acknowledged: true })
-          .eq("id", check.id);
+        // Still subscribed → forget the check entirely (per user request).
+        await supabase.from("delayed_checks").delete().eq("id", check.id);
       }
 
       processed++;
