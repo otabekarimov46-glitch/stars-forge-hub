@@ -419,6 +419,7 @@ Deno.serve(async (req) => {
       case "list_tasks": {
         const { telegram_id } = params;
         let completedIds = new Set<string>();
+        let redoTaskIds = new Set<string>();
         if (telegram_id) {
           const { data: user } = await supabase
             .from("users").select("id").eq("telegram_id", telegram_id).single();
@@ -426,6 +427,13 @@ Deno.serve(async (req) => {
             const { data: done } = await supabase
               .from("task_completions").select("task_id").eq("user_id", user.id);
             completedIds = new Set((done || []).map((d: any) => d.task_id));
+            const { data: redo } = await supabase
+              .from("delayed_checks")
+              .select("task_id")
+              .eq("user_id", user.id)
+              .eq("reward_deducted", true)
+              .eq("acknowledged", false);
+            redoTaskIds = new Set((redo || []).map((d: any) => d.task_id));
           }
         }
         const { data: tasks } = await supabase
@@ -434,8 +442,42 @@ Deno.serve(async (req) => {
           .eq("is_active", true)
           .neq("type", "video")
           .order("created_at", { ascending: false });
-        const filtered = (tasks || []).filter((t: any) => !completedIds.has(t.id));
+        const filtered = (tasks || [])
+          .filter((t: any) => !completedIds.has(t.id))
+          .map((t: any) => ({ ...t, requires_redo: redoTaskIds.has(t.id) }));
         return jsonResponse({ data: { tasks: filtered } });
+      }
+
+      case "list_redo_tasks": {
+        const { telegram_id } = params;
+        if (!telegram_id) return jsonResponse({ data: { tasks: [] } });
+        const { data: user } = await supabase
+          .from("users").select("id").eq("telegram_id", telegram_id).single();
+        if (!user) return jsonResponse({ data: { tasks: [] } });
+        const { data: redo } = await supabase
+          .from("delayed_checks")
+          .select("task_id, tasks(id, type, title, channel_username, reward_pt, is_active)")
+          .eq("user_id", user.id)
+          .eq("reward_deducted", true)
+          .eq("acknowledged", false);
+        const tasks = (redo || [])
+          .map((r: any) => r.tasks)
+          .filter((t: any) => t && t.is_active);
+        return jsonResponse({ data: { tasks } });
+      }
+
+      case "acknowledge_redo": {
+        const { telegram_id } = params;
+        if (!telegram_id) return jsonResponse({ data: { ok: true } });
+        const { data: user } = await supabase
+          .from("users").select("id").eq("telegram_id", telegram_id).single();
+        if (!user) return jsonResponse({ data: { ok: true } });
+        await supabase.from("delayed_checks")
+          .update({ acknowledged: true })
+          .eq("user_id", user.id)
+          .eq("reward_deducted", true)
+          .eq("acknowledged", false);
+        return jsonResponse({ data: { ok: true } });
       }
 
       case "start_task": {
@@ -449,6 +491,7 @@ Deno.serve(async (req) => {
         });
         return jsonResponse({ data: { ok: true } });
       }
+
 
       case "verify_task": {
         const { telegram_id, task_id } = params;
