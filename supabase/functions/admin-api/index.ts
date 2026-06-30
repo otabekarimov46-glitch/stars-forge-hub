@@ -301,11 +301,12 @@ Deno.serve(async (req) => {
       case "create_video_ad": {
         const res = await supabase.from("video_ads").insert({
           title: params.title,
+          description: params.description || null,
           video_url: params.video_url,
           duration_seconds: params.duration_seconds,
           reward_pt: params.reward_pt,
           external_link_url: params.external_link_url || null,
-          external_link_label: params.external_link_label || "Перейти",
+          external_link_label: params.external_link_label || "Посмотреть",
           media_type: params.media_type === "image" ? "image" : "video",
           advertiser_id: params.advertiser_id || null,
           is_active: true,
