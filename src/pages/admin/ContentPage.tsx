@@ -37,7 +37,7 @@ export default function ContentPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2", recheck_value: "5", recheck_unit: "minutes" as "minutes" | "hours" };
-  const emptyVideoForm = { title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
+  const emptyVideoForm = { title: "", description: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
 
   const [contentDialogOpen, setContentDialogOpen] = useState(false);
   const [contentKind, setContentKind] = useState<ContentKind>("subscribe");
@@ -272,6 +272,7 @@ export default function ContentPage() {
     try {
       await adminApi("create_video_ad", {
         title: videoForm.title.trim(),
+        description: videoForm.description?.trim() || null,
         video_url: videoForm.video_url,
         duration_seconds: Number(videoForm.duration_seconds),
         reward_pt: Number(videoForm.reward_pt),
@@ -521,6 +522,15 @@ export default function ContentPage() {
                           <div>
                             <Label>{t("content.videoTitle")}</Label>
                             <Input className="rounded-xl" value={videoForm.title} onChange={e => setVideoForm((f: any) => ({ ...f, title: e.target.value }))} />
+                          </div>
+                          <div>
+                            <Label>Описание (необязательно)</Label>
+                            <textarea
+                              className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
+                              value={videoForm.description}
+                              onChange={e => setVideoForm((f: any) => ({ ...f, description: e.target.value }))}
+                              placeholder="Краткое описание оффера, которое увидит пользователь под видео"
+                            />
                           </div>
                           <div>
                             <Label>{t("content.videoUrl")}</Label>
