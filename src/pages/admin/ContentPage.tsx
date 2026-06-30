@@ -604,6 +604,33 @@ export default function ContentPage() {
                               <p className="text-xs text-muted-foreground mt-1">Если вернулся раньше — задание не засчитывается, кнопка вернётся. Если вернулся во время или позже — задание выполнено.</p>
                             </div>
                           )}
+                          {showChannelFields && (
+                            <div>
+                              <Label>Повторная проверка подписки</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  className="rounded-xl flex-1"
+                                  type="number"
+                                  min={0}
+                                  value={taskForm.recheck_value}
+                                  onChange={e => setTaskForm((f: any) => ({ ...f, recheck_value: e.target.value }))}
+                                />
+                                <Select
+                                  value={taskForm.recheck_unit}
+                                  onValueChange={(v) => setTaskForm((f: any) => ({ ...f, recheck_unit: v }))}
+                                >
+                                  <SelectTrigger className="rounded-xl w-32"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="minutes">минут</SelectItem>
+                                    <SelectItem value="hours">часов</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Через это время бот проверит, остался ли юзер подписан. Если отписался — PT списываются и задание становится доступным заново. <b>0 = без проверки.</b>
+                              </p>
+                            </div>
+
                           <Button onClick={submitTask} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
                             {editingTaskId ? "Сохранить" : t("common.create")}
                           </Button>
