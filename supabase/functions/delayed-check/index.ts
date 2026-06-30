@@ -58,9 +58,7 @@ Deno.serve(async (req) => {
         Date.now() - new Date(task.created_at).getTime() > holdDays * 24 * 60 * 60 * 1000;
       const limitReached = task.max_completions > 0 && task.current_completions >= task.max_completions;
       if (!task.is_active || holdEnded || limitReached) {
-        await supabase.from("delayed_checks")
-          .update({ checked: true, acknowledged: true })
-          .eq("id", check.id);
+        await supabase.from("delayed_checks").delete().eq("id", check.id);
         skipped++;
         processed++;
         continue;
@@ -134,9 +132,8 @@ Deno.serve(async (req) => {
 
         deducted++;
       } else {
-        await supabase.from("delayed_checks")
-          .update({ checked: true, reward_deducted: false, acknowledged: true })
-          .eq("id", check.id);
+        // Still subscribed → forget the check entirely (per user request).
+        await supabase.from("delayed_checks").delete().eq("id", check.id);
       }
 
       processed++;
