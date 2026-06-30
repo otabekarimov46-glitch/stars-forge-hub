@@ -7,24 +7,30 @@ const corsHeaders = {
 
 const TELEGRAM_API = "https://api.telegram.org/bot";
 
+// Telegram rate-limit guard: ~30 req/s globally for bots, getChatMember is
+// per-chat. Keep a conservative pace + small batch to avoid 429 / soft-bans.
+const BATCH_SIZE = 25;
+const SLEEP_BETWEEN_CALLS_MS = 250;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+    const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 
     const { data: checks, error } = await supabase
       .from("delayed_checks")
       .select("*, tasks(*), users(*)")
       .eq("checked", false)
       .lte("check_at", new Date().toISOString())
-      .limit(50);
+      .order("check_at", { ascending: true })
+      .limit(BATCH_SIZE);
 
     if (error) throw error;
     if (!checks || checks.length === 0) {
@@ -33,12 +39,30 @@ Deno.serve(async (req) => {
 
     let processed = 0;
     let deducted = 0;
+    let skipped = 0;
 
     for (const check of checks) {
       const task = check.tasks;
       const user = check.users;
       if (!task || !user) {
         await supabase.from("delayed_checks").update({ checked: true }).eq("id", check.id);
+        continue;
+      }
+
+      // Forget the check if conditions no longer apply:
+      // - task disabled
+      // - hold period ended (created_at + hold_days)
+      // - limit reached
+      const holdDays = Number(task.hold_days || 0);
+      const holdEnded = holdDays > 0 &&
+        Date.now() - new Date(task.created_at).getTime() > holdDays * 24 * 60 * 60 * 1000;
+      const limitReached = task.max_completions > 0 && task.current_completions >= task.max_completions;
+      if (!task.is_active || holdEnded || limitReached) {
+        await supabase.from("delayed_checks")
+          .update({ checked: true, acknowledged: true })
+          .eq("id", check.id);
+        skipped++;
+        processed++;
         continue;
       }
 
@@ -55,25 +79,29 @@ Deno.serve(async (req) => {
             body: JSON.stringify({ chat_id: chatId, user_id: user.telegram_id }),
           });
           const memberData = await res.json();
+          if (res.status === 429) {
+            // Hit Telegram rate limit — back off and try this check next run.
+            const retryAfter = Number(memberData?.parameters?.retry_after || 1);
+            await sleep(Math.min(5000, retryAfter * 1000));
+            continue;
+          }
           if (memberData?.ok) {
             const status = memberData?.result?.status;
-            if (!status || status === "left" || status === "kicked") {
-              shouldDeduct = true;
-            }
+            if (!status || status === "left" || status === "kicked") shouldDeduct = true;
           } else {
-            // Telegram API call failed (rate limit / network / channel unreachable) —
-            // do NOT deduct on uncertainty. Just mark checked to avoid retry storms.
+            // Uncertainty (network / channel unreachable / bot removed) — do NOT deduct.
             console.log("delayed-check getChatMember not ok:", memberData?.description);
           }
         } catch (e) {
           console.error("getChatMember error:", e);
         }
+        // Pace requests to stay well under Telegram's global limit.
+        await sleep(SLEEP_BETWEEN_CALLS_MS);
       }
 
       if (shouldDeduct) {
         const balance = Number(user.balance_pt);
         const reward = Number(task.reward_pt);
-        // If user already withdrew (balance < reward) — do NOT deduct, per spec.
         const canDeduct = balance >= reward;
         if (canDeduct) {
           await supabase.from("users")
@@ -81,7 +109,7 @@ Deno.serve(async (req) => {
             .eq("id", user.id);
         }
 
-        // Make task available again: remove completion + free up slot.
+        // Free up the slot so the user can re-do the task.
         await supabase.from("task_completions")
           .delete()
           .eq("user_id", user.id)
@@ -90,24 +118,11 @@ Deno.serve(async (req) => {
           current_completions: Math.max(0, (task.current_completions || 1) - 1),
         }).eq("id", task.id);
 
+        // Mark the check as done; reward_deducted=true + acknowledged=false
+        // signals the Mini App to show the popup on next entry.
         await supabase.from("delayed_checks")
-          .update({ checked: true, reward_deducted: canDeduct })
+          .update({ checked: true, reward_deducted: true, acknowledged: false })
           .eq("id", check.id);
-
-        // Notify user only if we actually deducted, to keep Telegram traffic low.
-        if (canDeduct) {
-          try {
-            await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: user.telegram_id,
-                text: `⚠️ Вы отписались от ${task.channel_username || "канала"}. С вашего баланса списано *${reward} PT*.`,
-                parse_mode: "Markdown",
-              }),
-            });
-          } catch {}
-        }
 
         await supabase.from("admin_alerts").insert({
           type: "subscription_check_fail",
@@ -120,15 +135,14 @@ Deno.serve(async (req) => {
         deducted++;
       } else {
         await supabase.from("delayed_checks")
-          .update({ checked: true, reward_deducted: false })
+          .update({ checked: true, reward_deducted: false, acknowledged: true })
           .eq("id", check.id);
       }
 
       processed++;
     }
 
-
-    return jsonResponse({ data: { processed, deducted } });
+    return jsonResponse({ data: { processed, deducted, skipped, batch_size: BATCH_SIZE } });
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message }),
