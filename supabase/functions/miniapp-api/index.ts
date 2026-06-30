@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
 
         const { data: task } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away, recheck_delay_minutes")
           .eq("id", task_id).single();
         if (!task || !task.is_active) throw new Error("Task unavailable");
         if (task.max_completions && task.current_completions >= task.max_completions) {
@@ -551,7 +551,7 @@ Deno.serve(async (req) => {
                 const st = j.result?.status;
                 if (st === "member" || st === "administrator" || st === "creator") completed = true;
                 else failReason = "not_member";
-                break; // definitive answer received
+                break;
               } else {
                 failReason = j?.description || "telegram_error";
               }
@@ -561,7 +561,6 @@ Deno.serve(async (req) => {
             }
           }
         } else if (task.type === "view_post" || task.type === "view_story" || task.type === "survey") {
-          // Time-based check: user must have been away for >= min_seconds_away (default 2s), within last hour.
           const minMs = Math.max(1, Number(task.min_seconds_away ?? 2)) * 1000;
           const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
           const { data: started } = await supabase
@@ -589,7 +588,6 @@ Deno.serve(async (req) => {
           return jsonResponse({ data: { completed: false, subscribed: false, reason: failReason } });
         }
 
-        // Record completion and award PT
         await supabase.from("task_completions").insert({ user_id: user.id, task_id });
         await supabase.from("tasks").update({
           current_completions: (task.current_completions || 0) + 1,
@@ -608,18 +606,31 @@ Deno.serve(async (req) => {
           metadata: { task_id, reward_pt: task.reward_pt, type: task.type },
         });
 
-        // Anti-unsubscribe: schedule exactly ONE re-check 1 hour later for subscribe tasks.
+        // Mark any previous "redo" delayed_check rows for this task as acknowledged
+        // (user has now re-completed it, popup must not show again for this task).
+        await supabase.from("delayed_checks")
+          .update({ acknowledged: true })
+          .eq("user_id", user.id)
+          .eq("task_id", task_id)
+          .eq("reward_deducted", true);
+
+        // Anti-unsubscribe: schedule ONE re-check after configurable delay (subscribe only).
+        // recheck_delay_minutes = 0 → проверка отключена.
         if (task.type === "subscribe") {
-          const checkAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-          await supabase.from("delayed_checks").insert({
-            user_id: user.id,
-            task_id,
-            check_at: checkAt,
-          });
+          const delayMin = Number(task.recheck_delay_minutes ?? 60);
+          if (delayMin > 0) {
+            const checkAt = new Date(Date.now() + delayMin * 60 * 1000).toISOString();
+            await supabase.from("delayed_checks").insert({
+              user_id: user.id,
+              task_id,
+              check_at: checkAt,
+            });
+          }
         }
 
         return jsonResponse({ data: { completed: true, subscribed: true, new_balance: newBalance, reward: Number(task.reward_pt) } });
       }
+
 
 
 
