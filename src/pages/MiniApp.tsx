@@ -15,7 +15,9 @@ interface BotTask {
   channel_username?: string | null;
   post_url?: string | null;
   reward_pt: number;
+  requires_redo?: boolean;
 }
+
 
 interface VideoAd {
   id: string;
