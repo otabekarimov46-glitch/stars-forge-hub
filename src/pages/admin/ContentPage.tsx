@@ -524,6 +524,14 @@ export default function ContentPage() {
                             <Input className="rounded-xl" value={videoForm.title} onChange={e => setVideoForm((f: any) => ({ ...f, title: e.target.value }))} />
                           </div>
                           <div>
+                            <Label>Описание (необязательно)</Label>
+                            <textarea
+                              className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
+                              value={videoForm.description}
+                              onChange={e => setVideoForm((f: any) => ({ ...f, description: e.target.value }))}
+                              placeholder="Краткое описание оффера, которое увидит пользователь под видео"
+                            />
+                          <div>
                             <Label>{t("content.videoUrl")}</Label>
                             <div className="flex gap-2">
                               <Input className="rounded-xl flex-1" value={videoForm.video_url} onChange={e => setVideoForm((f: any) => ({ ...f, video_url: e.target.value }))} placeholder="https://..." />
