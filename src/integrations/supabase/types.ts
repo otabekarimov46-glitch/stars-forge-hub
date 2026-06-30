@@ -72,6 +72,7 @@ export type Database = {
       }
       delayed_checks: {
         Row: {
+          acknowledged: boolean
           check_at: string
           checked: boolean
           created_at: string
@@ -81,6 +82,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          acknowledged?: boolean
           check_at: string
           checked?: boolean
           created_at?: string
@@ -90,6 +92,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          acknowledged?: boolean
           check_at?: string
           checked?: boolean
           created_at?: string
@@ -219,6 +222,7 @@ export type Database = {
           min_seconds_away: number
           post_url: string | null
           reaction_emoji: string | null
+          recheck_delay_minutes: number
           reward_pt: number
           title: string | null
           type: Database["public"]["Enums"]["task_type"]
@@ -237,6 +241,7 @@ export type Database = {
           min_seconds_away?: number
           post_url?: string | null
           reaction_emoji?: string | null
+          recheck_delay_minutes?: number
           reward_pt?: number
           title?: string | null
           type: Database["public"]["Enums"]["task_type"]
@@ -255,6 +260,7 @@ export type Database = {
           min_seconds_away?: number
           post_url?: string | null
           reaction_emoji?: string | null
+          recheck_delay_minutes?: number
           reward_pt?: number
           title?: string | null
           type?: Database["public"]["Enums"]["task_type"]
@@ -364,6 +370,7 @@ export type Database = {
         Row: {
           advertiser_id: string | null
           created_at: string
+          description: string | null
           duration_seconds: number
           external_link_label: string | null
           external_link_url: string | null
@@ -378,6 +385,7 @@ export type Database = {
         Insert: {
           advertiser_id?: string | null
           created_at?: string
+          description?: string | null
           duration_seconds: number
           external_link_label?: string | null
           external_link_url?: string | null
@@ -392,6 +400,7 @@ export type Database = {
         Update: {
           advertiser_id?: string | null
           created_at?: string
+          description?: string | null
           duration_seconds?: number
           external_link_label?: string | null
           external_link_url?: string | null
