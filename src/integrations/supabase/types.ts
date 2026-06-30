@@ -364,6 +364,7 @@ export type Database = {
         Row: {
           advertiser_id: string | null
           created_at: string
+          description: string | null
           duration_seconds: number
           external_link_label: string | null
           external_link_url: string | null
@@ -378,6 +379,7 @@ export type Database = {
         Insert: {
           advertiser_id?: string | null
           created_at?: string
+          description?: string | null
           duration_seconds: number
           external_link_label?: string | null
           external_link_url?: string | null
@@ -392,6 +394,7 @@ export type Database = {
         Update: {
           advertiser_id?: string | null
           created_at?: string
+          description?: string | null
           duration_seconds?: number
           external_link_label?: string | null
           external_link_url?: string | null
