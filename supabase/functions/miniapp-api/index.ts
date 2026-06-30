@@ -294,13 +294,14 @@ Deno.serve(async (req) => {
         const watchedSet = new Set((watchedAfter || []).map((v: any) => v.video_ad_id));
         const { data: allVids } = await supabase
           .from("video_ads")
-          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type")
+          .select("id, title, description, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type, advertiser:advertisers(name)")
           .eq("is_active", true);
         const pool = (allVids || []).filter((v: any) => v.id !== view.video_ad_id);
         const fresh = pool.filter((v: any) => !watchedSet.has(v.id));
         const rest = pool.filter((v: any) => watchedSet.has(v.id));
         const shuffle2 = <T,>(arr: T[]) => arr.map(a => [Math.random(), a] as const).sort((a, b) => a[0] - b[0]).map(([, a]) => a);
-        const nextVideo = [...shuffle2(fresh), ...shuffle2(rest)][0] || null;
+        const rawNext = [...shuffle2(fresh), ...shuffle2(rest)][0] || null;
+        const nextVideo = rawNext ? { ...rawNext, advertiser_name: rawNext.advertiser?.name ?? null, advertiser: undefined } : null;
 
         return jsonResponse({ data: { rewarded: true, amount: video.reward_pt, new_balance: newBalance, next_video: nextVideo } });
       }
