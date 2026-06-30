@@ -630,6 +630,8 @@ export default function ContentPage() {
                                 Через это время бот проверит, остался ли юзер подписан. Если отписался — PT списываются и задание становится доступным заново. <b>0 = без проверки.</b>
                               </p>
                             </div>
+                          )}
+
 
                           <Button onClick={submitTask} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
                             {editingTaskId ? "Сохранить" : t("common.create")}
