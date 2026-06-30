@@ -518,55 +518,8 @@ export default function MiniApp() {
     );
   }
 
-  // ===== Fullscreen player =====
-  if (status === "playing" && video) {
-    return (
-      <div className="fixed inset-0 bg-black flex flex-col z-50 fade-in">
-        <div className="flex-1 flex items-center justify-center overflow-hidden">
-          {video.media_type === "image" ? (
-            <img src={video.video_url} alt={video.title} className="max-w-full max-h-full object-contain" />
-          ) : (
-            <video
-              ref={videoRef} src={video.video_url} poster={posterUrl || undefined}
-              className="max-w-full max-h-full" playsInline autoPlay preload="metadata"
-              controls={false} disablePictureInPicture
-              onContextMenu={(e) => e.preventDefault()}
-              onLoadedMetadata={(e) => {
-                syncPlaybackDuration(e.currentTarget);
-                setIsBuffering(false);
-              }}
-              onDurationChange={(e) => {
-                syncPlaybackDuration(e.currentTarget);
-              }}
-              onCanPlay={() => setIsBuffering(false)}
-              onPlaying={() => setIsBuffering(false)}
-              onTimeUpdate={(e) => {
-                setElapsed(e.currentTarget.currentTime);
-                if (isBuffering) setIsBuffering(false);
-              }}
-              onEnded={() => {
-                const naturalDuration = syncPlaybackDuration(videoRef.current);
-                setElapsed(naturalDuration || video.duration_seconds);
-                if (!finishedRef.current) finishWatching(naturalDuration || video.duration_seconds);
-              }}
-              onStalled={() => setIsBuffering(true)}
-              onSuspend={() => setIsBuffering(false)}
-              onWaiting={() => setIsBuffering(true)}
-              onError={() => setIsBuffering(false)}
-            />
-          )}
-        </div>
-        <div className="p-4 bg-black/80 backdrop-blur space-y-2">
-          <div className="flex justify-between text-xs text-white">
-            <span className="tabular-nums">{Math.min(playbackDuration || video.duration_seconds, elapsed).toFixed(1)}с / {(playbackDuration || video.duration_seconds).toFixed(1)}с</span>
-            <span className="text-yellow-300">+{video.reward_pt} PT</span>
-          </div>
-          <Progress value={progressPercent} className="h-1.5" />
-          <p className="text-center text-[11px] text-white/70">{isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}</p>
-        </div>
-      </div>
-    );
-  }
+  // Inline playback happens inside the ready/playing card below (no fullscreen takeover).
+
 
   // ===== Home =====
   const initial = (tgUser.name || "U").slice(0, 1).toUpperCase();
