@@ -746,29 +746,60 @@ export default function MiniApp() {
             <div key={video.id} className="screen-enter">
               <div className="rounded-3xl overflow-hidden"
                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                {/* Creative preview */}
                 <div className="relative aspect-video bg-black/40 overflow-hidden">
                   {posterUrl || video.media_type === "image" ? (
                     <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
                   )}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-2xl shadow-purple-900/40 font-bold text-lg tabular-nums">
+                  <div className="absolute left-2 top-2 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-900/40 tabular-nums">
                     +{video.reward_pt} PT
                   </div>
-                  <div className="absolute right-2 bottom-2 px-2.5 py-1 rounded-full text-[11px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1">
+                  <div className="absolute right-2 top-2 px-2 py-1 rounded-full text-[10px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1 text-white/90">
                     <Clock className="w-3 h-3" /> {video.duration_seconds}с
                   </div>
                 </div>
-                <div className="p-4 space-y-3.5">
-                  <h2 className="text-[15px] font-medium text-center text-white/95 leading-snug">{video.title}</h2>
+
+                {/* Content block — Telegram-ad style */}
+                <div className="p-4 space-y-3">
+                  <div className="space-y-1.5">
+                    <h2 className="text-[16px] font-semibold text-white leading-snug">{video.title}</h2>
+                    {video.description && (
+                      <p className="text-[13px] text-white/70 leading-relaxed whitespace-pre-wrap">{video.description}</p>
+                    )}
+                    <div className="text-[11px] text-white/40 pt-0.5">Реклама · 18+</div>
+                  </div>
+
+                  {video.advertiser_name && (
+                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/5">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-[12px] font-bold text-white shrink-0">
+                        {video.advertiser_name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="text-[13px] font-medium text-white/85 truncate">{video.advertiser_name}</div>
+                    </div>
+                  )}
+
                   <button
-                    onClick={startWatching}
+                    onClick={() => {
+                      if (video.external_link_url) {
+                        try {
+                          const tg: any = (window as any).Telegram?.WebApp;
+                          if (tg?.openLink) tg.openLink(video.external_link_url);
+                          else window.open(video.external_link_url, "_blank", "noopener,noreferrer");
+                        } catch {
+                          window.open(video.external_link_url, "_blank", "noopener,noreferrer");
+                        }
+                      }
+                      startWatching();
+                    }}
                     className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                       bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
                       shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
-                    <Play className="w-4 h-4" /> СМОТРЕТЬ
+                    {video.external_link_label || "Посмотреть"}
+                    {video.external_link_url ? <ExternalLink className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
