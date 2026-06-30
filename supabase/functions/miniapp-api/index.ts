@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
         const { data: allVideos } = await supabase
           .from("video_ads")
-          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type")
+          .select("id, title, description, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type")
           .eq("is_active", true);
 
         const list = allVideos || [];
