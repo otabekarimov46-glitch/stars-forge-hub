@@ -177,6 +177,7 @@ export default function MiniApp() {
   }, [video?.id, video?.duration_seconds]);
 
   // Load bot tasks (subscribe / survey / view_post)
+  const [redoPopup, setRedoPopup] = useState<{ tasks: any[] } | null>(null);
   const loadBotTasks = useCallback(() => {
     if (!telegramId) return;
     miniAppApi("list_tasks", { telegram_id: telegramId })
@@ -184,6 +185,27 @@ export default function MiniApp() {
       .catch(() => {});
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
+
+  // Check for "redo" tasks (user unsubscribed, PT deducted) — show popup once.
+  useEffect(() => {
+    if (!telegramId) return;
+    miniAppApi("list_redo_tasks", { telegram_id: telegramId })
+      .then((d) => {
+        const tasks = Array.isArray(d?.tasks) ? d.tasks : [];
+        if (tasks.length > 0) setRedoPopup({ tasks });
+      })
+      .catch(() => {});
+  }, [telegramId]);
+
+  const dismissRedoPopup = useCallback(() => {
+    setRedoPopup(null);
+    if (telegramId) {
+      miniAppApi("acknowledge_redo", { telegram_id: telegramId }).catch(() => {});
+    }
+    // Refresh task list so "redo" tasks reappear in the bottom sheet outlined red.
+    loadBotTasks();
+  }, [telegramId, loadBotTasks]);
+
 
   // Per-task UI state for subscribe verification
   // 'idle' | 'checking' | 'done' | 'failed'
