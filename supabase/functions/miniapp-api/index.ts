@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
         const { data: allVideos } = await supabase
           .from("video_ads")
-          .select("id, title, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type")
+          .select("id, title, description, video_url, duration_seconds, reward_pt, external_link_url, external_link_label, media_type, advertiser:advertisers(name)")
           .eq("is_active", true);
 
         const list = allVideos || [];
@@ -86,7 +86,8 @@ Deno.serve(async (req) => {
         const watchedAgain = list.filter((v: any) => watchedIds.has(v.id));
         const shuffle = <T,>(arr: T[]) => arr.map(a => [Math.random(), a] as const).sort((a, b) => a[0] - b[0]).map(([, a]) => a);
         const queue = [...shuffle(unwatched), ...shuffle(watchedAgain)];
-        const video = queue[0] || null;
+        const raw = queue[0] || null;
+        const video = raw ? { ...raw, advertiser_name: raw.advertiser?.name ?? null, advertiser: undefined } : null;
 
         return jsonResponse({ data: { video, user: userPayload } });
       }
