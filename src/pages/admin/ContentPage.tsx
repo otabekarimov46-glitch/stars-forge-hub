@@ -528,6 +528,7 @@ export default function ContentPage() {
                               placeholder="Короткое описание рекламы (необязательно)"
                               maxLength={280}
                             />
+                          </div>
                           <div>
                             <Label>{t("content.videoUrl")}</Label>
                             <div className="flex gap-2">
