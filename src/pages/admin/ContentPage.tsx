@@ -268,11 +268,12 @@ export default function ContentPage() {
     try {
       await adminApi("create_video_ad", {
         title: videoForm.title.trim(),
+        description: videoForm.description?.trim() || null,
         video_url: videoForm.video_url,
         duration_seconds: Number(videoForm.duration_seconds),
         reward_pt: Number(videoForm.reward_pt),
         external_link_url: videoForm.external_link_url || null,
-        external_link_label: videoForm.external_link_label || "Перейти",
+        external_link_label: videoForm.external_link_label || "Посмотреть",
         media_type: videoForm.media_type,
         advertiser_id: activeAdvertiser.id,
       });
