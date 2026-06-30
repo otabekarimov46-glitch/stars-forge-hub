@@ -518,55 +518,8 @@ export default function MiniApp() {
     );
   }
 
-  // ===== Fullscreen player =====
-  if (status === "playing" && video) {
-    return (
-      <div className="fixed inset-0 bg-black flex flex-col z-50 fade-in">
-        <div className="flex-1 flex items-center justify-center overflow-hidden">
-          {video.media_type === "image" ? (
-            <img src={video.video_url} alt={video.title} className="max-w-full max-h-full object-contain" />
-          ) : (
-            <video
-              ref={videoRef} src={video.video_url} poster={posterUrl || undefined}
-              className="max-w-full max-h-full" playsInline autoPlay preload="metadata"
-              controls={false} disablePictureInPicture
-              onContextMenu={(e) => e.preventDefault()}
-              onLoadedMetadata={(e) => {
-                syncPlaybackDuration(e.currentTarget);
-                setIsBuffering(false);
-              }}
-              onDurationChange={(e) => {
-                syncPlaybackDuration(e.currentTarget);
-              }}
-              onCanPlay={() => setIsBuffering(false)}
-              onPlaying={() => setIsBuffering(false)}
-              onTimeUpdate={(e) => {
-                setElapsed(e.currentTarget.currentTime);
-                if (isBuffering) setIsBuffering(false);
-              }}
-              onEnded={() => {
-                const naturalDuration = syncPlaybackDuration(videoRef.current);
-                setElapsed(naturalDuration || video.duration_seconds);
-                if (!finishedRef.current) finishWatching(naturalDuration || video.duration_seconds);
-              }}
-              onStalled={() => setIsBuffering(true)}
-              onSuspend={() => setIsBuffering(false)}
-              onWaiting={() => setIsBuffering(true)}
-              onError={() => setIsBuffering(false)}
-            />
-          )}
-        </div>
-        <div className="p-4 bg-black/80 backdrop-blur space-y-2">
-          <div className="flex justify-between text-xs text-white">
-            <span className="tabular-nums">{Math.min(playbackDuration || video.duration_seconds, elapsed).toFixed(1)}с / {(playbackDuration || video.duration_seconds).toFixed(1)}с</span>
-            <span className="text-yellow-300">+{video.reward_pt} PT</span>
-          </div>
-          <Progress value={progressPercent} className="h-1.5" />
-          <p className="text-center text-[11px] text-white/70">{isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}</p>
-        </div>
-      </div>
-    );
-  }
+  // Inline playback happens inside the ready/playing card below (no fullscreen takeover).
+
 
   // ===== Home =====
   const initial = (tgUser.name || "U").slice(0, 1).toUpperCase();
@@ -742,23 +695,81 @@ export default function MiniApp() {
             </button>
           )}
 
-          {status === "ready" && video && (
+          {(status === "ready" || status === "playing") && video && (() => {
+            const playing = status === "playing";
+            const dur = playbackDuration || video.duration_seconds;
+            const remain = Math.max(0, dur - elapsed);
+            const mm = Math.floor(remain / 60).toString().padStart(2, "0");
+            const ss = Math.floor(remain % 60).toString().padStart(2, "0");
+            return (
             <div key={video.id} className="screen-enter">
               <div className="rounded-3xl overflow-hidden"
                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                {/* Creative preview */}
-                <div className="relative aspect-video bg-black/40 overflow-hidden">
-                  {posterUrl || video.media_type === "image" ? (
+                {/* Creative preview / inline player */}
+                <div className="relative aspect-video bg-black overflow-hidden">
+                  {playing && video.media_type !== "image" ? (
+                    <video
+                      ref={videoRef} src={video.video_url} poster={posterUrl || undefined}
+                      className="w-full h-full object-contain bg-black" playsInline autoPlay preload="metadata"
+                      controls={false} disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
+                      onLoadedMetadata={(e) => { syncPlaybackDuration(e.currentTarget); setIsBuffering(false); }}
+                      onDurationChange={(e) => syncPlaybackDuration(e.currentTarget)}
+                      onCanPlay={() => setIsBuffering(false)}
+                      onPlaying={() => setIsBuffering(false)}
+                      onTimeUpdate={(e) => { setElapsed(e.currentTarget.currentTime); if (isBuffering) setIsBuffering(false); }}
+                      onEnded={() => {
+                        const nd = syncPlaybackDuration(videoRef.current);
+                        setElapsed(nd || video.duration_seconds);
+                        if (!finishedRef.current) finishWatching(nd || video.duration_seconds);
+                      }}
+                      onStalled={() => setIsBuffering(true)}
+                      onSuspend={() => setIsBuffering(false)}
+                      onWaiting={() => setIsBuffering(true)}
+                      onError={() => setIsBuffering(false)}
+                    />
+                  ) : playing && video.media_type === "image" ? (
+                    <img src={video.video_url} alt={video.title} className="w-full h-full object-contain" />
+                  ) : posterUrl || video.media_type === "image" ? (
                     <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
                   )}
-                  <div className="absolute left-2 top-2 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-900/40 tabular-nums">
-                    +{video.reward_pt} PT
-                  </div>
-                  <div className="absolute right-2 top-2 px-2 py-1 rounded-full text-[10px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1 text-white/90">
-                    <Clock className="w-3 h-3" /> {video.duration_seconds}с
-                  </div>
+
+                  {/* Top progress + timer (Telegram-ad style) */}
+                  {playing && (
+                    <>
+                      <div className="absolute top-0 inset-x-0 p-2.5 bg-gradient-to-b from-black/70 to-transparent">
+                        <div className="h-1 rounded-full bg-white/20 overflow-hidden">
+                          <div
+                            className="h-full bg-white rounded-full transition-[width] duration-150 ease-linear"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                        <div className="mt-1.5 flex justify-center">
+                          <span className="px-2 py-0.5 rounded-full bg-black/55 backdrop-blur text-[11px] tabular-nums font-medium text-white">
+                            {mm}:{ss}
+                          </span>
+                        </div>
+                      </div>
+                      {isBuffering && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {!playing && (
+                    <>
+                      <div className="absolute left-2 top-2 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-br from-purple-600 to-blue-600 shadow-lg shadow-purple-900/40 tabular-nums">
+                        +{video.reward_pt} PT
+                      </div>
+                      <div className="absolute right-2 top-2 px-2 py-1 rounded-full text-[10px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1 text-white/90">
+                        <Clock className="w-3 h-3" /> {video.duration_seconds}с
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Content block — Telegram-ad style */}
@@ -781,7 +792,9 @@ export default function MiniApp() {
                   )}
 
                   <button
+                    disabled={playing}
                     onClick={() => {
+                      if (playing) return;
                       if (video.external_link_url) {
                         try {
                           const tg: any = (window as any).Telegram?.WebApp;
@@ -793,18 +806,32 @@ export default function MiniApp() {
                       }
                       startWatching();
                     }}
-                    className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
-                      transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
+                    className={
+                      "press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white " +
+                      "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 " +
+                      "shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2 " +
+                      "transition-transform duration-150 active:scale-[0.97] hover:brightness-110 " +
+                      (playing ? "opacity-70 cursor-not-allowed" : "")
+                    }
                   >
-                    {video.external_link_label || "Посмотреть"}
-                    {video.external_link_url ? <ExternalLink className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    {playing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Идёт просмотр…
+                      </>
+                    ) : (
+                      <>
+                        {video.external_link_label || "Посмотреть"}
+                        {video.external_link_url ? <ExternalLink className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
+
 
           {status === "completed" && lastFinished && (
             <div className="screen-enter">
