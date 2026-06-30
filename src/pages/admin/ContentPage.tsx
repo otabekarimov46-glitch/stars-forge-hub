@@ -531,6 +531,7 @@ export default function ContentPage() {
                               onChange={e => setVideoForm((f: any) => ({ ...f, description: e.target.value }))}
                               placeholder="Краткое описание оффера, которое увидит пользователь под видео"
                             />
+                          </div>
                           <div>
                             <Label>{t("content.videoUrl")}</Label>
                             <div className="flex gap-2">
