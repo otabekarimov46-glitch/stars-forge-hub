@@ -272,6 +272,7 @@ export default function ContentPage() {
     try {
       await adminApi("create_video_ad", {
         title: videoForm.title.trim(),
+        description: videoForm.description?.trim() || null,
         video_url: videoForm.video_url,
         duration_seconds: Number(videoForm.duration_seconds),
         reward_pt: Number(videoForm.reward_pt),
