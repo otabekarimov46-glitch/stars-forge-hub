@@ -943,40 +943,33 @@ export default function MiniApp() {
                   }
 
                   const disabled = state === "checking" || state === "done";
-                  const isRedo = !!t.requires_redo;
                   const content = (
                     <div
                       className={
                         "rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 " +
-                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]") +
-                        (isRedo ? " ring-1 ring-red-400/60 shadow-[0_0_0_1px_rgba(248,113,113,0.25)]" : "")
+                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
                       }
                       style={{
-                        background: isRedo ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.05)",
-                        border: isRedo ? "1px solid rgba(248,113,113,0.55)" : "1px solid rgba(255,255,255,0.09)",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.09)",
                       }}
                     >
-                      <div className={
-                        "w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 " +
-                        (isRedo
-                          ? "bg-red-500/15 border-red-400/30"
-                          : "bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10")
-                      }>
-                        <Icon className={"w-5 h-5 " + (isRedo ? "text-red-200" : "text-sky-200")} />
+                      <div className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10">
+                        <Icon className="w-5 h-5 text-sky-200" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
                         <div className={
                           "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
-                          (state === "done" ? "text-emerald-400 line-through"
-                            : isRedo ? "text-red-300" : "text-yellow-300/90")
+                          (state === "done" ? "text-emerald-400 line-through" : "text-yellow-300/90")
                         }>
-                          {isRedo ? `Вернуть +${t.reward_pt} PT` : `+${t.reward_pt} PT`}
+                          +{t.reward_pt} PT
                         </div>
                       </div>
                       {cta}
                     </div>
                   );
+
 
                   if (disabled) {
                     return <div key={t.id} className="pointer-events-none">{content}</div>;
