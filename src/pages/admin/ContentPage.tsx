@@ -109,7 +109,6 @@ export default function ContentPage() {
         max_completions: Number(taskForm.max_completions) || 0,
         hold_days: Number(taskForm.hold_days) || 5,
         min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
-        recheck_delay_minutes: recheckMinutes(),
       };
       if (editingTaskId) {
         await adminApi("update_task", { task_id: editingTaskId, ...payload, channel_id: payload.channel_id });
