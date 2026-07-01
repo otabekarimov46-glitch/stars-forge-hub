@@ -79,8 +79,6 @@ export default function ContentPage() {
   const openEditTask = (ta: any) => {
     setEditingTaskId(ta.id);
     setContentKind(ta.type);
-    const mins = Number(ta.recheck_delay_minutes ?? 60);
-    const useHours = mins === 0 ? false : mins % 60 === 0;
     setTaskForm({
       type: ta.type,
       title: ta.title || "",
@@ -91,16 +89,11 @@ export default function ContentPage() {
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
       min_seconds_away: String(ta.min_seconds_away ?? "2"),
-      recheck_value: String(useHours ? mins / 60 : mins),
-      recheck_unit: useHours ? "hours" : "minutes",
     });
     setContentDialogOpen(true);
   };
 
-  const recheckMinutes = () => {
-    const v = Math.max(0, Number(taskForm.recheck_value) || 0);
-    return taskForm.recheck_unit === "hours" ? v * 60 : v;
-  };
+
 
   const submitTask = async () => {
     if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
