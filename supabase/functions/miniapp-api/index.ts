@@ -566,27 +566,8 @@ Deno.serve(async (req) => {
           metadata: { task_id, reward_pt: task.reward_pt, type: task.type },
         });
 
-        // Mark any previous "redo" delayed_check rows for this task as acknowledged
-        // (user has now re-completed it, popup must not show again for this task).
-        await supabase.from("delayed_checks")
-          .update({ acknowledged: true })
-          .eq("user_id", user.id)
-          .eq("task_id", task_id)
-          .eq("reward_deducted", true);
 
-        // Anti-unsubscribe: schedule ONE re-check after configurable delay (subscribe only).
-        // recheck_delay_minutes = 0 → проверка отключена.
-        if (task.type === "subscribe") {
-          const delayMin = Number(task.recheck_delay_minutes ?? 60);
-          if (delayMin > 0) {
-            const checkAt = new Date(Date.now() + delayMin * 60 * 1000).toISOString();
-            await supabase.from("delayed_checks").insert({
-              user_id: user.id,
-              task_id,
-              check_at: checkAt,
-            });
-          }
-        }
+
 
         return jsonResponse({ data: { completed: true, subscribed: true, new_balance: newBalance, reward: Number(task.reward_pt) } });
       }
