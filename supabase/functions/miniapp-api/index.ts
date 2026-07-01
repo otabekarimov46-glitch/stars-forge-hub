@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
         if (task.type === "subscribe") {
           // IMPORTANT: use the NEW bot token first — the active bot (channel admin)
           // is the one configured in TELEGRAM_BOT_TOKEN_NEW (same as telegram-bot fn).
-          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
           if (!botToken) return jsonResponse({ data: { completed: false, subscribed: false, reason: "bot_not_configured" } });
 
           const candidates: (string | number)[] = [];
@@ -766,7 +766,7 @@ async function issueCaptcha(supabase: any, user: any, reason: string, freeze: bo
     message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}.${freeze ? " Баланс заморожен," : ""} отправлена капча.`,
   });
 
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
   if (botToken) {
     try {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
