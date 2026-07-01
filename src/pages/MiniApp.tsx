@@ -179,7 +179,6 @@ export default function MiniApp() {
   }, [video?.id, video?.duration_seconds]);
 
   // Load bot tasks (subscribe / survey / view_post)
-  const [redoPopup, setRedoPopup] = useState<{ tasks: any[] } | null>(null);
   const loadBotTasks = useCallback(() => {
     if (!telegramId) return;
     miniAppApi("list_tasks", { telegram_id: telegramId })
@@ -188,47 +187,7 @@ export default function MiniApp() {
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
 
-  // Check for "redo" tasks (user unsubscribed, PT deducted).
-  // Poll periodically + on window focus / visibility change so the popup
-  // shows up even when the user is already inside the Mini App while the
-  // background delayed-check job deducts PT.
-  useEffect(() => {
-    if (!telegramId) return;
-    let cancelled = false;
-    const check = () => {
-      miniAppApi("list_redo_tasks", { telegram_id: telegramId })
-        .then((d) => {
-          if (cancelled) return;
-          const tasks = Array.isArray(d?.tasks) ? d.tasks : [];
-          if (tasks.length > 0) {
-            setRedoPopup((prev) => prev ?? { tasks });
-            loadBotTasks();
-          }
-        })
-        .catch(() => {});
-    };
-    check();
-    const interval = window.setInterval(check, 30_000);
-    const onVisible = () => { if (document.visibilityState === "visible") check(); };
-    const onFocus = () => check();
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onFocus);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [telegramId, loadBotTasks]);
 
-  const dismissRedoPopup = useCallback(() => {
-    setRedoPopup(null);
-    if (telegramId) {
-      miniAppApi("acknowledge_redo", { telegram_id: telegramId }).catch(() => {});
-    }
-    // Refresh task list so "redo" tasks reappear in the bottom sheet outlined red.
-    loadBotTasks();
-  }, [telegramId, loadBotTasks]);
 
 
   // Per-task UI state for subscribe verification
@@ -984,40 +943,33 @@ export default function MiniApp() {
                   }
 
                   const disabled = state === "checking" || state === "done";
-                  const isRedo = !!t.requires_redo;
                   const content = (
                     <div
                       className={
                         "rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 " +
-                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]") +
-                        (isRedo ? " ring-1 ring-red-400/60 shadow-[0_0_0_1px_rgba(248,113,113,0.25)]" : "")
+                        (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
                       }
                       style={{
-                        background: isRedo ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.05)",
-                        border: isRedo ? "1px solid rgba(248,113,113,0.55)" : "1px solid rgba(255,255,255,0.09)",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.09)",
                       }}
                     >
-                      <div className={
-                        "w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 " +
-                        (isRedo
-                          ? "bg-red-500/15 border-red-400/30"
-                          : "bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10")
-                      }>
-                        <Icon className={"w-5 h-5 " + (isRedo ? "text-red-200" : "text-sky-200")} />
+                      <div className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10">
+                        <Icon className="w-5 h-5 text-sky-200" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
                         <div className={
                           "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
-                          (state === "done" ? "text-emerald-400 line-through"
-                            : isRedo ? "text-red-300" : "text-yellow-300/90")
+                          (state === "done" ? "text-emerald-400 line-through" : "text-yellow-300/90")
                         }>
-                          {isRedo ? `Вернуть +${t.reward_pt} PT` : `+${t.reward_pt} PT`}
+                          +{t.reward_pt} PT
                         </div>
                       </div>
                       {cta}
                     </div>
                   );
+
 
                   if (disabled) {
                     return <div key={t.id} className="pointer-events-none">{content}</div>;
@@ -1043,48 +995,6 @@ export default function MiniApp() {
         </Vaul.Portal>
       </Vaul.Root>
 
-      {/* Unsubscribe popup */}
-      {redoPopup && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={dismissRedoPopup}
-        >
-          <div
-            className="w-full max-w-md mx-3 mb-3 sm:mb-0 rounded-3xl p-6 animate-in slide-in-from-bottom-4 duration-300"
-            style={{
-              background: "linear-gradient(180deg, rgba(30,32,48,0.98), rgba(18,20,32,0.98))",
-              border: "1px solid rgba(248,113,113,0.35)",
-              boxShadow: "0 20px 60px -10px rgba(239,68,68,0.35)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-11 h-11 rounded-2xl bg-red-500/15 border border-red-400/40 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-300" />
-              </div>
-              <div className="text-white font-semibold text-[16px]">Подписка отменена</div>
-            </div>
-            <p className="text-white/75 text-[14px] leading-relaxed">
-              Похоже, вы отписались от одного или нескольких каналов, поэтому начисленные PT были возвращены.
-              Чтобы получить награду снова — откройте список заданий и заново выполните те, что обведены <span className="text-red-300 font-medium">красной рамкой</span>.
-            </p>
-            <div className="mt-4 space-y-1.5 max-h-40 overflow-y-auto">
-              {redoPopup.tasks.slice(0, 5).map((t) => (
-                <div key={t.id} className="flex items-center justify-between text-[13px] px-3 py-2 rounded-xl bg-white/[0.04] border border-red-400/20">
-                  <span className="text-white/90 truncate mr-2">{t.title || t.channel_username || "Задание"}</span>
-                  <span className="text-red-300 tabular-nums shrink-0">−{t.reward_pt} PT</span>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={dismissRedoPopup}
-              className="mt-5 w-full h-11 rounded-2xl font-medium text-white bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-400 hover:to-rose-400 active:scale-[0.98] transition-all"
-            >
-              Понятно
-            </button>
-          </div>
-        </div>
-      )}
     </div>
 
   );

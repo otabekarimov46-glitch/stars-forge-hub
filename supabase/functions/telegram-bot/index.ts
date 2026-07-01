@@ -419,11 +419,8 @@ async function handleTaskComplete(chatId: number, botToken: string, user: any, t
   await supabase.from("users").update({ balance_pt: Number(user.balance_pt) + Number(task.reward_pt) }).eq("id", user.id);
   await supabase.from("tasks").update({ current_completions: (task.current_completions || 0) + 1 }).eq("id", task.id);
 
-  if (task.type === "subscribe" || task.type === "reaction") {
-    const holdDays = task.hold_days || 5;
-    const checkAt = new Date(Date.now() + holdDays * 86_400_000).toISOString();
-    await supabase.from("delayed_checks").insert({ user_id: user.id, task_id: taskId, check_at: checkAt });
-  }
+
+
 
   await sendTg(botToken, { chat_id: chatId, text: `✅ +${task.reward_pt} PT` });
 }

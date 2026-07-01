@@ -70,54 +70,6 @@ export type Database = {
         }
         Relationships: []
       }
-      delayed_checks: {
-        Row: {
-          acknowledged: boolean
-          check_at: string
-          checked: boolean
-          created_at: string
-          id: string
-          reward_deducted: boolean
-          task_id: string
-          user_id: string
-        }
-        Insert: {
-          acknowledged?: boolean
-          check_at: string
-          checked?: boolean
-          created_at?: string
-          id?: string
-          reward_deducted?: boolean
-          task_id: string
-          user_id: string
-        }
-        Update: {
-          acknowledged?: boolean
-          check_at?: string
-          checked?: boolean
-          created_at?: string
-          id?: string
-          reward_deducted?: boolean
-          task_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "delayed_checks_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "delayed_checks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       logs_activity: {
         Row: {
           action: string
@@ -222,7 +174,6 @@ export type Database = {
           min_seconds_away: number
           post_url: string | null
           reaction_emoji: string | null
-          recheck_delay_minutes: number
           reward_pt: number
           title: string | null
           type: Database["public"]["Enums"]["task_type"]
@@ -241,7 +192,6 @@ export type Database = {
           min_seconds_away?: number
           post_url?: string | null
           reaction_emoji?: string | null
-          recheck_delay_minutes?: number
           reward_pt?: number
           title?: string | null
           type: Database["public"]["Enums"]["task_type"]
@@ -260,7 +210,6 @@ export type Database = {
           min_seconds_away?: number
           post_url?: string | null
           reaction_emoji?: string | null
-          recheck_delay_minutes?: number
           reward_pt?: number
           title?: string | null
           type?: Database["public"]["Enums"]["task_type"]
