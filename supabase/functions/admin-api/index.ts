@@ -254,7 +254,6 @@ Deno.serve(async (req) => {
           max_completions: params.max_completions || 0,
           hold_days: params.hold_days || 5,
           min_seconds_away: params.min_seconds_away ?? 2,
-          recheck_delay_minutes: params.recheck_delay_minutes ?? 60,
         }).select();
         data = res.data;
         error = res.error;
