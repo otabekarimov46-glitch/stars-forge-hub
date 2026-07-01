@@ -188,16 +188,38 @@ export default function MiniApp() {
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
 
-  // Check for "redo" tasks (user unsubscribed, PT deducted) — show popup once.
+  // Check for "redo" tasks (user unsubscribed, PT deducted).
+  // Poll periodically + on window focus / visibility change so the popup
+  // shows up even when the user is already inside the Mini App while the
+  // background delayed-check job deducts PT.
   useEffect(() => {
     if (!telegramId) return;
-    miniAppApi("list_redo_tasks", { telegram_id: telegramId })
-      .then((d) => {
-        const tasks = Array.isArray(d?.tasks) ? d.tasks : [];
-        if (tasks.length > 0) setRedoPopup({ tasks });
-      })
-      .catch(() => {});
-  }, [telegramId]);
+    let cancelled = false;
+    const check = () => {
+      miniAppApi("list_redo_tasks", { telegram_id: telegramId })
+        .then((d) => {
+          if (cancelled) return;
+          const tasks = Array.isArray(d?.tasks) ? d.tasks : [];
+          if (tasks.length > 0) {
+            setRedoPopup((prev) => prev ?? { tasks });
+            loadBotTasks();
+          }
+        })
+        .catch(() => {});
+    };
+    check();
+    const interval = window.setInterval(check, 30_000);
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    const onFocus = () => check();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [telegramId, loadBotTasks]);
 
   const dismissRedoPopup = useCallback(() => {
     setRedoPopup(null);
