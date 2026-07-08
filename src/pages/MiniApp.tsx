@@ -670,6 +670,8 @@ export default function MiniApp() {
         </div>
       </header>
 
+      <div className="pb-28">
+      {tab === "tasks" && (<>
       {/* ===== Daily bonus ===== */}
       <section className="px-4 mt-2">
         <button
