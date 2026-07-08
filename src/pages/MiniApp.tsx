@@ -1001,7 +1001,7 @@ export default function MiniApp() {
                 }
               >
                 <Icon className="w-4 h-4" />
-                <span className={active ? "inline" : "hidden sm:inline"}>{label}</span>
+                <span className="inline">{label}</span>
               </button>
             );
           })}
