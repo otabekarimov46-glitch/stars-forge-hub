@@ -129,6 +129,13 @@ export default function MiniApp() {
     return () => clearInterval(id);
   }, []);
 
+  // Load config (exchange rate, etc.)
+  useEffect(() => {
+    miniAppApi("get_config")
+      .then((c) => { if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate); })
+      .catch(() => {});
+  }, []);
+
   // Anti-clicker
   const reportSuspicious = useCallback(async () => {
     if (!telegramId) return;
