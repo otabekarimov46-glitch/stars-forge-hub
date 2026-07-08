@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, ClipboardList, Newspaper, Camera, ChevronRight, X } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
@@ -89,7 +89,9 @@ export default function MiniApp() {
 
   // Bot tasks for category sheets
   const [botTasks, setBotTasks] = useState<BotTask[]>([]);
-  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post" | "view_story">(null);
+  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "view_post" | "view_story">(null);
+  const [tab, setTab] = useState<"tasks" | "wallet" | "profile">("tasks");
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,6 +127,13 @@ export default function MiniApp() {
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Load config (exchange rate, etc.)
+  useEffect(() => {
+    miniAppApi("get_config")
+      .then((c) => { if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate); })
+      .catch(() => {});
   }, []);
 
   // Anti-clicker
@@ -236,7 +245,7 @@ export default function MiniApp() {
   // to keep hook order stable across renders. Tasks completed in this session
   // stay visible (with a check) until the sheet closes and the list refreshes.
   const tasksByType = useMemo(() => {
-    const m: Record<string, BotTask[]> = { subscribe: [], survey: [], view_post: [], view_story: [] };
+    const m: Record<string, BotTask[]> = { subscribe: [], view_post: [], view_story: [] };
     for (const t of botTasks) {
       if (m[t.type]) m[t.type].push(t);
     }
@@ -579,7 +588,6 @@ export default function MiniApp() {
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
     subscribe:  { title: "Подписаться на канал",  icon: Send,          empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
-    survey:     { title: "Пройти опрос",          icon: ClipboardList, empty: "Пока нет доступных опросов",     ctaLabel: "Пройти" },
     view_story: { title: "Посмотреть историю",    icon: Camera,        empty: "Пока нет историй",                ctaLabel: "Открыть" },
     view_post:  { title: "Посмотреть пост",       icon: Newspaper,     empty: "Пока нет публикаций",             ctaLabel: "Открыть" },
   };
@@ -599,7 +607,7 @@ export default function MiniApp() {
     return "Задание";
   };
 
-  const categoryTile = (kind: "subscribe" | "survey" | "view_post" | "view_story") => {
+  const categoryTile = (kind: "subscribe" | "view_post" | "view_story") => {
     const cfg = SHEET_CONFIG[kind];
     const Icon = cfg.icon;
     const list = (tasksByType[kind] || []).filter((t) => taskState[t.id] !== "done");
@@ -662,6 +670,8 @@ export default function MiniApp() {
         </div>
       </header>
 
+      <div className="pb-28">
+      {tab === "tasks" && (<>
       {/* ===== Daily bonus ===== */}
       <section className="px-4 mt-2">
         <button
@@ -838,9 +848,165 @@ export default function MiniApp() {
           {categoryTile("subscribe")}
           {categoryTile("view_story")}
           {categoryTile("view_post")}
-          {categoryTile("survey")}
         </div>
       </section>
+      </>)}
+
+      {tab === "wallet" && (
+        <section className="px-4 mt-4 space-y-3">
+          <div className="max-w-md mx-auto space-y-3">
+            <div className="rounded-3xl p-6 text-center relative overflow-hidden"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+              <div className="absolute inset-0 pointer-events-none opacity-30"
+                   style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(139,92,246,0.35) 0%, transparent 70%)" }} />
+              <div className="relative">
+                <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">Ваш баланс</div>
+                <div className="flex items-baseline justify-center gap-2">
+                  <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
+                    {user ? user.balance_pt.toFixed(1) : "…"}
+                  </span>
+                  <span className="text-white/70 font-medium">PT</span>
+                </div>
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
+                  <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+                  <span className="text-[13px] tabular-nums">
+                    ≈ {user ? (user.balance_pt * exchangeRate).toFixed(2) : "…"}
+                  </span>
+                  <span className="text-[11px] text-white/60">Stars</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
+              <div className="text-[13px] font-semibold text-white/85 mb-2">Курс обмена</div>
+              <div className="flex items-center justify-between text-[13px]">
+                <span className="text-white/70">1 PT</span>
+                <span className="tabular-nums font-semibold">≈ {exchangeRate.toFixed(2)} ⭐</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[12px] text-white/50">
+                <span>10 PT</span>
+                <span className="tabular-nums">≈ {(exchangeRate * 10).toFixed(2)} ⭐</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-[12px] text-white/50">
+                <span>100 PT</span>
+                <span className="tabular-nums">≈ {(exchangeRate * 100).toFixed(2)} ⭐</span>
+              </div>
+            </div>
+
+            <button
+              disabled
+              className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
+                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
+                opacity-60 cursor-not-allowed"
+            >
+              <Star className="w-4 h-4" /> Вывести в Stars
+            </button>
+            <p className="text-center text-[11px] text-white/50">Вывод откроется скоро</p>
+          </div>
+        </section>
+      )}
+
+      {tab === "profile" && (
+        <section className="px-4 mt-4 space-y-3">
+          <div className="max-w-md mx-auto space-y-3">
+            <div className="rounded-3xl p-6 text-center"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+              <div className="w-20 h-20 rounded-full mx-auto overflow-hidden ring-2 ring-white/15 shadow-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-2xl font-semibold">
+                {tgUser.photo ? (
+                  <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
+                ) : (initial)}
+              </div>
+              <div className="mt-3 text-[17px] font-semibold">{tgUser.name || "Пользователь"}</div>
+              {telegramId && (
+                <div className="text-[12px] text-white/50 tabular-nums mt-0.5">ID: {telegramId}</div>
+              )}
+            </div>
+
+            <div className="rounded-2xl p-4 flex items-center gap-3"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] text-white/60">Баланс</div>
+                <div className="text-[15px] font-semibold tabular-nums">
+                  {user ? user.balance_pt.toFixed(1) : "…"} PT
+                  <span className="text-white/50 font-normal"> · ≈ {user ? (user.balance_pt * exchangeRate).toFixed(2) : "…"} ⭐</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setTab("wallet")}
+                className="press-soft px-3 h-8 rounded-full text-[12px] border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+              >
+                Кошелёк
+              </button>
+            </div>
+
+            {telegramId && (
+              <button
+                onClick={() => {
+                  const link = `https://t.me/share/url?url=${encodeURIComponent("Присоединяйся к Starment: смотри видео и получай Stars")}`;
+                  try {
+                    const tg = (window as any).Telegram?.WebApp;
+                    if (tg?.openTelegramLink) tg.openTelegramLink(link);
+                    else window.open(link, "_blank");
+                  } catch {}
+                }}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Send className="w-5 h-5 text-sky-200" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">Пригласить друга</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">Поделиться Starment</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+      </div>
+
+      {/* ===== Floating tab bar ===== */}
+      <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none">
+        <div
+          className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full shadow-2xl shadow-black/40"
+          style={{
+            background: "rgba(15,8,40,0.72)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            backdropFilter: "blur(22px)",
+            WebkitBackdropFilter: "blur(22px)",
+          }}
+        >
+          {[
+            { id: "tasks",   label: "Задания", icon: ListChecks },
+            { id: "wallet",  label: "Кошелёк", icon: Wallet },
+            { id: "profile", label: "Профиль", icon: UserIcon },
+          ].map(({ id, label, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setTab(id as any)}
+                className={
+                  "press-soft h-11 px-4 rounded-full flex items-center gap-2 text-[13px] font-medium transition-all duration-200 " +
+                  (active
+                    ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-purple-900/40"
+                    : "text-white/70 hover:text-white hover:bg-white/5")
+                }
+              >
+                <Icon className="w-4 h-4" />
+                <span className="inline">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* ===== Category bottom sheet (full-screen w/ grabber) ===== */}
       <Vaul.Root
