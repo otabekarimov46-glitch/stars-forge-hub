@@ -89,7 +89,9 @@ export default function MiniApp() {
 
   // Bot tasks for category sheets
   const [botTasks, setBotTasks] = useState<BotTask[]>([]);
-  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "survey" | "view_post" | "view_story">(null);
+  const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "view_post" | "view_story">(null);
+  const [tab, setTab] = useState<"tasks" | "wallet" | "profile">("tasks");
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
