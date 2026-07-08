@@ -384,7 +384,19 @@ Deno.serve(async (req) => {
       }
 
       case "get_config": {
-        return jsonResponse({ data: { turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null } });
+        const { data: rows } = await supabase
+          .from("settings")
+          .select("key,value")
+          .in("key", ["exchange_rate"]);
+        const map: Record<string, string> = {};
+        (rows || []).forEach((r: any) => (map[r.key] = r.value));
+        const exchange_rate = Number(map.exchange_rate ?? "1") || 1;
+        return jsonResponse({
+          data: {
+            turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null,
+            exchange_rate,
+          },
+        });
       }
 
       case "verify_turnstile": {
