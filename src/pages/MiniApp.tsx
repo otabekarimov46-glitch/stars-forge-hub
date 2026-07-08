@@ -839,7 +839,6 @@ export default function MiniApp() {
           {categoryTile("subscribe")}
           {categoryTile("view_story")}
           {categoryTile("view_post")}
-          {categoryTile("survey")}
         </div>
       </section>
 
