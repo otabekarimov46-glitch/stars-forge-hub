@@ -581,7 +581,6 @@ export default function MiniApp() {
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
     subscribe:  { title: "Подписаться на канал",  icon: Send,          empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
-    survey:     { title: "Пройти опрос",          icon: ClipboardList, empty: "Пока нет доступных опросов",     ctaLabel: "Пройти" },
     view_story: { title: "Посмотреть историю",    icon: Camera,        empty: "Пока нет историй",                ctaLabel: "Открыть" },
     view_post:  { title: "Посмотреть пост",       icon: Newspaper,     empty: "Пока нет публикаций",             ctaLabel: "Открыть" },
   };
