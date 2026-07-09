@@ -80,15 +80,16 @@ Deno.serve(async (req) => {
           .single();
         if (res.error) { error = res.error; break; }
 
-        await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+        const tgRes = await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chat_id: res.data.telegram_id,
-            text: `🔒 *Проверка безопасности*\n\nРешите пример: *${a} + ${b} = ?*\n\nОтправьте ответ числом. До верного ответа все функции заблокированы.`,
-            parse_mode: "Markdown",
+            chat_id: Number(res.data.telegram_id),
+            text: `🔒 Проверка безопасности\n\nРешите пример: ${a} + ${b} = ?\n\nОтправьте ответ числом. До верного ответа все функции заблокированы.`,
           }),
         });
+        const tgJson = await tgRes.json().catch(() => ({}));
+        if (!tgJson?.ok) console.error(`[send_captcha] telegram error: ${JSON.stringify(tgJson)}`);
 
         await supabase.from("admin_alerts").insert({
           type: "force_captcha",
