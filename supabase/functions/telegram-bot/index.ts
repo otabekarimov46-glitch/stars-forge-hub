@@ -401,7 +401,7 @@ async function handleTaskComplete(chatId: number, botToken: string, user: any, t
   }
 
   if (task.type === "subscribe" && task.channel_id) {
-    const res = await fetch(`${TELEGRAM_API}${Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN")}/getChatMember?chat_id=${task.channel_id}&user_id=${user.telegram_id}`);
+    const res = await fetch(`${TELEGRAM_API}${Deno.env.get("new_TELEGRAM_Api_token") || Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN")}/getChatMember?chat_id=${task.channel_id}&user_id=${user.telegram_id}`);
     const json = await res.json().catch(() => ({}));
     const memberStatus = json?.result?.status;
     const isMember = memberStatus === "member" || memberStatus === "administrator" || memberStatus === "creator";
