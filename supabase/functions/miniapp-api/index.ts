@@ -719,18 +719,39 @@ async function issueCaptcha(supabase: any, user: any, reason: string, freeze: bo
     message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}.${freeze ? " Баланс заморожен," : ""} отправлена капча.`,
   });
 
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
-  if (botToken) {
-    try {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: user.telegram_id,
-          text: `🔒 Подтвердите, что вы человек.\nРешите пример: *${captchaA} + ${captchaB} = ?*\nОтправьте число в этот чат.`,
-          parse_mode: "Markdown",
-        }),
-      });
-    } catch {}
+  const botToken =
+    Deno.env.get("new_TELEGRAM_Api_token") ||
+    Deno.env.get("TELEGRAM_BOT_TOKEN_V2") ||
+    Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") ||
+    Deno.env.get("TELEGRAM_BOT_TOKEN");
+
+  console.log(`[issueCaptcha] user=${user.id} tg=${user.telegram_id} reason="${reason}" hasToken=${!!botToken}`);
+
+  if (!botToken) {
+    console.error("[issueCaptcha] no bot token configured");
+    return;
+  }
+  if (!user.telegram_id) {
+    console.error("[issueCaptcha] user has no telegram_id");
+    return;
+  }
+
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: Number(user.telegram_id),
+        text: `🔒 Подтвердите, что вы человек.\nРешите пример: ${captchaA} + ${captchaB} = ?\nОтправьте число в этот чат.`,
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!j?.ok) {
+      console.error(`[issueCaptcha] sendMessage failed: ${JSON.stringify(j)}`);
+    } else {
+      console.log(`[issueCaptcha] sent to ${user.telegram_id}`);
+    }
+  } catch (e) {
+    console.error(`[issueCaptcha] fetch error: ${(e as Error).message}`);
   }
 }
