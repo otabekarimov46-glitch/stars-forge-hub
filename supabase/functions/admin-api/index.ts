@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const BOT_TOKEN = (Deno.env.get("new_TELEGRAM_Api_token") || Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN"))!;
+    const BOT_TOKEN = (Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN"))!;
     const { action, ...params } = await req.json();
 
     let data: any;
@@ -80,16 +80,15 @@ Deno.serve(async (req) => {
           .single();
         if (res.error) { error = res.error; break; }
 
-        const tgRes = await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+        await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chat_id: Number(res.data.telegram_id),
-            text: `🔒 Проверка безопасности\n\nРешите пример: ${a} + ${b} = ?\n\nОтправьте ответ числом. До верного ответа все функции заблокированы.`,
+            chat_id: res.data.telegram_id,
+            text: `🔒 *Проверка безопасности*\n\nРешите пример: *${a} + ${b} = ?*\n\nОтправьте ответ числом. До верного ответа все функции заблокированы.`,
+            parse_mode: "Markdown",
           }),
         });
-        const tgJson = await tgRes.json().catch(() => ({}));
-        if (!tgJson?.ok) console.error(`[send_captcha] telegram error: ${JSON.stringify(tgJson)}`);
 
         await supabase.from("admin_alerts").insert({
           type: "force_captcha",
