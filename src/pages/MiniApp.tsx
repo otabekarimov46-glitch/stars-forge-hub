@@ -1202,6 +1202,22 @@ export default function MiniApp() {
       )}
       </div>
 
+      {/* ===== Scroll to top ===== */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Наверх"
+        className={"fixed right-4 bottom-24 z-40 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 press-soft " +
+          (showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none")}
+        style={{
+          background: "rgba(15,8,40,0.72)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          backdropFilter: "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
+        }}
+      >
+        <ArrowUp className="w-4 h-4 text-white/85" />
+      </button>
+
       {/* ===== Floating tab bar ===== */}
       <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none">
         <div
