@@ -106,6 +106,11 @@ export default function MiniApp() {
   } | null>(null);
   const [refLoading, setRefLoading] = useState(false);
   const [copyTip, setCopyTip] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<{
+    top: { id: string; telegram_id: number; username: string | null; balance_pt: number }[];
+    me: { id: string; telegram_id: number; username: string | null; balance_pt: number; rank: number } | null;
+  } | null>(null);
+  const [txs, setTxs] = useState<{ id: string; kind: string; label: string; reward_pt: number; at: string }[] | null>(null);
 
 
   const videoRef = useRef<HTMLVideoElement>(null);
