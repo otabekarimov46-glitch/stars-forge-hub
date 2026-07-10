@@ -45,13 +45,16 @@ async function miniAppApi(action: string, params: Record<string, any> = {}) {
   return json.data;
 }
 
-function getTelegramUser(): { id: number | null; photo: string | null; name: string | null } {
+function getTelegramUser(): { id: number | null; photo: string | null; name: string | null; start_param: string | null } {
   try {
-    const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    if (u?.id) return { id: u.id, photo: u.photo_url || null, name: u.first_name || u.username || null };
+    const w = (window as any).Telegram?.WebApp;
+    const u = w?.initDataUnsafe?.user;
+    const sp = w?.initDataUnsafe?.start_param || null;
+    if (u?.id) return { id: u.id, photo: u.photo_url || null, name: u.first_name || u.username || null, start_param: sp };
   } catch {}
-  return { id: null, photo: null, name: null };
+  return { id: null, photo: null, name: null, start_param: null };
 }
+
 
 function formatCountdown(ms: number) {
   if (ms <= 0) return "00:00:00";
