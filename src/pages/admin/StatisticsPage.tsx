@@ -195,8 +195,9 @@ export default function StatisticsPage() {
         );
       })()}
 
-
+      {stats.alerts && stats.alerts.length > 0 && (
         <div className="glass-card p-6">
+
           <h3 className="text-base font-semibold mb-4">{t("stats.unreadAlerts")}</h3>
           <div className="space-y-2">
             {stats.alerts.map((a: any) => (
