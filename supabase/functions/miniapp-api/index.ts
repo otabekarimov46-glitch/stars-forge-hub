@@ -258,7 +258,9 @@ Deno.serve(async (req) => {
             .from("users")
             .update({ balance_pt: newBalance })
             .eq("id", user.id);
+          await creditReferral(supabase, user.id, Number(video.reward_pt), "video", { video_ad_id: view.video_ad_id });
         }
+
 
         await supabase.from("logs_activity").insert({
           user_id: user.id,
