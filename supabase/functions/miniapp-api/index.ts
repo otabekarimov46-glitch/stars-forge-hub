@@ -627,7 +627,9 @@ Deno.serve(async (req) => {
         if (!user.balance_frozen) {
           newBalance = Number(user.balance_pt) + Number(task.reward_pt);
           await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+          await creditReferral(supabase, user.id, Number(task.reward_pt), "task", { task_id, type: task.type });
         }
+
 
         await supabase.from("logs_activity").insert({
           user_id: user.id,
