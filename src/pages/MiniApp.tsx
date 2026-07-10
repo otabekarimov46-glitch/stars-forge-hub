@@ -95,6 +95,18 @@ export default function MiniApp() {
   const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "view_post" | "view_story">(null);
   const [tab, setTab] = useState<"tasks" | "wallet" | "profile">("tasks");
   const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [botUsername, setBotUsername] = useState<string>("");
+  const [refSheetOpen, setRefSheetOpen] = useState(false);
+  const [refData, setRefData] = useState<{
+    user_id: string;
+    bot_username: string;
+    total_earnings_pt: number;
+    count: number;
+    referrals: { id: string; telegram_id: number; username: string | null; joined_at: string }[];
+  } | null>(null);
+  const [refLoading, setRefLoading] = useState(false);
+  const [copyTip, setCopyTip] = useState(false);
+
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
