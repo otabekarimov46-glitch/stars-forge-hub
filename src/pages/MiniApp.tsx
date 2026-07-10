@@ -1260,11 +1260,9 @@ export default function MiniApp() {
                       Получай <span className="text-emerald-300 font-semibold">5%</span> от каждого задания,
                       которое выполнит приглашённый друг
                     </div>
-                    <div className="mt-1 text-[12px] text-white/55">
-                      Друг ничего не теряет — 5% начисляются сверху, тебе на баланс
-                    </div>
                   </div>
                 </div>
+
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-2.5">
