@@ -1289,33 +1289,6 @@ export default function MiniApp() {
 
 
 
-                {/* Referrals list */}
-                {refData && refData.count > 0 && (
-                  <div className="rounded-2xl overflow-hidden"
-                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                    <div className="px-4 pt-3 pb-2 text-[13px] font-semibold text-white/85">
-                      Твои приглашённые
-                    </div>
-                    <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
-                      {refData.referrals.map((r) => (
-                        <div key={r.id} className="px-4 py-2.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
-                            {(r.username || String(r.telegram_id)).slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[13.5px] text-white/90 truncate">
-                              {r.username ? `@${r.username}` : `ID ${r.telegram_id}`}
-                            </div>
-                            <div className="text-[11px] text-white/45">
-                              {new Date(r.joined_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Referral link */}
                 <div className="rounded-2xl p-4 space-y-3"
                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
@@ -1353,6 +1326,34 @@ export default function MiniApp() {
                     </button>
                   </div>
                 </div>
+
+                {/* Referrals list */}
+                {refData && refData.count > 0 && (
+                  <div className="rounded-2xl overflow-hidden"
+                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <div className="px-4 pt-3 pb-2 text-[13px] font-semibold text-white/85">
+                      Твои приглашённые
+                    </div>
+                    <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
+                      {refData.referrals.map((r) => (
+                        <div key={r.id} className="px-4 py-2.5 flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                            {(r.username || String(r.telegram_id)).slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13.5px] text-white/90 truncate">
+                              {r.username ? `@${r.username}` : `ID ${r.telegram_id}`}
+                            </div>
+                            <div className="text-[11px] text-white/45">
+                              {new Date(r.joined_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           </Vaul.Content>
