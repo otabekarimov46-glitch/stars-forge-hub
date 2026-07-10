@@ -111,6 +111,26 @@ export default function MiniApp() {
     me: { id: string; telegram_id: number; username: string | null; balance_pt: number; rank: number } | null;
   } | null>(null);
   const [txs, setTxs] = useState<{ id: string; kind: string; label: string; reward_pt: number; at: string }[] | null>(null);
+  const [txVisible, setTxVisible] = useState(10);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const goingUp = y < lastY;
+        setShowScrollTop(y > 500 && goingUp);
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
 
   const videoRef = useRef<HTMLVideoElement>(null);
