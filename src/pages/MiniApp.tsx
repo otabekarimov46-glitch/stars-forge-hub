@@ -262,6 +262,20 @@ export default function MiniApp() {
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
 
+  useEffect(() => {
+    if (tab !== "profile" || !telegramId) return;
+    miniAppApi("get_leaderboard", { telegram_id: telegramId })
+      .then((d) => setLeaderboard(d))
+      .catch(() => {});
+  }, [tab, telegramId, user?.balance_pt]);
+
+  useEffect(() => {
+    if (tab !== "wallet" || !telegramId) return;
+    miniAppApi("get_transactions", { telegram_id: telegramId })
+      .then((d) => setTxs(Array.isArray(d?.items) ? d.items : []))
+      .catch(() => {});
+  }, [tab, telegramId, user?.balance_pt]);
+
 
 
 
