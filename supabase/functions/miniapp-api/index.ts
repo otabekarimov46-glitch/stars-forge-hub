@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "get_next_video": {
-        const { telegram_id } = params;
+        const { telegram_id, start_param } = params;
         if (!telegram_id) throw new Error("telegram_id required");
 
         let { data: user } = await supabase
@@ -38,14 +38,20 @@ Deno.serve(async (req) => {
           .single();
 
         if (!user) {
+          let referrerId: string | null = null;
+          if (typeof start_param === "string" && /^[a-f0-9-]{36}$/i.test(start_param)) {
+            const { data: ref } = await supabase.from("users").select("id").eq("id", start_param).maybeSingle();
+            if (ref) referrerId = ref.id;
+          }
           const { data: newUser, error } = await supabase
             .from("users")
-            .insert({ telegram_id })
+            .insert({ telegram_id, referrer_id: referrerId })
             .select("id, is_banned, balance_frozen, captcha_pending, balance_pt, daily_bonus_at")
             .single();
           if (error) throw error;
           user = newUser;
         }
+
 
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
         if (user.captcha_pending) {
@@ -252,7 +258,9 @@ Deno.serve(async (req) => {
             .from("users")
             .update({ balance_pt: newBalance })
             .eq("id", user.id);
+          await creditReferral(supabase, user.id, Number(video.reward_pt), "video", { video_ad_id: view.video_ad_id });
         }
+
 
         await supabase.from("logs_activity").insert({
           user_id: user.id,
@@ -387,17 +395,67 @@ Deno.serve(async (req) => {
         const { data: rows } = await supabase
           .from("settings")
           .select("key,value")
-          .in("key", ["exchange_rate"]);
+          .in("key", ["exchange_rate", "bot_username"]);
         const map: Record<string, string> = {};
         (rows || []).forEach((r: any) => (map[r.key] = r.value));
         const exchange_rate = Number(map.exchange_rate ?? "1") || 1;
+        let bot_username = (map.bot_username || "").replace(/^@/, "");
+        if (!bot_username) {
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          if (botToken) {
+            try {
+              const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+              const j = await r.json();
+              if (j?.ok && j.result?.username) {
+                bot_username = j.result.username;
+                await supabase.from("settings").upsert({ key: "bot_username", value: bot_username });
+              }
+            } catch {}
+          }
+        }
         return jsonResponse({
           data: {
             turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null,
             exchange_rate,
+            bot_username,
           },
         });
       }
+
+      case "get_referral": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, referral_earnings_pt")
+          .eq("telegram_id", telegram_id)
+          .single();
+        if (!user) throw new Error("User not found");
+        const { data: refs } = await supabase
+          .from("users")
+          .select("id, telegram_id, username, created_at")
+          .eq("referrer_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        const { data: cfgRows } = await supabase
+          .from("settings").select("key,value").in("key", ["bot_username"]);
+        const bot_username = ((cfgRows || []).find((r: any) => r.key === "bot_username")?.value || "").replace(/^@/, "");
+        return jsonResponse({
+          data: {
+            user_id: user.id,
+            bot_username,
+            total_earnings_pt: Number(user.referral_earnings_pt || 0),
+            referrals: (refs || []).map((r: any) => ({
+              id: r.id,
+              telegram_id: Number(r.telegram_id),
+              username: r.username,
+              joined_at: r.created_at,
+            })),
+            count: (refs || []).length,
+          },
+        });
+      }
+
 
       case "verify_turnstile": {
         const { telegram_id, token } = params;
@@ -569,7 +627,9 @@ Deno.serve(async (req) => {
         if (!user.balance_frozen) {
           newBalance = Number(user.balance_pt) + Number(task.reward_pt);
           await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+          await creditReferral(supabase, user.id, Number(task.reward_pt), "task", { task_id, type: task.type });
         }
+
 
         await supabase.from("logs_activity").insert({
           user_id: user.id,
@@ -600,6 +660,40 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function creditReferral(supabase: any, userId: string, reward: number, source: "task" | "video", meta: Record<string, any>) {
+  try {
+    if (!reward || reward <= 0) return;
+    const { data: u } = await supabase
+      .from("users")
+      .select("referrer_id")
+      .eq("id", userId)
+      .single();
+    if (!u?.referrer_id) return;
+    const { data: ref } = await supabase
+      .from("users")
+      .select("id, balance_pt, referral_earnings_pt, balance_frozen, is_banned")
+      .eq("id", u.referrer_id)
+      .single();
+    if (!ref || ref.is_banned || ref.balance_frozen) return;
+    // 5%, обрезаем до 2 знаков (0.5 → 0.5, 0.13 → 0.13, 0.155 → 0.16)
+    const bonus = Math.round(reward * 0.05 * 100) / 100;
+    if (bonus <= 0) return;
+    const newBalance = Math.round((Number(ref.balance_pt) + bonus) * 100) / 100;
+    const newEarnings = Math.round((Number(ref.referral_earnings_pt || 0) + bonus) * 100) / 100;
+    await supabase.from("users").update({
+      balance_pt: newBalance,
+      referral_earnings_pt: newEarnings,
+    }).eq("id", ref.id);
+    await supabase.from("logs_activity").insert({
+      user_id: ref.id,
+      action: "referral_reward",
+      metadata: { from_user_id: userId, source, bonus, base_reward: reward, ...meta },
+    });
+  } catch (e) {
+    console.log("creditReferral error", String(e));
+  }
+}
 
 async function recordIp(supabase: any, userId: string, ip: string) {
   const { data: existingIp } = await supabase

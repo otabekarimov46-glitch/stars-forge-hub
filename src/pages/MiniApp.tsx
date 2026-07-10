@@ -45,13 +45,16 @@ async function miniAppApi(action: string, params: Record<string, any> = {}) {
   return json.data;
 }
 
-function getTelegramUser(): { id: number | null; photo: string | null; name: string | null } {
+function getTelegramUser(): { id: number | null; photo: string | null; name: string | null; start_param: string | null } {
   try {
-    const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-    if (u?.id) return { id: u.id, photo: u.photo_url || null, name: u.first_name || u.username || null };
+    const w = (window as any).Telegram?.WebApp;
+    const u = w?.initDataUnsafe?.user;
+    const sp = w?.initDataUnsafe?.start_param || null;
+    if (u?.id) return { id: u.id, photo: u.photo_url || null, name: u.first_name || u.username || null, start_param: sp };
   } catch {}
-  return { id: null, photo: null, name: null };
+  return { id: null, photo: null, name: null, start_param: null };
 }
+
 
 function formatCountdown(ms: number) {
   if (ms <= 0) return "00:00:00";
@@ -92,6 +95,18 @@ export default function MiniApp() {
   const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "view_post" | "view_story">(null);
   const [tab, setTab] = useState<"tasks" | "wallet" | "profile">("tasks");
   const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [botUsername, setBotUsername] = useState<string>("");
+  const [refSheetOpen, setRefSheetOpen] = useState(false);
+  const [refData, setRefData] = useState<{
+    user_id: string;
+    bot_username: string;
+    total_earnings_pt: number;
+    count: number;
+    referrals: { id: string; telegram_id: number; username: string | null; joined_at: string }[];
+  } | null>(null);
+  const [refLoading, setRefLoading] = useState(false);
+  const [copyTip, setCopyTip] = useState(false);
+
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -129,12 +144,58 @@ export default function MiniApp() {
     return () => clearInterval(id);
   }, []);
 
-  // Load config (exchange rate, etc.)
+  // Load config (exchange rate, bot username)
   useEffect(() => {
     miniAppApi("get_config")
-      .then((c) => { if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate); })
+      .then((c) => {
+        if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate);
+        if (c && typeof c.bot_username === "string") setBotUsername(c.bot_username);
+      })
       .catch(() => {});
   }, []);
+
+  const openRefSheet = useCallback(() => {
+    setRefSheetOpen(true);
+    if (!telegramId) return;
+    setRefLoading(true);
+    miniAppApi("get_referral", { telegram_id: telegramId })
+      .then((d) => { setRefData(d); if (d?.bot_username && !botUsername) setBotUsername(d.bot_username); })
+      .catch(() => {})
+      .finally(() => setRefLoading(false));
+  }, [telegramId, botUsername]);
+
+  const refLink = useMemo(() => {
+    if (!refData?.user_id) return "";
+    const bu = (botUsername || refData.bot_username || "").replace(/^@/, "");
+    if (!bu) return "";
+    return `https://t.me/${bu}?start=${refData.user_id}`;
+  }, [refData, botUsername]);
+
+  const copyRefLink = useCallback(async () => {
+    if (!refLink) return;
+    try {
+      await navigator.clipboard.writeText(refLink);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = refLink; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setCopyTip(true);
+    setTimeout(() => setCopyTip(false), 1600);
+  }, [refLink]);
+
+  const shareRefLink = useCallback(() => {
+    if (!refLink) return;
+    const text = "🚀 Заходи в Starment — смотри видео и получай Stars. По моей ссылке начнём вместе:";
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(text)}`;
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.openTelegramLink) { tg.openTelegramLink(shareUrl); return; }
+    } catch {}
+    window.open(shareUrl, "_blank");
+  }, [refLink]);
+
 
   // Anti-clicker
   const reportSuspicious = useCallback(async () => {
@@ -165,7 +226,7 @@ export default function MiniApp() {
     if (!telegramId) { setStatus("no_telegram"); return; }
     try {
       setStatus("loading");
-      const data = await miniAppApi("get_next_video", { telegram_id: telegramId });
+      const data = await miniAppApi("get_next_video", { telegram_id: telegramId, start_param: tgUser.start_param });
       if (data?.locked) { setStatus("locked"); return; }
       if (data?.user) setUser(data.user);
       if (!data?.video) { setStatus("no_video"); return; }
@@ -946,27 +1007,21 @@ export default function MiniApp() {
 
             {telegramId && (
               <button
-                onClick={() => {
-                  const link = `https://t.me/share/url?url=${encodeURIComponent("Присоединяйся к Starment: смотри видео и получай Stars")}`;
-                  try {
-                    const tg = (window as any).Telegram?.WebApp;
-                    if (tg?.openTelegramLink) tg.openTelegramLink(link);
-                    else window.open(link, "_blank");
-                  } catch {}
-                }}
+                onClick={openRefSheet}
                 className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                  <Send className="w-5 h-5 text-sky-200" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Send className="w-5 h-5 text-emerald-200" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14.5px] font-medium text-white/95 leading-tight">Пригласить друга</div>
-                  <div className="text-[11.5px] text-white/50 mt-0.5">Поделиться Starment</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">Приглашай и зарабатывай 5%</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
               </button>
             )}
+
           </div>
         </section>
       )}
@@ -1161,7 +1216,152 @@ export default function MiniApp() {
         </Vaul.Portal>
       </Vaul.Root>
 
+      {/* ===== Referral bottom sheet ===== */}
+      <Vaul.Root open={refSheetOpen} onOpenChange={setRefSheetOpen}>
+        <Vaul.Portal>
+          <Vaul.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
+          <Vaul.Content
+            className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
+            style={{
+              background: "rgba(15,8,40,0.96)",
+              borderTop: "1px solid rgba(255,255,255,0.10)",
+              backdropFilter: "blur(28px)",
+              maxHeight: "88vh",
+            }}
+          >
+            <div className="pt-2.5 pb-2 flex items-center justify-center">
+              <div className="h-1.5 w-12 rounded-full bg-white/35" />
+            </div>
+            <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
+              <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white">
+                Реферальная программа
+              </Vaul.Title>
+              <button
+                onClick={() => setRefSheetOpen(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
+                aria-label="Закрыть"
+              >
+                <X className="w-4 h-4 text-white/80" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6">
+              <div className="max-w-md mx-auto space-y-3">
+                {/* Hero */}
+                <div className="rounded-3xl p-5 text-center relative overflow-hidden"
+                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                  <div className="absolute inset-0 pointer-events-none opacity-40"
+                       style={{ background: "radial-gradient(60% 60% at 50% 0%, rgba(16,185,129,0.35) 0%, transparent 70%)" }} />
+                  <div className="relative">
+                    <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-900/30">
+                      <Send className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="mt-3 text-[15px] text-white/85 leading-snug">
+                      Получай <span className="text-emerald-300 font-semibold">5%</span> от каждого задания,
+                      которое выполнит приглашённый друг
+                    </div>
+                    <div className="mt-1 text-[12px] text-white/55">
+                      Друг ничего не теряет — 5% начисляются сверху, тебе на баланс
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-2xl p-3.5"
+                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <div className="text-[11px] uppercase tracking-widest text-white/50">Приглашено</div>
+                    <div className="mt-1 text-2xl font-bold tabular-nums">
+                      {refData?.count ?? (refLoading ? "…" : 0)}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl p-3.5"
+                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <div className="text-[11px] uppercase tracking-widest text-white/50">Заработано</div>
+                    <div className="mt-1 text-2xl font-bold tabular-nums">
+                      <span className="bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
+                        {refData ? refData.total_earnings_pt.toFixed(2).replace(/\.?0+$/, "") : (refLoading ? "…" : "0")}
+                      </span>
+                      <span className="text-white/60 text-sm font-medium"> PT</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* How it works */}
+                <div className="rounded-2xl p-4 space-y-2"
+                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                  <div className="text-[13px] font-semibold text-white/85">Как это работает</div>
+                  <ul className="text-[12.5px] text-white/70 space-y-1.5 leading-relaxed">
+                    <li>1. Отправь ссылку другу — он открывает бота по ней.</li>
+                    <li>2. Друг выполняет задания и смотрит видео.</li>
+                    <li>3. 5% от его награды автоматически падают тебе на баланс.</li>
+                    <li className="text-white/50">За сам факт регистрации бонус не начисляется — только за выполненные действия.</li>
+                  </ul>
+                </div>
+
+                {/* Referrals list */}
+                {refData && refData.count > 0 && (
+                  <div className="rounded-2xl overflow-hidden"
+                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <div className="px-4 pt-3 pb-2 text-[13px] font-semibold text-white/85">
+                      Твои приглашённые
+                    </div>
+                    <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
+                      {refData.referrals.map((r) => (
+                        <div key={r.id} className="px-4 py-2.5 flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                            {(r.username || String(r.telegram_id)).slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13.5px] text-white/90 truncate">
+                              {r.username ? `@${r.username}` : `ID ${r.telegram_id}`}
+                            </div>
+                            <div className="text-[11px] text-white/45">
+                              {new Date(r.joined_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Referral link */}
+                <div className="rounded-2xl p-4 space-y-3"
+                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                  <div className="text-[12px] uppercase tracking-widest text-white/50">Ваша ссылка</div>
+                  <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/85 break-all tabular-nums">
+                    {refLink || (refLoading ? "Загрузка…" : "Ссылка недоступна")}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      onClick={copyRefLink}
+                      disabled={!refLink}
+                      className="press h-11 rounded-xl font-medium text-[13.5px] text-white/90 border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Copy className="w-4 h-4" />
+                      {copyTip ? "Скопировано" : "Скопировать"}
+                    </button>
+                    <button
+                      onClick={shareRefLink}
+                      disabled={!refLink}
+                      className="press-cta h-11 rounded-xl font-semibold text-[13.5px] text-white
+                        bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-500
+                        shadow-lg shadow-sky-900/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      Поделиться
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Vaul.Content>
+        </Vaul.Portal>
+      </Vaul.Root>
+
     </div>
+
 
   );
 }
