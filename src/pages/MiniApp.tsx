@@ -1160,8 +1160,6 @@ export default function MiniApp() {
             </div>
 
           </div>
-
-          </div>
         </section>
       )}
       </div>
