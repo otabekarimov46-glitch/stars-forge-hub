@@ -1285,17 +1285,8 @@ export default function MiniApp() {
                   </div>
                 </div>
 
-                {/* How it works */}
-                <div className="rounded-2xl p-4 space-y-2"
-                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                  <div className="text-[13px] font-semibold text-white/85">Как это работает</div>
-                  <ul className="text-[12.5px] text-white/70 space-y-1.5 leading-relaxed">
-                    <li>1. Отправь ссылку другу — он открывает бота по ней.</li>
-                    <li>2. Друг выполняет задания и смотрит видео.</li>
-                    <li>3. 5% от его награды автоматически падают тебе на баланс.</li>
-                    <li className="text-white/50">За сам факт регистрации бонус не начисляется — только за выполненные действия.</li>
-                  </ul>
-                </div>
+
+
 
                 {/* Referrals list */}
                 {refData && refData.count > 0 && (
