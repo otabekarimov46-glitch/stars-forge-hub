@@ -268,6 +268,7 @@ export type Database = {
           id: string
           is_banned: boolean
           is_suspicious: boolean
+          referral_earnings_pt: number
           referrer_id: string | null
           telegram_id: number
           username: string | null
@@ -284,6 +285,7 @@ export type Database = {
           id?: string
           is_banned?: boolean
           is_suspicious?: boolean
+          referral_earnings_pt?: number
           referrer_id?: string | null
           telegram_id: number
           username?: string | null
@@ -300,6 +302,7 @@ export type Database = {
           id?: string
           is_banned?: boolean
           is_suspicious?: boolean
+          referral_earnings_pt?: number
           referrer_id?: string | null
           telegram_id?: number
           username?: string | null
