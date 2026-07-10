@@ -984,6 +984,53 @@ export default function MiniApp() {
               <Star className="w-4 h-4" /> Вывести в Stars
             </button>
             <p className="text-center text-[11px] text-white/50">Вывод откроется скоро</p>
+
+            {/* ===== Transactions ===== */}
+            <div className="pt-3">
+              <div className="flex items-center gap-2 px-1 pb-2">
+                <History className="w-3.5 h-3.5 text-white/60" />
+                <span className="text-[12px] uppercase tracking-widest text-white/60">История транзакций</span>
+              </div>
+              {txs === null ? (
+                <div className="space-y-2">
+                  {[0,1,2].map((i) => (
+                    <div key={i} className="h-12 rounded-xl skeleton-shimmer" />
+                  ))}
+                </div>
+              ) : txs.length === 0 ? (
+                <div className="text-center text-[12px] text-white/50 py-6 rounded-xl border border-dashed border-white/10">
+                  Пока нет транзакций. Выполни задание — оно появится здесь.
+                </div>
+              ) : (
+                <ul className="divide-y divide-white/5 rounded-2xl overflow-hidden"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  {txs.map((t) => {
+                    const Icon = t.kind === "video" ? Film
+                      : t.label.startsWith("Подписка") ? Send
+                      : t.label.startsWith("Просмотр поста") ? Newspaper
+                      : t.label.startsWith("Просмотр истории") ? Camera
+                      : ListChecks;
+                    const d = new Date(t.at);
+                    const dd = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
+                    const tt = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+                    return (
+                      <li key={t.id} className="flex items-center gap-3 px-3 py-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500/25 to-purple-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                          <Icon className="w-4 h-4 text-indigo-200" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13.5px] text-white/90 truncate">{t.label}</div>
+                          <div className="text-[11px] text-white/50 tabular-nums">{dd} · {tt}</div>
+                        </div>
+                        <div className="text-[13.5px] font-semibold tabular-nums text-emerald-300 shrink-0">
+                          +{t.reward_pt} PT
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         </section>
       )}
