@@ -168,7 +168,7 @@ export default function MiniApp() {
     if (!telegramId) { setStatus("no_telegram"); return; }
     try {
       setStatus("loading");
-      const data = await miniAppApi("get_next_video", { telegram_id: telegramId });
+      const data = await miniAppApi("get_next_video", { telegram_id: telegramId, start_param: tgUser.start_param });
       if (data?.locked) { setStatus("locked"); return; }
       if (data?.user) setUser(data.user);
       if (!data?.video) { setStatus("no_video"); return; }
