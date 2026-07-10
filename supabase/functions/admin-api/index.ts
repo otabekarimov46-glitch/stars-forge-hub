@@ -353,17 +353,21 @@ Deno.serve(async (req) => {
 
       // ===== STATISTICS =====
       case "get_stats": {
-        const [users, withdrawals, videoViewsCount, alerts] = await Promise.all([
-          supabase.from("users").select("id, balance_pt, is_banned, is_suspicious, created_at"),
+        const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+        const [users, withdrawals, videoViewsCount, alerts, activeCompletions] = await Promise.all([
+          supabase.from("users").select("id, telegram_id, username, balance_pt, is_banned, is_suspicious, created_at, referrer_id, referral_earnings_pt"),
           supabase.from("withdrawals").select("id, status, amount_pt, amount_stars, created_at"),
           supabase.from("video_views").select("id", { count: "exact", head: true }).eq("rewarded", true),
           supabase.from("admin_alerts").select("*").eq("is_read", false).order("created_at", { ascending: false }).limit(20),
+          supabase.from("task_completions").select("user_id").gte("completed_at", fiveDaysAgo),
         ]);
+        const activeUserIds = Array.from(new Set((activeCompletions.data || []).map((c: any) => c.user_id)));
         data = {
           users: users.data,
           withdrawals: withdrawals.data,
           rewardedVideoViews: videoViewsCount.count || 0,
           alerts: alerts.data,
+          activeUserIds,
         };
         break;
       }
