@@ -116,14 +116,24 @@ export default function StatisticsPage() {
       {/* Referral stats */}
       {(() => {
         const users = stats.users || [];
+        const activeSet = new Set<string>(stats.activeUserIds || []);
         const invited = users.filter((u: any) => u.referrer_id).length;
         const totalRefEarn = users.reduce((s: number, u: any) => s + Number(u.referral_earnings_pt || 0), 0);
         const refCountByUser = new Map<string, number>();
+        const activeRefCountByUser = new Map<string, number>();
         users.forEach((u: any) => {
-          if (u.referrer_id) refCountByUser.set(u.referrer_id, (refCountByUser.get(u.referrer_id) || 0) + 1);
+          if (u.referrer_id) {
+            refCountByUser.set(u.referrer_id, (refCountByUser.get(u.referrer_id) || 0) + 1);
+            if (activeSet.has(u.id)) {
+              activeRefCountByUser.set(u.referrer_id, (activeRefCountByUser.get(u.referrer_id) || 0) + 1);
+            }
+          }
         });
-        const activeRefs = refCountByUser.size;
-        const conversion = users.length ? (invited / users.length) * 100 : 0;
+        const activeRefsTotal = users.filter((u: any) => u.referrer_id && activeSet.has(u.id)).length;
+        const fmtPt = (n: number) => {
+          const r = Math.round(n * 100) / 100;
+          return `${(r % 1 === 0 ? r.toFixed(0) : r.toFixed(2).replace(/\.?0+$/, ""))} PT`;
+        };
         const top = users
           .filter((u: any) => refCountByUser.get(u.id))
           .map((u: any) => ({
@@ -136,9 +146,8 @@ export default function StatisticsPage() {
           .slice(0, 5);
         const refKpis = [
           { label: "Приглашено всего", value: invited, icon: UserPlus, color: "from-brand-purple to-brand-blue" },
-          { label: "Активных рефереров", value: activeRefs, icon: Share2, color: "from-brand-blue to-brand-green" },
-          { label: "Выплачено рефералам", value: `${totalRefEarn.toFixed(2).replace(/\.?0+$/, "")} PT`, icon: DollarSign, color: "from-brand-gold to-yellow-500" },
-          { label: "Доля приглашённых", value: `${conversion.toFixed(1)}%`, icon: TrendingUp, color: "from-brand-green to-emerald-500" },
+          { label: "Активных рефералов", value: activeRefsTotal, icon: Share2, color: "from-brand-blue to-brand-green" },
+          { label: "Выплачено рефералам", value: fmtPt(totalRefEarn), icon: DollarSign, color: "from-brand-gold to-yellow-500" },
         ];
         return (
           <div className="space-y-4">
@@ -148,7 +157,7 @@ export default function StatisticsPage() {
               </div>
               <h3 className="text-base font-semibold">Реферальная программа</h3>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {refKpis.map((k) => (
                 <div key={k.label} className="glass-card p-4 relative overflow-hidden group hover:scale-[1.02] transition-transform">
                   <div className={`absolute inset-0 bg-gradient-to-br ${k.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
