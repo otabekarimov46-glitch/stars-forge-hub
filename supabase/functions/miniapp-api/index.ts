@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "get_next_video": {
-        const { telegram_id } = params;
+        const { telegram_id, start_param } = params;
         if (!telegram_id) throw new Error("telegram_id required");
 
         let { data: user } = await supabase
@@ -38,14 +38,20 @@ Deno.serve(async (req) => {
           .single();
 
         if (!user) {
+          let referrerId: string | null = null;
+          if (typeof start_param === "string" && /^[a-f0-9-]{36}$/i.test(start_param)) {
+            const { data: ref } = await supabase.from("users").select("id").eq("id", start_param).maybeSingle();
+            if (ref) referrerId = ref.id;
+          }
           const { data: newUser, error } = await supabase
             .from("users")
-            .insert({ telegram_id })
+            .insert({ telegram_id, referrer_id: referrerId })
             .select("id, is_banned, balance_frozen, captcha_pending, balance_pt, daily_bonus_at")
             .single();
           if (error) throw error;
           user = newUser;
         }
+
 
         if (user.is_banned) throw new Error("Аккаунт заблокирован");
         if (user.captcha_pending) {
