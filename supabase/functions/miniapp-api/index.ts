@@ -395,17 +395,67 @@ Deno.serve(async (req) => {
         const { data: rows } = await supabase
           .from("settings")
           .select("key,value")
-          .in("key", ["exchange_rate"]);
+          .in("key", ["exchange_rate", "bot_username"]);
         const map: Record<string, string> = {};
         (rows || []).forEach((r: any) => (map[r.key] = r.value));
         const exchange_rate = Number(map.exchange_rate ?? "1") || 1;
+        let bot_username = (map.bot_username || "").replace(/^@/, "");
+        if (!bot_username) {
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          if (botToken) {
+            try {
+              const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+              const j = await r.json();
+              if (j?.ok && j.result?.username) {
+                bot_username = j.result.username;
+                await supabase.from("settings").upsert({ key: "bot_username", value: bot_username });
+              }
+            } catch {}
+          }
+        }
         return jsonResponse({
           data: {
             turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null,
             exchange_rate,
+            bot_username,
           },
         });
       }
+
+      case "get_referral": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, referral_earnings_pt")
+          .eq("telegram_id", telegram_id)
+          .single();
+        if (!user) throw new Error("User not found");
+        const { data: refs } = await supabase
+          .from("users")
+          .select("id, telegram_id, username, created_at")
+          .eq("referrer_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        const { data: cfgRows } = await supabase
+          .from("settings").select("key,value").in("key", ["bot_username"]);
+        const bot_username = ((cfgRows || []).find((r: any) => r.key === "bot_username")?.value || "").replace(/^@/, "");
+        return jsonResponse({
+          data: {
+            user_id: user.id,
+            bot_username,
+            total_earnings_pt: Number(user.referral_earnings_pt || 0),
+            referrals: (refs || []).map((r: any) => ({
+              id: r.id,
+              telegram_id: Number(r.telegram_id),
+              username: r.username,
+              joined_at: r.created_at,
+            })),
+            count: (refs || []).length,
+          },
+        });
+      }
+
 
       case "verify_turnstile": {
         const { telegram_id, token } = params;
