@@ -1132,43 +1132,42 @@ export default function MiniApp() {
             )}
 
             {/* ===== Top by balance ===== */}
-            <div className="rounded-3xl p-4"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Trophy className="w-4.5 h-4.5 text-white" />
+            <div className="rounded-2xl p-4"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
+                  <Trophy className="w-4 h-4 text-white/80" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-[14.5px] font-semibold text-white/95 leading-tight">Топ по балансу</div>
-                  <div className="text-[11.5px] text-white/50">Самые богатые в боте</div>
+                  <div className="text-[14px] font-medium text-white/95 leading-tight">Топ по балансу</div>
+                  <div className="text-[11px] text-white/45 mt-0.5">Лидеры в боте</div>
                 </div>
               </div>
 
               {leaderboard === null ? (
-                <div className="space-y-2">
-                  {[0,1,2].map((i) => <div key={i} className="h-12 rounded-xl skeleton-shimmer" />)}
+                <div className="space-y-1">
+                  {[0,1,2].map((i) => <div key={i} className="h-11 rounded-xl skeleton-shimmer" />)}
                 </div>
               ) : (
-                <ul className="space-y-1.5">
+                <ul className="space-y-1">
                   {leaderboard.top.map((u, i) => {
-                    const rankColors = ["from-yellow-400 to-orange-500", "from-slate-300 to-slate-500", "from-orange-500 to-amber-700"];
                     const name = u.username ? `@${u.username}` : `id${u.telegram_id}`;
                     const isMe = leaderboard.me && u.id === leaderboard.me.id;
                     const initial = (u.username || String(u.telegram_id)).slice(0, 1).toUpperCase();
                     return (
                       <li key={u.id}
-                          className={"flex items-center gap-3 px-2.5 py-2 rounded-xl " + (isMe ? "bg-white/[0.07] ring-1 ring-purple-400/40" : "")}>
-                        <div className={"w-7 h-7 rounded-full bg-gradient-to-br " + rankColors[i] + " flex items-center justify-center text-[12px] font-bold text-black shadow shrink-0"}>
+                          className={"flex items-center gap-3 px-2.5 py-2 rounded-xl " + (isMe ? "bg-white/[0.06] ring-1 ring-white/15" : "")}>
+                        <div className="w-6 text-center text-[12px] font-medium text-white/50 tabular-nums shrink-0">
                           {i + 1}
                         </div>
-                        <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 bg-white/[0.06] flex items-center justify-center text-[12px] font-medium text-white/80 shrink-0">
                           {initial}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[13.5px] text-white/95 truncate">{name}{isMe && <span className="text-[11px] text-purple-300 ml-1">· вы</span>}</div>
+                          <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· вы</span>}</div>
                         </div>
-                        <div className="text-[13.5px] font-semibold tabular-nums text-yellow-300 shrink-0">
-                          {u.balance_pt.toFixed(1)} <span className="text-white/50 font-normal text-[11px]">PT</span>
+                        <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
+                          {u.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
                         </div>
                       </li>
                     );
@@ -1178,24 +1177,20 @@ export default function MiniApp() {
 
               {leaderboard?.me && leaderboard.me.rank > 3 && (
                 <>
-                  <div className="my-3 flex items-center gap-2">
-                    <div className="flex-1 h-px bg-white/10" />
-                    <span className="text-[10px] uppercase tracking-widest text-white/40">Вы</span>
-                    <div className="flex-1 h-px bg-white/10" />
-                  </div>
-                  <div className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/[0.07] ring-1 ring-purple-400/40">
-                    <div className="w-7 h-7 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-[11px] font-semibold text-white/80 tabular-nums shrink-0">
+                  <div className="my-2.5 h-px bg-white/8" />
+                  <div className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/[0.05] ring-1 ring-white/10">
+                    <div className="w-6 text-center text-[12px] font-medium text-white/60 tabular-nums shrink-0">
                       {leaderboard.me.rank}
                     </div>
-                    <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                    <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 bg-white/[0.06] flex items-center justify-center text-[12px] font-medium text-white/80 shrink-0">
                       {tgUser.photo ? <img src={tgUser.photo} alt="" className="w-full h-full object-cover" /> : initial}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13.5px] text-white/95 truncate">{tgUser.name || (leaderboard.me.username ? `@${leaderboard.me.username}` : `id${leaderboard.me.telegram_id}`)}</div>
-                      <div className="text-[11px] text-white/50">Ваше место в топе</div>
+                      <div className="text-[13px] text-white/90 truncate">{tgUser.name || (leaderboard.me.username ? `@${leaderboard.me.username}` : `id${leaderboard.me.telegram_id}`)}</div>
+                      <div className="text-[10.5px] text-white/40">Ваше место</div>
                     </div>
-                    <div className="text-[13.5px] font-semibold tabular-nums text-yellow-300 shrink-0">
-                      {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/50 font-normal text-[11px]">PT</span>
+                    <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
+                      {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
                     </div>
                   </div>
                 </>
