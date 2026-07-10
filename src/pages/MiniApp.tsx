@@ -144,12 +144,58 @@ export default function MiniApp() {
     return () => clearInterval(id);
   }, []);
 
-  // Load config (exchange rate, etc.)
+  // Load config (exchange rate, bot username)
   useEffect(() => {
     miniAppApi("get_config")
-      .then((c) => { if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate); })
+      .then((c) => {
+        if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate);
+        if (c && typeof c.bot_username === "string") setBotUsername(c.bot_username);
+      })
       .catch(() => {});
   }, []);
+
+  const openRefSheet = useCallback(() => {
+    setRefSheetOpen(true);
+    if (!telegramId) return;
+    setRefLoading(true);
+    miniAppApi("get_referral", { telegram_id: telegramId })
+      .then((d) => { setRefData(d); if (d?.bot_username && !botUsername) setBotUsername(d.bot_username); })
+      .catch(() => {})
+      .finally(() => setRefLoading(false));
+  }, [telegramId, botUsername]);
+
+  const refLink = useMemo(() => {
+    if (!refData?.user_id) return "";
+    const bu = (botUsername || refData.bot_username || "").replace(/^@/, "");
+    if (!bu) return "";
+    return `https://t.me/${bu}?start=${refData.user_id}`;
+  }, [refData, botUsername]);
+
+  const copyRefLink = useCallback(async () => {
+    if (!refLink) return;
+    try {
+      await navigator.clipboard.writeText(refLink);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = refLink; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setCopyTip(true);
+    setTimeout(() => setCopyTip(false), 1600);
+  }, [refLink]);
+
+  const shareRefLink = useCallback(() => {
+    if (!refLink) return;
+    const text = "🚀 Заходи в Starment — смотри видео и получай Stars. По моей ссылке начнём вместе:";
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(text)}`;
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.openTelegramLink) { tg.openTelegramLink(shareUrl); return; }
+    } catch {}
+    window.open(shareUrl, "_blank");
+  }, [refLink]);
+
 
   // Anti-clicker
   const reportSuspicious = useCallback(async () => {
