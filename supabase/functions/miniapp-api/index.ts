@@ -661,6 +661,40 @@ Deno.serve(async (req) => {
   }
 });
 
+async function creditReferral(supabase: any, userId: string, reward: number, source: "task" | "video", meta: Record<string, any>) {
+  try {
+    if (!reward || reward <= 0) return;
+    const { data: u } = await supabase
+      .from("users")
+      .select("referrer_id")
+      .eq("id", userId)
+      .single();
+    if (!u?.referrer_id) return;
+    const { data: ref } = await supabase
+      .from("users")
+      .select("id, balance_pt, referral_earnings_pt, balance_frozen, is_banned")
+      .eq("id", u.referrer_id)
+      .single();
+    if (!ref || ref.is_banned || ref.balance_frozen) return;
+    // 5%, обрезаем до 2 знаков (0.5 → 0.5, 0.13 → 0.13, 0.155 → 0.16)
+    const bonus = Math.round(reward * 0.05 * 100) / 100;
+    if (bonus <= 0) return;
+    const newBalance = Math.round((Number(ref.balance_pt) + bonus) * 100) / 100;
+    const newEarnings = Math.round((Number(ref.referral_earnings_pt || 0) + bonus) * 100) / 100;
+    await supabase.from("users").update({
+      balance_pt: newBalance,
+      referral_earnings_pt: newEarnings,
+    }).eq("id", ref.id);
+    await supabase.from("logs_activity").insert({
+      user_id: ref.id,
+      action: "referral_reward",
+      metadata: { from_user_id: userId, source, bonus, base_reward: reward, ...meta },
+    });
+  } catch (e) {
+    console.log("creditReferral error", String(e));
+  }
+}
+
 async function recordIp(supabase: any, userId: string, ip: string) {
   const { data: existingIp } = await supabase
     .from("user_ips")
