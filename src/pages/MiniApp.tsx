@@ -1007,27 +1007,21 @@ export default function MiniApp() {
 
             {telegramId && (
               <button
-                onClick={() => {
-                  const link = `https://t.me/share/url?url=${encodeURIComponent("Присоединяйся к Starment: смотри видео и получай Stars")}`;
-                  try {
-                    const tg = (window as any).Telegram?.WebApp;
-                    if (tg?.openTelegramLink) tg.openTelegramLink(link);
-                    else window.open(link, "_blank");
-                  } catch {}
-                }}
+                onClick={openRefSheet}
                 className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                  <Send className="w-5 h-5 text-sky-200" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Send className="w-5 h-5 text-emerald-200" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14.5px] font-medium text-white/95 leading-tight">Пригласить друга</div>
-                  <div className="text-[11.5px] text-white/50 mt-0.5">Поделиться Starment</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">Приглашай и зарабатывай 5%</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
               </button>
             )}
+
           </div>
         </section>
       )}
