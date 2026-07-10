@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 
@@ -111,6 +111,26 @@ export default function MiniApp() {
     me: { id: string; telegram_id: number; username: string | null; balance_pt: number; rank: number } | null;
   } | null>(null);
   const [txs, setTxs] = useState<{ id: string; kind: string; label: string; reward_pt: number; at: string }[] | null>(null);
+  const [txVisible, setTxVisible] = useState(10);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const goingUp = y < lastY;
+        setShowScrollTop(y > 500 && goingUp);
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -986,49 +1006,72 @@ export default function MiniApp() {
             <p className="text-center text-[11px] text-white/50">Вывод откроется скоро</p>
 
             {/* ===== Transactions ===== */}
-            <div className="pt-3">
-              <div className="flex items-center gap-2 px-1 pb-2">
-                <History className="w-3.5 h-3.5 text-white/60" />
-                <span className="text-[12px] uppercase tracking-widest text-white/60">История транзакций</span>
+            <div className="pt-4">
+              <div className="flex items-center justify-between px-1 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-white/50" />
+                  <span className="text-[11px] uppercase tracking-[0.14em] text-white/50">История</span>
+                </div>
+                {txs && txs.length > 10 && (
+                  <button
+                    onClick={() => setTxVisible(v => v > 10 ? 10 : txs.length)}
+                    className="press-soft text-[11px] text-white/50 hover:text-white/80 flex items-center gap-0.5"
+                  >
+                    {txVisible > 10 ? <>Свернуть <ChevronUp className="w-3 h-3" /></> : <>Все <ChevronDown className="w-3 h-3" /></>}
+                  </button>
+                )}
               </div>
               {txs === null ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {[0,1,2].map((i) => (
-                    <div key={i} className="h-12 rounded-xl skeleton-shimmer" />
+                    <div key={i} className="h-11 rounded-xl skeleton-shimmer" />
                   ))}
                 </div>
               ) : txs.length === 0 ? (
-                <div className="text-center text-[12px] text-white/50 py-6 rounded-xl border border-dashed border-white/10">
-                  Пока нет транзакций. Выполни задание — оно появится здесь.
+                <div className="text-center text-[12px] text-white/45 py-6 rounded-2xl"
+                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  Пока нет транзакций
                 </div>
               ) : (
-                <ul className="divide-y divide-white/5 rounded-2xl overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  {txs.map((t) => {
-                    const Icon = t.kind === "video" ? Film
-                      : t.label.startsWith("Подписка") ? Send
-                      : t.label.startsWith("Просмотр поста") ? Newspaper
-                      : t.label.startsWith("Просмотр истории") ? Camera
-                      : ListChecks;
-                    const d = new Date(t.at);
-                    const dd = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
-                    const tt = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-                    return (
-                      <li key={t.id} className="flex items-center gap-3 px-3 py-2.5">
-                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500/25 to-purple-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-indigo-200" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13.5px] text-white/90 truncate">{t.label}</div>
-                          <div className="text-[11px] text-white/50 tabular-nums">{dd} · {tt}</div>
-                        </div>
-                        <div className="text-[13.5px] font-semibold tabular-nums text-emerald-300 shrink-0">
-                          +{t.reward_pt} PT
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <>
+                  <ul className="space-y-1">
+                    {txs.slice(0, txVisible).map((t) => {
+                      const Icon = t.kind === "video" ? Film
+                        : t.label.startsWith("Подписка") ? Send
+                        : t.label.startsWith("Просмотр поста") ? Newspaper
+                        : t.label.startsWith("Просмотр истории") ? Camera
+                        : ListChecks;
+                      const d = new Date(t.at);
+                      const dd = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
+                      const tt = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+                      return (
+                        <li key={t.id}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
+                            <Icon className="w-3.5 h-3.5 text-white/70" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] text-white/90 truncate">{t.label}</div>
+                            <div className="text-[10.5px] text-white/40 tabular-nums mt-0.5">{dd} · {tt}</div>
+                          </div>
+                          <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
+                            +{t.reward_pt} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {txs.length > txVisible && (
+                    <button
+                      onClick={() => setTxVisible(v => Math.min(v + 10, txs.length))}
+                      className="press-soft w-full mt-2 h-10 rounded-xl text-[12px] text-white/70 hover:text-white transition-colors flex items-center justify-center gap-1"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    >
+                      Показать ещё <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -1089,43 +1132,42 @@ export default function MiniApp() {
             )}
 
             {/* ===== Top by balance ===== */}
-            <div className="rounded-3xl p-4"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                  <Trophy className="w-4.5 h-4.5 text-white" />
+            <div className="rounded-2xl p-4"
+                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
+                  <Trophy className="w-4 h-4 text-white/80" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-[14.5px] font-semibold text-white/95 leading-tight">Топ по балансу</div>
-                  <div className="text-[11.5px] text-white/50">Самые богатые в боте</div>
+                  <div className="text-[14px] font-medium text-white/95 leading-tight">Топ по балансу</div>
+                  <div className="text-[11px] text-white/45 mt-0.5">Лидеры в боте</div>
                 </div>
               </div>
 
               {leaderboard === null ? (
-                <div className="space-y-2">
-                  {[0,1,2].map((i) => <div key={i} className="h-12 rounded-xl skeleton-shimmer" />)}
+                <div className="space-y-1">
+                  {[0,1,2].map((i) => <div key={i} className="h-11 rounded-xl skeleton-shimmer" />)}
                 </div>
               ) : (
-                <ul className="space-y-1.5">
+                <ul className="space-y-1">
                   {leaderboard.top.map((u, i) => {
-                    const rankColors = ["from-yellow-400 to-orange-500", "from-slate-300 to-slate-500", "from-orange-500 to-amber-700"];
                     const name = u.username ? `@${u.username}` : `id${u.telegram_id}`;
                     const isMe = leaderboard.me && u.id === leaderboard.me.id;
                     const initial = (u.username || String(u.telegram_id)).slice(0, 1).toUpperCase();
                     return (
                       <li key={u.id}
-                          className={"flex items-center gap-3 px-2.5 py-2 rounded-xl " + (isMe ? "bg-white/[0.07] ring-1 ring-purple-400/40" : "")}>
-                        <div className={"w-7 h-7 rounded-full bg-gradient-to-br " + rankColors[i] + " flex items-center justify-center text-[12px] font-bold text-black shadow shrink-0"}>
+                          className={"flex items-center gap-3 px-2.5 py-2 rounded-xl " + (isMe ? "bg-white/[0.06] ring-1 ring-white/15" : "")}>
+                        <div className="w-6 text-center text-[12px] font-medium text-white/50 tabular-nums shrink-0">
                           {i + 1}
                         </div>
-                        <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 bg-white/[0.06] flex items-center justify-center text-[12px] font-medium text-white/80 shrink-0">
                           {initial}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[13.5px] text-white/95 truncate">{name}{isMe && <span className="text-[11px] text-purple-300 ml-1">· вы</span>}</div>
+                          <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· вы</span>}</div>
                         </div>
-                        <div className="text-[13.5px] font-semibold tabular-nums text-yellow-300 shrink-0">
-                          {u.balance_pt.toFixed(1)} <span className="text-white/50 font-normal text-[11px]">PT</span>
+                        <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
+                          {u.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
                         </div>
                       </li>
                     );
@@ -1135,24 +1177,20 @@ export default function MiniApp() {
 
               {leaderboard?.me && leaderboard.me.rank > 3 && (
                 <>
-                  <div className="my-3 flex items-center gap-2">
-                    <div className="flex-1 h-px bg-white/10" />
-                    <span className="text-[10px] uppercase tracking-widest text-white/40">Вы</span>
-                    <div className="flex-1 h-px bg-white/10" />
-                  </div>
-                  <div className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/[0.07] ring-1 ring-purple-400/40">
-                    <div className="w-7 h-7 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-[11px] font-semibold text-white/80 tabular-nums shrink-0">
+                  <div className="my-2.5 h-px bg-white/8" />
+                  <div className="flex items-center gap-3 px-2.5 py-2 rounded-xl bg-white/[0.05] ring-1 ring-white/10">
+                    <div className="w-6 text-center text-[12px] font-medium text-white/60 tabular-nums shrink-0">
                       {leaderboard.me.rank}
                     </div>
-                    <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                    <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 bg-white/[0.06] flex items-center justify-center text-[12px] font-medium text-white/80 shrink-0">
                       {tgUser.photo ? <img src={tgUser.photo} alt="" className="w-full h-full object-cover" /> : initial}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13.5px] text-white/95 truncate">{tgUser.name || (leaderboard.me.username ? `@${leaderboard.me.username}` : `id${leaderboard.me.telegram_id}`)}</div>
-                      <div className="text-[11px] text-white/50">Ваше место в топе</div>
+                      <div className="text-[13px] text-white/90 truncate">{tgUser.name || (leaderboard.me.username ? `@${leaderboard.me.username}` : `id${leaderboard.me.telegram_id}`)}</div>
+                      <div className="text-[10.5px] text-white/40">Ваше место</div>
                     </div>
-                    <div className="text-[13.5px] font-semibold tabular-nums text-yellow-300 shrink-0">
-                      {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/50 font-normal text-[11px]">PT</span>
+                    <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
+                      {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
                     </div>
                   </div>
                 </>
@@ -1163,6 +1201,22 @@ export default function MiniApp() {
         </section>
       )}
       </div>
+
+      {/* ===== Scroll to top ===== */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Наверх"
+        className={"fixed right-4 bottom-24 z-40 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 press-soft " +
+          (showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none")}
+        style={{
+          background: "rgba(15,8,40,0.72)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          backdropFilter: "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
+        }}
+      >
+        <ArrowUp className="w-4 h-4 text-white/85" />
+      </button>
 
       {/* ===== Floating tab bar ===== */}
       <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none">
