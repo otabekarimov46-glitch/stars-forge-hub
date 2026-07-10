@@ -157,7 +157,7 @@ export default function StatisticsPage() {
               </div>
               <h3 className="text-base font-semibold">Реферальная программа</h3>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {refKpis.map((k) => (
                 <div key={k.label} className="glass-card p-4 relative overflow-hidden group hover:scale-[1.02] transition-transform">
                   <div className={`absolute inset-0 bg-gradient-to-br ${k.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
