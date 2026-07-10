@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Users, DollarSign, Eye, AlertTriangle, TrendingUp } from "lucide-react";
+import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { format, subDays, parseISO } from "date-fns";
 
