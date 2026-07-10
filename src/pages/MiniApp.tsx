@@ -1319,9 +1319,18 @@ export default function MiniApp() {
                 <div className="rounded-2xl p-4 space-y-3"
                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
                   <div className="text-[12px] uppercase tracking-widest text-white/50">Ваша ссылка</div>
-                  <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/85 break-all tabular-nums">
-                    {refLink || (refLoading ? "Загрузка…" : "Ссылка недоступна")}
-                  </div>
+                  {refLink ? (
+                    <button
+                      onClick={copyRefLink}
+                      className="w-full text-left px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/85 break-all tabular-nums hover:bg-black/35 active:scale-[0.99] transition"
+                    >
+                      {refLink}
+                    </button>
+                  ) : (
+                    <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/60 break-all">
+                      {refLoading ? "Загрузка…" : "Ссылка недоступна"}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
                       onClick={copyRefLink}
