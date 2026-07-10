@@ -439,7 +439,20 @@ Deno.serve(async (req) => {
           .limit(50);
         const { data: cfgRows } = await supabase
           .from("settings").select("key,value").in("key", ["bot_username"]);
-        const bot_username = ((cfgRows || []).find((r: any) => r.key === "bot_username")?.value || "").replace(/^@/, "");
+        let bot_username = ((cfgRows || []).find((r: any) => r.key === "bot_username")?.value || "").replace(/^@/, "");
+        if (!bot_username) {
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          if (botToken) {
+            try {
+              const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+              const j = await r.json();
+              if (j?.ok && j.result?.username) {
+                bot_username = j.result.username;
+                await supabase.from("settings").upsert({ key: "bot_username", value: bot_username });
+              }
+            } catch {}
+          }
+        }
         return jsonResponse({
           data: {
             user_id: user.id,

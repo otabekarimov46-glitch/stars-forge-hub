@@ -1260,11 +1260,9 @@ export default function MiniApp() {
                       Получай <span className="text-emerald-300 font-semibold">5%</span> от каждого задания,
                       которое выполнит приглашённый друг
                     </div>
-                    <div className="mt-1 text-[12px] text-white/55">
-                      Друг ничего не теряет — 5% начисляются сверху, тебе на баланс
-                    </div>
                   </div>
                 </div>
+
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-2.5">
@@ -1287,17 +1285,8 @@ export default function MiniApp() {
                   </div>
                 </div>
 
-                {/* How it works */}
-                <div className="rounded-2xl p-4 space-y-2"
-                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                  <div className="text-[13px] font-semibold text-white/85">Как это работает</div>
-                  <ul className="text-[12.5px] text-white/70 space-y-1.5 leading-relaxed">
-                    <li>1. Отправь ссылку другу — он открывает бота по ней.</li>
-                    <li>2. Друг выполняет задания и смотрит видео.</li>
-                    <li>3. 5% от его награды автоматически падают тебе на баланс.</li>
-                    <li className="text-white/50">За сам факт регистрации бонус не начисляется — только за выполненные действия.</li>
-                  </ul>
-                </div>
+
+
 
                 {/* Referrals list */}
                 {refData && refData.count > 0 && (
@@ -1330,9 +1319,18 @@ export default function MiniApp() {
                 <div className="rounded-2xl p-4 space-y-3"
                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
                   <div className="text-[12px] uppercase tracking-widest text-white/50">Ваша ссылка</div>
-                  <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/85 break-all tabular-nums">
-                    {refLink || (refLoading ? "Загрузка…" : "Ссылка недоступна")}
-                  </div>
+                  {refLink ? (
+                    <button
+                      onClick={copyRefLink}
+                      className="w-full text-left px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/85 break-all tabular-nums hover:bg-black/35 active:scale-[0.99] transition"
+                    >
+                      {refLink}
+                    </button>
+                  ) : (
+                    <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/60 break-all">
+                      {refLoading ? "Загрузка…" : "Ссылка недоступна"}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
                       onClick={copyRefLink}
