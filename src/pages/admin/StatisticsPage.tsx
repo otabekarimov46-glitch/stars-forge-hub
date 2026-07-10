@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Users, DollarSign, Eye, AlertTriangle, TrendingUp } from "lucide-react";
+import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { format, subDays, parseISO } from "date-fns";
 
@@ -113,8 +113,91 @@ export default function StatisticsPage() {
         </div>
       </div>
 
+      {/* Referral stats */}
+      {(() => {
+        const users = stats.users || [];
+        const invited = users.filter((u: any) => u.referrer_id).length;
+        const totalRefEarn = users.reduce((s: number, u: any) => s + Number(u.referral_earnings_pt || 0), 0);
+        const refCountByUser = new Map<string, number>();
+        users.forEach((u: any) => {
+          if (u.referrer_id) refCountByUser.set(u.referrer_id, (refCountByUser.get(u.referrer_id) || 0) + 1);
+        });
+        const activeRefs = refCountByUser.size;
+        const conversion = users.length ? (invited / users.length) * 100 : 0;
+        const top = users
+          .filter((u: any) => refCountByUser.get(u.id))
+          .map((u: any) => ({
+            id: u.id,
+            name: u.username ? `@${u.username}` : `ID ${u.telegram_id}`,
+            count: refCountByUser.get(u.id) || 0,
+            earned: Number(u.referral_earnings_pt || 0),
+          }))
+          .sort((a: any, b: any) => b.count - a.count)
+          .slice(0, 5);
+        const refKpis = [
+          { label: "Приглашено всего", value: invited, icon: UserPlus, color: "from-brand-purple to-brand-blue" },
+          { label: "Активных рефереров", value: activeRefs, icon: Share2, color: "from-brand-blue to-brand-green" },
+          { label: "Выплачено рефералам", value: `${totalRefEarn.toFixed(2).replace(/\.?0+$/, "")} PT`, icon: DollarSign, color: "from-brand-gold to-yellow-500" },
+          { label: "Доля приглашённых", value: `${conversion.toFixed(1)}%`, icon: TrendingUp, color: "from-brand-green to-emerald-500" },
+        ];
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-brand-purple to-brand-blue">
+                <Share2 className="h-4 w-4 text-white" />
+              </div>
+              <h3 className="text-base font-semibold">Реферальная программа</h3>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {refKpis.map((k) => (
+                <div key={k.label} className="glass-card p-4 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${k.color} opacity-5 group-hover:opacity-10 transition-opacity`} />
+                  <div className="relative">
+                    <div className={`inline-flex p-2 rounded-xl bg-gradient-to-br ${k.color} mb-2`}>
+                      <k.icon className="h-4 w-4 text-white" />
+                    </div>
+                    <p className="text-2xl font-bold">{k.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {top.length > 0 && (
+              <div className="glass-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Trophy className="h-4 w-4 text-brand-gold" />
+                  <h4 className="text-sm font-semibold">Топ рефереров</h4>
+                </div>
+                <div className="space-y-2">
+                  {top.map((u: any, i: number) => (
+                    <div key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br ${
+                        i === 0 ? "from-yellow-400 to-orange-500" :
+                        i === 1 ? "from-slate-300 to-slate-500" :
+                        i === 2 ? "from-amber-600 to-amber-800" :
+                        "from-brand-purple to-brand-blue"
+                      }`}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{u.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">{u.count} 👥</p>
+                        <p className="text-xs text-muted-foreground">{u.earned.toFixed(2).replace(/\.?0+$/, "")} PT</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {stats.alerts && stats.alerts.length > 0 && (
         <div className="glass-card p-6">
+
           <h3 className="text-base font-semibold mb-4">{t("stats.unreadAlerts")}</h3>
           <div className="space-y-2">
             {stats.alerts.map((a: any) => (
