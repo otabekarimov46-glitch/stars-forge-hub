@@ -660,6 +660,82 @@ Deno.serve(async (req) => {
 
 
 
+      case "get_leaderboard": {
+        const { telegram_id } = params;
+        const { data: top } = await supabase
+          .from("users")
+          .select("id, telegram_id, username, balance_pt")
+          .eq("is_banned", false)
+          .order("balance_pt", { ascending: false })
+          .limit(3);
+        let me: any = null;
+        if (telegram_id) {
+          const { data: u } = await supabase
+            .from("users")
+            .select("id, telegram_id, username, balance_pt")
+            .eq("telegram_id", telegram_id)
+            .maybeSingle();
+          if (u) {
+            const { count: higher } = await supabase
+              .from("users")
+              .select("id", { count: "exact", head: true })
+              .eq("is_banned", false)
+              .gt("balance_pt", Number(u.balance_pt));
+            me = {
+              id: u.id,
+              telegram_id: Number(u.telegram_id),
+              username: u.username,
+              balance_pt: Number(u.balance_pt),
+              rank: (higher || 0) + 1,
+            };
+          }
+        }
+        return jsonResponse({
+          data: {
+            top: (top || []).map((t: any) => ({
+              id: t.id,
+              telegram_id: Number(t.telegram_id),
+              username: t.username,
+              balance_pt: Number(t.balance_pt),
+            })),
+            me,
+          },
+        });
+      }
+
+      case "get_transactions": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+        const { data: user } = await supabase
+          .from("users").select("id").eq("telegram_id", telegram_id).single();
+        if (!user) throw new Error("User not found");
+        const { data: rows } = await supabase
+          .from("logs_activity")
+          .select("id, action, created_at, metadata")
+          .eq("user_id", user.id)
+          .in("action", ["task_reward", "video_reward"])
+          .order("created_at", { ascending: false })
+          .limit(50);
+        const items = (rows || []).map((r: any) => {
+          const meta = r.metadata || {};
+          let kind = "task";
+          let label = "Задание";
+          if (r.action === "video_reward") { kind = "video"; label = "Видеореклама"; }
+          else if (meta.type === "subscribe") label = "Подписка на канал";
+          else if (meta.type === "view_post") label = "Просмотр поста";
+          else if (meta.type === "view_story") label = "Просмотр истории";
+          else if (meta.type === "reaction") label = "Реакция";
+          return {
+            id: r.id,
+            kind,
+            label,
+            reward_pt: Number(meta.reward_pt || 0),
+            at: r.created_at,
+          };
+        }).filter((x: any) => x.reward_pt > 0);
+        return jsonResponse({ data: { items } });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown action" }),
