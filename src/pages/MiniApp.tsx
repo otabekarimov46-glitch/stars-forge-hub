@@ -1269,9 +1269,10 @@ export default function MiniApp() {
                   <div className="rounded-2xl p-3.5"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
                     <div className="text-[11px] uppercase tracking-widest text-white/50">Приглашено</div>
-                    <div className="mt-1 text-2xl font-bold tabular-nums">
+                    <div className="mt-1 text-2xl font-bold tabular-nums text-white">
                       {refData?.count ?? (refLoading ? "…" : 0)}
                     </div>
+
                   </div>
                   <div className="rounded-2xl p-3.5"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
