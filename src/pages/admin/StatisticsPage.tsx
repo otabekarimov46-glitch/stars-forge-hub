@@ -149,12 +149,6 @@ export default function StatisticsPage() {
           { label: "Активных рефералов", value: activeRefsTotal, icon: Share2, color: "from-brand-blue to-brand-green" },
           { label: "Выплачено рефералам", value: fmtPt(totalRefEarn), icon: DollarSign, color: "from-brand-gold to-yellow-500" },
         ];
-        const refKpis = [
-          { label: "Приглашено всего", value: invited, icon: UserPlus, color: "from-brand-purple to-brand-blue" },
-          { label: "Активных рефереров", value: activeRefs, icon: Share2, color: "from-brand-blue to-brand-green" },
-          { label: "Выплачено рефералам", value: `${totalRefEarn.toFixed(2).replace(/\.?0+$/, "")} PT`, icon: DollarSign, color: "from-brand-gold to-yellow-500" },
-          { label: "Доля приглашённых", value: `${conversion.toFixed(1)}%`, icon: TrendingUp, color: "from-brand-green to-emerald-500" },
-        ];
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
