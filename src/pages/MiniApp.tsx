@@ -797,25 +797,25 @@ export default function MiniApp() {
             <Gift className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold tracking-wide text-white/90">DAILY BONUS</div>
+            <div className="text-[13px] font-semibold tracking-wide text-white/90">{t("daily_bonus")}</div>
             <div className="text-[12px] text-white/60 flex items-center gap-1.5 tabular-nums">
               <Clock className="w-3 h-3" />
-              {bonusClaimed ? formatCountdown(bonusCountdownMs) : "Доступен"}
+              {bonusClaimed ? formatCountdown(bonusCountdownMs) : t("available")}
             </div>
           </div>
           <span className={"px-3 h-7 inline-flex items-center rounded-full text-[11px] font-semibold tracking-wide " +
             (bonusClaimed
               ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
               : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black")}>
-            {bonusClaimed ? "Получено" : "Получить"}
+            {bonusClaimed ? t("received") : t("receive")}
           </span>
         </button>
 
         {bonusToast && (
           <div className="mt-2 text-center text-[12px] text-white/75 fade-in">
             {bonusToast.kind === "got"
-              ? <>🎁 +<span className="text-yellow-300 font-semibold">{bonusToast.bonus} PT</span> зачислено</>
-              : <>Уже получен. Следующий через ~{bonusToast.hours} ч.</>}
+              ? <>🎁 +<span className="text-yellow-300 font-semibold">{bonusToast.bonus} PT</span> {t("bonus_credited")}</>
+              : <>{t("bonus_next", { h: bonusToast.hours ?? 0 })}</>}
           </div>
         )}
       </section>
