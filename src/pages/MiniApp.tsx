@@ -1396,7 +1396,9 @@ export default function MiniApp() {
 
             {/* List */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10">
+              {(() => { return null; })()}
               <div className="max-w-md mx-auto space-y-2.5">
+                {(() => null)()}
                 {activeSheet && tasksByType[activeSheet].length === 0 && (
                   <div className="text-center text-white/55 text-sm py-16">
                     {SHEET_CONFIG[activeSheet].empty}
