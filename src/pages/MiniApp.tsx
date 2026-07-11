@@ -1557,7 +1557,7 @@ export default function MiniApp() {
                               {r.username ? `@${r.username}` : `ID ${r.telegram_id}`}
                             </div>
                             <div className="text-[11px] text-white/45">
-                              {new Date(r.joined_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
+                              {new Date(r.joined_at).toLocaleDateString(({ ru:"ru-RU", be:"be-BY", kk:"kk-KZ", uz:"uz-UZ", az:"az-AZ", hy:"hy-AM", ky:"ky-KG" } as Record<string,string>)[lang] || "ru-RU", { day: "2-digit", month: "short" })}
                             </div>
                           </div>
                         </div>
