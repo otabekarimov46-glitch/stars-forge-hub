@@ -1447,7 +1447,7 @@ export default function MiniApp() {
             </div>
             <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
               <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white">
-                Реферальная программа
+                {t("referral_program")}
               </Vaul.Title>
               <button
                 onClick={() => setRefSheetOpen(false)}
