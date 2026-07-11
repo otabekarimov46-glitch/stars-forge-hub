@@ -1015,9 +1015,9 @@ export default function MiniApp() {
                 shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
                 opacity-60 cursor-not-allowed"
             >
-              <Star className="w-4 h-4" /> Вывод
+              <Star className="w-4 h-4" /> {t("withdraw")}
             </button>
-            <p className="text-center text-[11px] text-white/50">Вывод откроется скоро</p>
+            <p className="text-center text-[11px] text-white/50">{t("withdraw_soon")}</p>
 
             {/* ===== Transactions ===== */}
             <div className="pt-4">
