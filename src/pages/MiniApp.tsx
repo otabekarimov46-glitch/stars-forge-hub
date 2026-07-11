@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp, Settings as SettingsIcon, LifeBuoy, Check } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
+import { useMiniAppI18n, MINIAPP_LANGS } from "@/lib/miniapp-i18n";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -66,8 +67,10 @@ function formatCountdown(ms: number) {
 }
 
 export default function MiniApp() {
+  const { t, lang, setLang } = useMiniAppI18n();
   const tgUser = useMemo(getTelegramUser, []);
   const telegramId = tgUser.id;
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [video, setVideo] = useState<VideoAd | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
@@ -576,9 +579,9 @@ export default function MiniApp() {
         <div className="w-full max-w-sm rounded-3xl p-8 space-y-4 text-center screen-enter"
           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
           <img src={logoImg} alt="" className="w-14 h-14 rounded-2xl mx-auto shadow-lg" />
-          <h2 className="text-lg font-semibold">Откройте через Telegram</h2>
+          <h2 className="text-lg font-semibold">{t("open_via_telegram")}</h2>
           <p className="text-[13px] text-white/70">
-            Это приложение работает только внутри Telegram. Откройте бота и нажмите «🎬 Смотреть видео».
+            {t("open_via_telegram_desc")}
           </p>
         </div>
       </div>
@@ -592,12 +595,12 @@ export default function MiniApp() {
         <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-4 screen-enter"
              style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}>
           <ShieldAlert className="w-14 h-14 mx-auto text-yellow-400" />
-          <h2 className="text-xl font-bold">Необычная активность</h2>
+          <h2 className="text-xl font-bold">{t("unusual_activity")}</h2>
           <p className="text-sm text-white/85">
-            {turnstileState === "running" && "Проверяем устройство, подождите несколько секунд…"}
-            {turnstileState === "passed" && "Устройство проверено. Откройте чат с ботом, решите простой пример и перезапустите приложение."}
-            {turnstileState === "failed" && "Откройте чат с ботом и решите простой пример, чтобы продолжить."}
-            {turnstileState === "idle" && "Подготовка проверки…"}
+            {turnstileState === "running" && t("checking_device")}
+            {turnstileState === "passed" && t("device_verified")}
+            {turnstileState === "failed" && t("solve_captcha")}
+            {turnstileState === "idle" && t("preparing_check")}
           </p>
           {turnstileState === "running" && (
             <Loader2 className="w-6 h-6 mx-auto animate-spin text-white/60" />
@@ -618,12 +621,12 @@ export default function MiniApp() {
           <div className="w-14 h-14 mx-auto rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
             <CheckCircle className="w-7 h-7 text-emerald-300" />
           </div>
-          <h2 className="text-xl font-bold">Дневной лимит достигнут</h2>
+          <h2 className="text-xl font-bold">{t("daily_limit_reached")}</h2>
           <p className="text-2xl font-bold tabular-nums text-yellow-300">
             {limitInfo.watched}/{limitInfo.limit}
           </p>
           <p className="text-sm text-white/80">
-            Вы посмотрели все доступные на сегодня видео. Возвращайтесь завтра — лимит сбрасывается в 00:00 UTC.
+            {t("daily_limit_desc")}
           </p>
         </div>
       </div>
@@ -674,7 +677,7 @@ export default function MiniApp() {
             <span className="text-yellow-300">+{video.reward_pt} PT</span>
           </div>
           <Progress value={progressPercent} className="h-1.5" />
-          <p className="text-center text-[11px] text-white/70">{isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}</p>
+          <p className="text-center text-[11px] text-white/70">{isBuffering ? t("loading_video") : t("dont_close")}</p>
         </div>
       </div>
     );
@@ -687,9 +690,9 @@ export default function MiniApp() {
 
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
-    subscribe:  { title: "Подписаться на канал",  icon: Send,          empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
-    view_story: { title: "Посмотреть историю",    icon: Camera,        empty: "Пока нет историй",                ctaLabel: "Открыть" },
-    view_post:  { title: "Посмотреть пост",       icon: Newspaper,     empty: "Пока нет публикаций",             ctaLabel: "Открыть" },
+    subscribe:  { title: t("subscribe_to_channel"), icon: Send,     empty: t("no_subscribe_channels"), ctaLabel: t("cta_subscribe") },
+    view_story: { title: t("view_story"),           icon: Camera,   empty: t("no_stories"),            ctaLabel: t("cta_open") },
+    view_post:  { title: t("view_post"),            icon: Newspaper,empty: t("no_posts"),              ctaLabel: t("cta_open") },
   };
 
   const taskLink = (t: BotTask) => {
@@ -701,10 +704,10 @@ export default function MiniApp() {
     return null;
   };
 
-  const taskTitle = (t: BotTask) => {
-    if (t.title && t.title.trim()) return t.title.trim();
-    if (t.channel_username) return t.channel_username.startsWith("@") ? t.channel_username : `@${t.channel_username}`;
-    return "Задание";
+  const taskTitle = (bt: BotTask) => {
+    if (bt.title && bt.title.trim()) return bt.title.trim();
+    if (bt.channel_username) return bt.channel_username.startsWith("@") ? bt.channel_username : `@${bt.channel_username}`;
+    return t("task_default");
   };
 
   const categoryTile = (kind: "subscribe" | "view_post" | "view_story") => {
@@ -735,7 +738,7 @@ export default function MiniApp() {
         <div className="flex-1 min-w-0">
           <div className="text-[14.5px] font-medium text-white/95 leading-tight">{cfg.title}</div>
           <div className="text-[11.5px] text-white/50 mt-0.5">
-            {disabled ? "нет заданий" : `${list.length} ${list.length === 1 ? "задание" : list.length < 5 ? "задания" : "заданий"}`}
+            {disabled ? t("no_tasks_short") : t("tasks_count", { n: list.length })}
           </div>
         </div>
         <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
@@ -759,14 +762,25 @@ export default function MiniApp() {
               <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
             ) : (initial)}
           </div>
-          <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
-               style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
-            <Wallet className="w-3.5 h-3.5 text-white/75" />
-            <span className="font-semibold tabular-nums text-[14px]">
-              {user ? user.balance_pt.toFixed(1) : "…"}
-            </span>
-            <span className="text-[11px] text-white/60">PT</span>
-          </div>
+          {tab === "profile" ? (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label={t("settings")}
+              className="press-soft w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/10 active:scale-90"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}
+            >
+              <SettingsIcon className="w-4 h-4 text-white/85" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
+                 style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
+              <Wallet className="w-3.5 h-3.5 text-white/75" />
+              <span className="font-semibold tabular-nums text-[14px]">
+                {user ? user.balance_pt.toFixed(1) : "…"}
+              </span>
+              <span className="text-[11px] text-white/60">PT</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -783,25 +797,25 @@ export default function MiniApp() {
             <Gift className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold tracking-wide text-white/90">DAILY BONUS</div>
+            <div className="text-[13px] font-semibold tracking-wide text-white/90">{t("daily_bonus")}</div>
             <div className="text-[12px] text-white/60 flex items-center gap-1.5 tabular-nums">
               <Clock className="w-3 h-3" />
-              {bonusClaimed ? formatCountdown(bonusCountdownMs) : "Доступен"}
+              {bonusClaimed ? formatCountdown(bonusCountdownMs) : t("available")}
             </div>
           </div>
           <span className={"px-3 h-7 inline-flex items-center rounded-full text-[11px] font-semibold tracking-wide " +
             (bonusClaimed
               ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
               : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black")}>
-            {bonusClaimed ? "Получено" : "Получить"}
+            {bonusClaimed ? t("received") : t("receive")}
           </span>
         </button>
 
         {bonusToast && (
           <div className="mt-2 text-center text-[12px] text-white/75 fade-in">
             {bonusToast.kind === "got"
-              ? <>🎁 +<span className="text-yellow-300 font-semibold">{bonusToast.bonus} PT</span> зачислено</>
-              : <>Уже получен. Следующий через ~{bonusToast.hours} ч.</>}
+              ? <>🎁 +<span className="text-yellow-300 font-semibold">{bonusToast.bonus} PT</span> {t("bonus_credited")}</>
+              : <>{t("bonus_next", { h: bonusToast.hours ?? 0 })}</>}
           </div>
         )}
       </section>
@@ -827,7 +841,7 @@ export default function MiniApp() {
               <p className="text-red-200 text-sm px-4">{error}</p>
               <button onClick={loadVideo}
                 className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm transition-all hover:bg-white/10 active:scale-95">
-                Попробовать снова
+                {t("try_again")}
               </button>
             </div>
           )}
@@ -848,8 +862,8 @@ export default function MiniApp() {
                 <Play className="w-5 h-5 text-white/60" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[14.5px] font-medium text-white/85 leading-tight">Видеореклама</div>
-                <div className="text-[11.5px] text-white/50 mt-0.5">сейчас недоступно</div>
+                <div className="text-[14.5px] font-medium text-white/85 leading-tight">{t("video_ads")}</div>
+                <div className="text-[11.5px] text-white/50 mt-0.5">{t("unavailable_now")}</div>
               </div>
               <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
             </button>
@@ -881,7 +895,7 @@ export default function MiniApp() {
                       shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
-                    <Play className="w-4 h-4" /> СМОТРЕТЬ
+                    <Play className="w-4 h-4" /> {t("watch")}
                   </button>
                 </div>
               </div>
@@ -898,7 +912,7 @@ export default function MiniApp() {
                       <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
                         <CheckCircle className="w-7 h-7 text-emerald-300" />
                       </div>
-                      <div className="text-[15px] text-white/90">Видео просмотрено</div>
+                      <div className="text-[15px] text-white/90">{t("video_watched")}</div>
                       <div className="text-2xl font-bold tabular-nums">
                         +<span className="text-yellow-300">{lastFinished.reward} PT</span>
                       </div>
@@ -908,9 +922,9 @@ export default function MiniApp() {
                       <div className="w-14 h-14 rounded-full bg-red-400/15 border border-red-400/30 flex items-center justify-center">
                         <XCircle className="w-7 h-7 text-red-300" />
                       </div>
-                      <div className="text-[15px] text-white/90">Просмотр не засчитан</div>
+                      <div className="text-[15px] text-white/90">{t("view_not_counted")}</div>
                       <div className="text-[12px] text-white/60 max-w-xs">
-                        Видео было прервано или закрыто слишком рано. Попробуйте ещё раз — досмотрите до конца.
+                        {t("view_interrupted")}
                       </div>
                     </>
                   )}
@@ -925,14 +939,14 @@ export default function MiniApp() {
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
                     <Play className="w-4 h-4" />
-                    {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
+                    {nextVideo ? t("watch_next") : t("refresh")}
                   </button>
 
                   {lastFinished.video.external_link_url && (
                     <a href={lastFinished.video.external_link_url} target="_blank" rel="noopener noreferrer"
                        className="press-soft mx-auto inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5 transition-all hover:bg-white/10">
                       <ExternalLink className="w-3.5 h-3.5" />
-                      {lastFinished.video.external_link_label || "Перейти к рекламодателю"}
+                      {lastFinished.video.external_link_label || t("goto_advertiser")}
                     </a>
                   )}
                 </div>
@@ -960,7 +974,7 @@ export default function MiniApp() {
               <div className="absolute inset-0 pointer-events-none opacity-20"
                    style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
               <div className="relative">
-                <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">Ваш баланс</div>
+                <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
                     {user ? user.balance_pt.toFixed(1) : "…"}
@@ -979,7 +993,7 @@ export default function MiniApp() {
 
             <div className="rounded-2xl p-4"
                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
-              <div className="text-[13px] font-semibold text-white/85 mb-2">Курс обмена</div>
+              <div className="text-[13px] font-semibold text-white/85 mb-2">{t("exchange_rate")}</div>
               <div className="flex items-center justify-between text-[13px]">
                 <span className="text-white/70">1 PT</span>
                 <span className="tabular-nums font-semibold">≈ {exchangeRate.toFixed(2)} ⭐</span>
@@ -1001,23 +1015,23 @@ export default function MiniApp() {
                 shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
                 opacity-60 cursor-not-allowed"
             >
-              <Star className="w-4 h-4" /> Вывод
+              <Star className="w-4 h-4" /> {t("withdraw")}
             </button>
-            <p className="text-center text-[11px] text-white/50">Вывод откроется скоро</p>
+            <p className="text-center text-[11px] text-white/50">{t("withdraw_soon")}</p>
 
             {/* ===== Transactions ===== */}
             <div className="pt-4">
               <div className="flex items-center justify-between px-1 pb-2">
                 <div className="flex items-center gap-1.5">
                   <History className="w-3.5 h-3.5 text-white/50" />
-                  <span className="text-[11px] uppercase tracking-[0.14em] text-white/50">История</span>
+                  <span className="text-[11px] uppercase tracking-[0.14em] text-white/50">{t("history")}</span>
                 </div>
                 {txs && txs.length > 10 && (
                   <button
                     onClick={() => setTxVisible(v => v > 10 ? 10 : txs.length)}
                     className="press-soft text-[11px] text-white/50 hover:text-white/80 flex items-center gap-0.5"
                   >
-                    {txVisible > 10 ? <>Свернуть <ChevronUp className="w-3 h-3" /></> : <>Все <ChevronDown className="w-3 h-3" /></>}
+                    {txVisible > 10 ? <>{t("collapse")} <ChevronUp className="w-3 h-3" /></> : <>{t("all")} <ChevronDown className="w-3 h-3" /></>}
                   </button>
                 )}
               </div>
@@ -1030,33 +1044,41 @@ export default function MiniApp() {
               ) : txs.length === 0 ? (
                 <div className="text-center text-[12px] text-white/45 py-6 rounded-2xl"
                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  Пока нет транзакций
+                  {t("no_transactions")}
                 </div>
               ) : (
                 <>
                   <ul className="space-y-1">
-                    {txs.slice(0, txVisible).map((t) => {
-                      const Icon = t.kind === "video" ? Film
-                        : t.label.startsWith("Подписка") ? Send
-                        : t.label.startsWith("Просмотр поста") ? Newspaper
-                        : t.label.startsWith("Просмотр истории") ? Camera
+                    {txs.slice(0, txVisible).map((tx: any) => {
+                      const sub = tx.sub || tx.kind;
+                      const Icon = sub === "video" ? Film
+                        : sub === "subscribe" ? Send
+                        : sub === "view_post" ? Newspaper
+                        : sub === "view_story" ? Camera
                         : ListChecks;
-                      const d = new Date(t.at);
-                      const dd = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
-                      const tt = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+                      const label = sub === "video" ? t("video_ads")
+                        : sub === "subscribe" ? t("subscribe_to_channel")
+                        : sub === "view_post" ? t("view_post")
+                        : sub === "view_story" ? t("view_story")
+                        : tx.label || t("task_default");
+                      const d = new Date(tx.at);
+                      const localeMap: Record<string, string> = { ru: "ru-RU", be: "be-BY", kk: "kk-KZ", uz: "uz-UZ", az: "az-AZ", hy: "hy-AM", ky: "ky-KG" };
+                      const loc = localeMap[lang] || "ru-RU";
+                      const dd = d.toLocaleDateString(loc, { day: "2-digit", month: "short" });
+                      const tt = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
                       return (
-                        <li key={t.id}
+                        <li key={tx.id}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                           <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
                             <Icon className="w-3.5 h-3.5 text-white/70" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[13px] text-white/90 truncate">{t.label}</div>
+                            <div className="text-[13px] text-white/90 truncate">{label}</div>
                             <div className="text-[10.5px] text-white/40 tabular-nums mt-0.5">{dd} · {tt}</div>
                           </div>
                           <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
-                            +{t.reward_pt} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
+                            +{tx.reward_pt} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
                           </div>
                         </li>
                       );
@@ -1068,7 +1090,7 @@ export default function MiniApp() {
                       className="press-soft w-full mt-2 h-10 rounded-xl text-[12px] text-white/70 hover:text-white transition-colors flex items-center justify-center gap-1"
                       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                     >
-                      Показать ещё <ChevronDown className="w-3.5 h-3.5" />
+                      {t("show_more")} <ChevronDown className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </>
@@ -1088,7 +1110,7 @@ export default function MiniApp() {
                   <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
                 ) : (initial)}
               </div>
-              <div className="mt-3 text-[17px] font-semibold">{tgUser.name || "Пользователь"}</div>
+              <div className="mt-3 text-[17px] font-semibold">{tgUser.name || t("user_fallback")}</div>
               {telegramId && (
                 <div className="text-[12px] text-white/50 tabular-nums mt-0.5">ID: {telegramId}</div>
               )}
@@ -1100,7 +1122,7 @@ export default function MiniApp() {
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[12px] text-white/60">Баланс</div>
+                <div className="text-[12px] text-white/60">{t("balance")}</div>
                 <div className="text-[15px] font-semibold tabular-nums">
                   {user ? user.balance_pt.toFixed(1) : "…"} PT
                   <span className="text-white/50 font-normal"> · ≈ {user ? (user.balance_pt * exchangeRate).toFixed(2) : "…"} ⭐</span>
@@ -1110,7 +1132,7 @@ export default function MiniApp() {
                 onClick={() => setTab("wallet")}
                 className="press-soft px-3 h-8 rounded-full text-[12px] border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
               >
-                Кошелёк
+                {t("wallet")}
               </button>
             </div>
 
@@ -1124,8 +1146,8 @@ export default function MiniApp() {
                   <Send className="w-5 h-5 text-emerald-200" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">Пригласить друга</div>
-                  <div className="text-[11.5px] text-white/50 mt-0.5">Приглашай и зарабатывай 5%</div>
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("invite_friend")}</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("invite_desc")}</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
               </button>
@@ -1139,8 +1161,8 @@ export default function MiniApp() {
                   <Trophy className="w-4 h-4 text-white/80" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-[14px] font-medium text-white/95 leading-tight">Топ по балансу</div>
-                  <div className="text-[11px] text-white/45 mt-0.5">Лидеры в боте</div>
+                  <div className="text-[14px] font-medium text-white/95 leading-tight">{t("top_by_balance")}</div>
+                  <div className="text-[11px] text-white/45 mt-0.5">{t("top_leaders")}</div>
                 </div>
               </div>
 
@@ -1164,7 +1186,7 @@ export default function MiniApp() {
                           {initial}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· вы</span>}</div>
+                          <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· {t("you")}</span>}</div>
                         </div>
                         <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
                           {u.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
@@ -1187,7 +1209,7 @@ export default function MiniApp() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] text-white/90 truncate">{tgUser.name || (leaderboard.me.username ? `@${leaderboard.me.username}` : `id${leaderboard.me.telegram_id}`)}</div>
-                      <div className="text-[10.5px] text-white/40">Ваше место</div>
+                      <div className="text-[10.5px] text-white/40">{t("your_place")}</div>
                     </div>
                     <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
                       {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
@@ -1205,7 +1227,7 @@ export default function MiniApp() {
       {/* ===== Scroll to top ===== */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        aria-label="Наверх"
+        aria-label={t("scroll_top")}
         className={"fixed right-4 bottom-24 z-40 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 press-soft " +
           (showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none")}
         style={{
@@ -1230,9 +1252,9 @@ export default function MiniApp() {
           }}
         >
           {[
-            { id: "tasks",   label: "Задания", icon: ListChecks },
-            { id: "wallet",  label: "Кошелёк", icon: Wallet },
-            { id: "profile", label: "Профиль", icon: UserIcon },
+            { id: "tasks",   label: t("tab_tasks"),   icon: ListChecks },
+            { id: "wallet",  label: t("tab_wallet"),  icon: Wallet },
+            { id: "profile", label: t("tab_profile"), icon: UserIcon },
           ].map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
@@ -1288,7 +1310,7 @@ export default function MiniApp() {
               <button
                 onClick={() => setActiveSheet(null)}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
-                aria-label="Закрыть"
+                aria-label={t("close")}
               >
                 <X className="w-4 h-4 text-white/80" />
               </button>
@@ -1425,12 +1447,12 @@ export default function MiniApp() {
             </div>
             <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
               <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white">
-                Реферальная программа
+                {t("referral_program")}
               </Vaul.Title>
               <button
                 onClick={() => setRefSheetOpen(false)}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
-                aria-label="Закрыть"
+                aria-label={t("close")}
               >
                 <X className="w-4 h-4 text-white/80" />
               </button>
@@ -1448,8 +1470,7 @@ export default function MiniApp() {
                       <Send className="w-6 h-6 text-white" />
                     </div>
                     <div className="mt-3 text-[15px] text-white/85 leading-snug">
-                      Получай <span className="text-emerald-300 font-semibold">5%</span> от каждого задания,
-                      которое выполнит приглашённый друг
+                      {t("referral_hero_prefix")} <span className="text-emerald-300 font-semibold">5%</span> {t("referral_hero_suffix")}
                     </div>
                   </div>
                 </div>
@@ -1459,7 +1480,7 @@ export default function MiniApp() {
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="rounded-2xl p-3.5"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                    <div className="text-[11px] uppercase tracking-widest text-white/50">Приглашено</div>
+                    <div className="text-[11px] uppercase tracking-widest text-white/50">{t("invited")}</div>
                     <div className="mt-1 text-2xl font-bold tabular-nums text-white">
                       {refData?.count ?? (refLoading ? "…" : 0)}
                     </div>
@@ -1467,7 +1488,7 @@ export default function MiniApp() {
                   </div>
                   <div className="rounded-2xl p-3.5"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                    <div className="text-[11px] uppercase tracking-widest text-white/50">Заработано</div>
+                    <div className="text-[11px] uppercase tracking-widest text-white/50">{t("earned")}</div>
                     <div className="mt-1 text-2xl font-bold tabular-nums">
                       <span className="bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
                         {refData ? refData.total_earnings_pt.toFixed(2).replace(/\.?0+$/, "") : (refLoading ? "…" : "0")}
@@ -1483,7 +1504,7 @@ export default function MiniApp() {
                 {/* Referral link */}
                 <div className="rounded-2xl p-4 space-y-3"
                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                  <div className="text-[12px] uppercase tracking-widest text-white/50">Ваша ссылка</div>
+                  <div className="text-[12px] uppercase tracking-widest text-white/50">{t("your_link")}</div>
                   {refLink ? (
                     <button
                       onClick={copyRefLink}
@@ -1493,7 +1514,7 @@ export default function MiniApp() {
                     </button>
                   ) : (
                     <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/60 break-all">
-                      {refLoading ? "Загрузка…" : "Ссылка недоступна"}
+                      {refLoading ? t("loading") : t("link_unavailable")}
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-2.5">
@@ -1503,7 +1524,7 @@ export default function MiniApp() {
                       className="press h-11 rounded-xl font-medium text-[13.5px] text-white/90 border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       <Copy className="w-4 h-4" />
-                      {copyTip ? "Скопировано" : "Скопировать"}
+                      {copyTip ? t("copied") : t("copy")}
                     </button>
                     <button
                       onClick={shareRefLink}
@@ -1513,7 +1534,7 @@ export default function MiniApp() {
                         shadow-lg shadow-sky-900/30 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" />
-                      Поделиться
+                      {t("share")}
                     </button>
                   </div>
                 </div>
@@ -1523,7 +1544,7 @@ export default function MiniApp() {
                   <div className="rounded-2xl overflow-hidden"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
                     <div className="px-4 pt-3 pb-2 text-[13px] font-semibold text-white/85">
-                      Твои приглашённые
+                      {t("your_invited")}
                     </div>
                     <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
                       {refData.referrals.map((r) => (
@@ -1536,7 +1557,7 @@ export default function MiniApp() {
                               {r.username ? `@${r.username}` : `ID ${r.telegram_id}`}
                             </div>
                             <div className="text-[11px] text-white/45">
-                              {new Date(r.joined_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
+                              {new Date(r.joined_at).toLocaleDateString(({ ru:"ru-RU", be:"be-BY", kk:"kk-KZ", uz:"uz-UZ", az:"az-AZ", hy:"hy-AM", ky:"ky-KG" } as Record<string,string>)[lang] || "ru-RU", { day: "2-digit", month: "short" })}
                             </div>
                           </div>
                         </div>
@@ -1545,6 +1566,100 @@ export default function MiniApp() {
                   </div>
                 )}
 
+              </div>
+            </div>
+          </Vaul.Content>
+        </Vaul.Portal>
+      </Vaul.Root>
+
+      {/* ===== Settings bottom sheet ===== */}
+      <Vaul.Root open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <Vaul.Portal>
+          <Vaul.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
+          <Vaul.Content
+            className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
+            style={{
+              background: "rgba(15,8,40,0.96)",
+              borderTop: "1px solid rgba(255,255,255,0.10)",
+              backdropFilter: "blur(28px)",
+              maxHeight: "88vh",
+            }}
+          >
+            <div className="pt-2.5 pb-2 flex items-center justify-center">
+              <div className="h-1.5 w-12 rounded-full bg-white/35" />
+            </div>
+            <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
+              <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white flex items-center gap-2">
+                <SettingsIcon className="w-4 h-4 text-white/80" />
+                {t("settings")}
+              </Vaul.Title>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
+                aria-label={t("close")}
+              >
+                <X className="w-4 h-4 text-white/80" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
+              <div className="max-w-md mx-auto space-y-4">
+                {/* Language */}
+                <div>
+                  <div className="px-1 pb-2 text-[11px] uppercase tracking-[0.14em] text-white/50">{t("language")}</div>
+                  <div className="rounded-2xl overflow-hidden divide-y divide-white/5"
+                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    {MINIAPP_LANGS.map((l) => {
+                      const active = l.code === lang;
+                      return (
+                        <button
+                          key={l.code}
+                          onClick={() => setLang(l.code)}
+                          className="w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+                        >
+                          <span className="text-[20px] leading-none">{l.flag}</span>
+                          <span className="flex-1 text-[14px] text-white/90">{l.label}</span>
+                          {active && (
+                            <span className="w-6 h-6 rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-emerald-300" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Support */}
+                <div>
+                  <div className="px-1 pb-2 text-[11px] uppercase tracking-[0.14em] text-white/50">{t("support")}</div>
+                  <a
+                    href="https://t.me/starmenthelp_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      try {
+                        const tg = (window as any).Telegram?.WebApp;
+                        if (tg?.openTelegramLink) {
+                          e.preventDefault();
+                          tg.openTelegramLink("https://t.me/starmenthelp_bot");
+                        }
+                      } catch {}
+                    }}
+                    className="press w-full rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-400/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                      <LifeBuoy className="w-5 h-5 text-sky-200" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("contact_support")}</div>
+                      <div className="text-[11.5px] text-white/50 mt-0.5 tabular-nums">@starmenthelp_bot</div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-white/40 shrink-0" />
+                  </a>
+                  <div className="mt-2 px-1 text-[11px] text-white/40">{t("support_desc")}</div>
+                </div>
               </div>
             </div>
           </Vaul.Content>
