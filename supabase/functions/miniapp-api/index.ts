@@ -688,8 +688,29 @@ Deno.serve(async (req) => {
           metadata: { task_id, reward_pt: task.reward_pt, type: task.type },
         });
 
+        // Schedule a background re-check for subscribe tasks, unless disabled.
+        // Also clears any prior "unsub" row for this task (user re-subscribed).
+        if (task.type === "subscribe") {
+          await supabase.from("subscription_checks")
+            .update({ status: "resolved", processed_at: new Date().toISOString() })
+            .eq("user_id", user.id).eq("task_id", task_id).in("status", ["unsub", "pending"]);
 
-
+          const { data: setting } = await supabase.from("settings")
+            .select("value").eq("key", "sub_recheck_minutes").maybeSingle();
+          const minutes = Math.max(0, Math.floor(Number(setting?.value ?? 60)));
+          if (minutes > 0) {
+            await supabase.from("subscription_checks").insert({
+              user_id: user.id,
+              task_id,
+              telegram_id: Number(telegram_id),
+              channel_id: task.channel_id ? String(task.channel_id) : null,
+              channel_username: task.channel_username || null,
+              reward_pt: Number(task.reward_pt),
+              check_at: new Date(Date.now() + minutes * 60 * 1000).toISOString(),
+              status: "pending",
+            });
+          }
+        }
 
         return jsonResponse({ data: { completed: true, subscribed: true, new_balance: newBalance, reward: Number(task.reward_pt) } });
       }
