@@ -1488,7 +1488,7 @@ export default function MiniApp() {
                   </div>
                   <div className="rounded-2xl p-3.5"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                    <div className="text-[11px] uppercase tracking-widest text-white/50">Заработано</div>
+                    <div className="text-[11px] uppercase tracking-widest text-white/50">{t("earned")}</div>
                     <div className="mt-1 text-2xl font-bold tabular-nums">
                       <span className="bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
                         {refData ? refData.total_earnings_pt.toFixed(2).replace(/\.?0+$/, "") : (refLoading ? "…" : "0")}
