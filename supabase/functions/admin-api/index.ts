@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
         break;
       }
 
-      // ===== PROMO CODES =====
+      // ===== PROMO CODES ===== (v2)
       case "get_promos": {
         const res = await supabase
           .from("promo_codes")
