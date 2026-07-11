@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Save, Sun, Moon, Globe } from "lucide-react";
+import { Save, Sun, Moon, ShieldCheck } from "lucide-react";
 
 export default function SettingsPage() {
   const { t, lang, setLang } = useTranslation();
