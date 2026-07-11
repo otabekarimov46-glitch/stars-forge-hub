@@ -707,7 +707,7 @@ export default function MiniApp() {
   const taskTitle = (t: BotTask) => {
     if (t.title && t.title.trim()) return t.title.trim();
     if (t.channel_username) return t.channel_username.startsWith("@") ? t.channel_username : `@${t.channel_username}`;
-    return "Задание";
+    return t("task_default");
   };
 
   const categoryTile = (kind: "subscribe" | "view_post" | "view_story") => {
