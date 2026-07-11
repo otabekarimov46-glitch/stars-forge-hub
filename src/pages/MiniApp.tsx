@@ -595,12 +595,12 @@ export default function MiniApp() {
         <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-4 screen-enter"
              style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}>
           <ShieldAlert className="w-14 h-14 mx-auto text-yellow-400" />
-          <h2 className="text-xl font-bold">Необычная активность</h2>
+          <h2 className="text-xl font-bold">{t("unusual_activity")}</h2>
           <p className="text-sm text-white/85">
-            {turnstileState === "running" && "Проверяем устройство, подождите несколько секунд…"}
-            {turnstileState === "passed" && "Устройство проверено. Откройте чат с ботом, решите простой пример и перезапустите приложение."}
-            {turnstileState === "failed" && "Откройте чат с ботом и решите простой пример, чтобы продолжить."}
-            {turnstileState === "idle" && "Подготовка проверки…"}
+            {turnstileState === "running" && t("checking_device")}
+            {turnstileState === "passed" && t("device_verified")}
+            {turnstileState === "failed" && t("solve_captcha")}
+            {turnstileState === "idle" && t("preparing_check")}
           </p>
           {turnstileState === "running" && (
             <Loader2 className="w-6 h-6 mx-auto animate-spin text-white/60" />
