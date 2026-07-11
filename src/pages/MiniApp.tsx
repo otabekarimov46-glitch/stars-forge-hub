@@ -1024,14 +1024,14 @@ export default function MiniApp() {
               <div className="flex items-center justify-between px-1 pb-2">
                 <div className="flex items-center gap-1.5">
                   <History className="w-3.5 h-3.5 text-white/50" />
-                  <span className="text-[11px] uppercase tracking-[0.14em] text-white/50">История</span>
+                  <span className="text-[11px] uppercase tracking-[0.14em] text-white/50">{t("history")}</span>
                 </div>
                 {txs && txs.length > 10 && (
                   <button
                     onClick={() => setTxVisible(v => v > 10 ? 10 : txs.length)}
                     className="press-soft text-[11px] text-white/50 hover:text-white/80 flex items-center gap-0.5"
                   >
-                    {txVisible > 10 ? <>Свернуть <ChevronUp className="w-3 h-3" /></> : <>Все <ChevronDown className="w-3 h-3" /></>}
+                    {txVisible > 10 ? <>{t("collapse")} <ChevronUp className="w-3 h-3" /></> : <>{t("all")} <ChevronDown className="w-3 h-3" /></>}
                   </button>
                 )}
               </div>
@@ -1044,33 +1044,41 @@ export default function MiniApp() {
               ) : txs.length === 0 ? (
                 <div className="text-center text-[12px] text-white/45 py-6 rounded-2xl"
                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  Пока нет транзакций
+                  {t("no_transactions")}
                 </div>
               ) : (
                 <>
                   <ul className="space-y-1">
-                    {txs.slice(0, txVisible).map((t) => {
-                      const Icon = t.kind === "video" ? Film
-                        : t.label.startsWith("Подписка") ? Send
-                        : t.label.startsWith("Просмотр поста") ? Newspaper
-                        : t.label.startsWith("Просмотр истории") ? Camera
+                    {txs.slice(0, txVisible).map((tx: any) => {
+                      const sub = tx.sub || tx.kind;
+                      const Icon = sub === "video" ? Film
+                        : sub === "subscribe" ? Send
+                        : sub === "view_post" ? Newspaper
+                        : sub === "view_story" ? Camera
                         : ListChecks;
-                      const d = new Date(t.at);
-                      const dd = d.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
-                      const tt = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+                      const label = sub === "video" ? t("video_ads")
+                        : sub === "subscribe" ? t("subscribe_to_channel")
+                        : sub === "view_post" ? t("view_post")
+                        : sub === "view_story" ? t("view_story")
+                        : tx.label || t("task_default");
+                      const d = new Date(tx.at);
+                      const localeMap: Record<string, string> = { ru: "ru-RU", be: "be-BY", kk: "kk-KZ", uz: "uz-UZ", az: "az-AZ", hy: "hy-AM", ky: "ky-KG" };
+                      const loc = localeMap[lang] || "ru-RU";
+                      const dd = d.toLocaleDateString(loc, { day: "2-digit", month: "short" });
+                      const tt = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
                       return (
-                        <li key={t.id}
+                        <li key={tx.id}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
                           <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
                             <Icon className="w-3.5 h-3.5 text-white/70" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[13px] text-white/90 truncate">{t.label}</div>
+                            <div className="text-[13px] text-white/90 truncate">{label}</div>
                             <div className="text-[10.5px] text-white/40 tabular-nums mt-0.5">{dd} · {tt}</div>
                           </div>
                           <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
-                            +{t.reward_pt} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
+                            +{tx.reward_pt} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
                           </div>
                         </li>
                       );
@@ -1082,7 +1090,7 @@ export default function MiniApp() {
                       className="press-soft w-full mt-2 h-10 rounded-xl text-[12px] text-white/70 hover:text-white transition-colors flex items-center justify-center gap-1"
                       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                     >
-                      Показать ещё <ChevronDown className="w-3.5 h-3.5" />
+                      {t("show_more")} <ChevronDown className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </>
