@@ -1455,6 +1455,7 @@ export default function MiniApp() {
                   }
 
                   const disabled = state === "checking" || state === "done";
+                  const redo = !!t.requires_redo;
                   const content = (
                     <div
                       className={
@@ -1462,18 +1463,33 @@ export default function MiniApp() {
                         (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
                       }
                       style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.09)",
+                        background: redo ? "rgba(239,68,68,0.09)" : "rgba(255,255,255,0.05)",
+                        border: redo
+                          ? "1px solid rgba(248,113,113,0.55)"
+                          : "1px solid rgba(255,255,255,0.09)",
+                        boxShadow: redo ? "0 0 0 1px rgba(248,113,113,0.15) inset" : undefined,
                       }}
                     >
-                      <div className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10">
-                        <Icon className="w-5 h-5 text-sky-200" />
+                      <div className={
+                        "w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 " +
+                        (redo
+                          ? "bg-gradient-to-br from-red-500/25 to-rose-500/25 border-red-400/30"
+                          : "bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10")
+                      }>
+                        <Icon className={"w-5 h-5 " + (redo ? "text-red-200" : "text-sky-200")} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
+                        <div className="text-[14.5px] font-medium text-white/95 truncate flex items-center gap-1.5">
+                          {taskTitle(t)}
+                          {redo && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-red-500/25 text-red-200 border border-red-400/40 shrink-0">
+                              {t("resub_badge")}
+                            </span>
+                          )}
+                        </div>
                         <div className={
                           "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
-                          (state === "done" ? "text-emerald-400 line-through" : "text-yellow-300/90")
+                          (state === "done" ? "text-emerald-400 line-through" : (redo ? "text-red-300/90" : "text-yellow-300/90"))
                         }>
                           +{t.reward_pt} PT
                         </div>
