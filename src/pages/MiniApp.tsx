@@ -106,6 +106,11 @@ export default function MiniApp() {
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [botUsername, setBotUsername] = useState<string>("");
   const [refSheetOpen, setRefSheetOpen] = useState(false);
+  const [promoSheetOpen, setPromoSheetOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSuccess, setPromoSuccess] = useState<{ amount: number } | null>(null);
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
   const [refData, setRefData] = useState<{
     user_id: string;
     bot_username: string;
