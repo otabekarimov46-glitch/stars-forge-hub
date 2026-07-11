@@ -738,7 +738,7 @@ export default function MiniApp() {
         <div className="flex-1 min-w-0">
           <div className="text-[14.5px] font-medium text-white/95 leading-tight">{cfg.title}</div>
           <div className="text-[11.5px] text-white/50 mt-0.5">
-            {disabled ? "нет заданий" : `${list.length} ${list.length === 1 ? "задание" : list.length < 5 ? "задания" : "заданий"}`}
+            {disabled ? t("no_tasks_short") : t("tasks_count", { n: list.length })}
           </div>
         </div>
         <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
