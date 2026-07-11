@@ -1142,24 +1142,7 @@ export default function MiniApp() {
               </button>
             </div>
 
-            {telegramId && (
-              <button
-                onClick={openRefSheet}
-                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
-              >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                  <Send className="w-5 h-5 text-emerald-200" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("invite_friend")}</div>
-                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("invite_desc")}</div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
-              </button>
-            )}
-
-            {/* ===== Top by balance ===== */}
+            {/* ===== Top by balance (above invite) ===== */}
             <div className="rounded-2xl p-4"
                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
               <div className="flex items-center gap-2.5 mb-3">
@@ -1224,6 +1207,41 @@ export default function MiniApp() {
                 </>
               )}
             </div>
+
+            {telegramId && (
+              <button
+                onClick={openRefSheet}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Send className="w-5 h-5 text-emerald-200" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("invite_friend")}</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("invite_desc")}</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+              </button>
+            )}
+
+            {/* ===== Promo code ===== */}
+            {telegramId && (
+              <button
+                onClick={() => { setPromoInput(""); setPromoError(null); setPromoSuccess(null); setPromoSheetOpen(true); }}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-fuchsia-400/25 to-purple-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Gift className="w-5 h-5 text-fuchsia-200" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("promo_code")}</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("promo_desc")}</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+              </button>
+            )}
 
           </div>
         </section>
