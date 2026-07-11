@@ -67,8 +67,10 @@ function formatCountdown(ms: number) {
 }
 
 export default function MiniApp() {
+  const { t, lang, setLang } = useMiniAppI18n();
   const tgUser = useMemo(getTelegramUser, []);
   const telegramId = tgUser.id;
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [video, setVideo] = useState<VideoAd | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
