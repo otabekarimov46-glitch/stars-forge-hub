@@ -704,9 +704,9 @@ export default function MiniApp() {
     return null;
   };
 
-  const taskTitle = (t: BotTask) => {
-    if (t.title && t.title.trim()) return t.title.trim();
-    if (t.channel_username) return t.channel_username.startsWith("@") ? t.channel_username : `@${t.channel_username}`;
+  const taskTitle = (bt: BotTask) => {
+    if (bt.title && bt.title.trim()) return bt.title.trim();
+    if (bt.channel_username) return bt.channel_username.startsWith("@") ? bt.channel_username : `@${bt.channel_username}`;
     return t("task_default");
   };
 
