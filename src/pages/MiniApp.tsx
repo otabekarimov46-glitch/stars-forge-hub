@@ -993,7 +993,7 @@ export default function MiniApp() {
 
             <div className="rounded-2xl p-4"
                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
-              <div className="text-[13px] font-semibold text-white/85 mb-2">Курс обмена</div>
+              <div className="text-[13px] font-semibold text-white/85 mb-2">{t("exchange_rate")}</div>
               <div className="flex items-center justify-between text-[13px]">
                 <span className="text-white/70">1 PT</span>
                 <span className="tabular-nums font-semibold">≈ {exchangeRate.toFixed(2)} ⭐</span>
