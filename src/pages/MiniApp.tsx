@@ -1518,7 +1518,8 @@ export default function MiniApp() {
                   ) : (
                     <div key={t.id}>{content}</div>
                   );
-                })}
+                });
+                })()}
               </div>
             </div>
           </Vaul.Content>
