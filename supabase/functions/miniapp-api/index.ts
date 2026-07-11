@@ -695,9 +695,7 @@ Deno.serve(async (req) => {
             .update({ status: "resolved", processed_at: new Date().toISOString() })
             .eq("user_id", user.id).eq("task_id", task_id).in("status", ["unsub", "pending"]);
 
-          const { data: setting } = await supabase.from("settings")
-            .select("value").eq("key", "sub_recheck_minutes").maybeSingle();
-          const minutes = Math.max(0, Math.floor(Number(setting?.value ?? 60)));
+          const minutes = Math.max(0, Math.floor(Number(task.sub_recheck_minutes ?? 60)));
           if (minutes > 0) {
             await supabase.from("subscription_checks").insert({
               user_id: user.id,
