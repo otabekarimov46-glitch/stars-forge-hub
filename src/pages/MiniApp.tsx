@@ -1209,7 +1209,7 @@ export default function MiniApp() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] text-white/90 truncate">{tgUser.name || (leaderboard.me.username ? `@${leaderboard.me.username}` : `id${leaderboard.me.telegram_id}`)}</div>
-                      <div className="text-[10.5px] text-white/40">Ваше место</div>
+                      <div className="text-[10.5px] text-white/40">{t("your_place")}</div>
                     </div>
                     <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
                       {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
