@@ -105,6 +105,84 @@ export type Database = {
           },
         ]
       }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_paused: boolean
+          max_uses: number | null
+          reward_pt: number
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_paused?: boolean
+          max_uses?: number | null
+          reward_pt: number
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_paused?: boolean
+          max_uses?: number | null
+          reward_pt?: number
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
+      promo_redemptions: {
+        Row: {
+          id: string
+          promo_id: string
+          redeemed_at: string
+          reward_pt: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          promo_id: string
+          redeemed_at?: string
+          reward_pt: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          promo_id?: string
+          redeemed_at?: string
+          reward_pt?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_promo_id_fkey"
+            columns: ["promo_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           key: string

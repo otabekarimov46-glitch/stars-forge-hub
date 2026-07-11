@@ -335,6 +335,71 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ===== PROMO CODES =====
+      case "get_promos": {
+        const res = await supabase
+          .from("promo_codes")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (res.error) { error = res.error; break; }
+        // Auto-mark exhausted/expired inactive on read so the panel stays accurate.
+        const now = Date.now();
+        const promos = res.data || [];
+        const toDeactivate: string[] = [];
+        for (const p of promos) {
+          const exhausted = p.max_uses != null && p.used_count >= p.max_uses;
+          const expired = p.expires_at && new Date(p.expires_at).getTime() <= now;
+          if (p.is_active && (exhausted || expired)) toDeactivate.push(p.id);
+        }
+        if (toDeactivate.length) {
+          await supabase.from("promo_codes").update({ is_active: false }).in("id", toDeactivate);
+          for (const p of promos) if (toDeactivate.includes(p.id)) p.is_active = false;
+        }
+        data = promos;
+        break;
+      }
+      case "create_promo": {
+        const code = String(params.code || "").trim();
+        if (!code) { error = { message: "Код обязателен" }; break; }
+        const reward_pt = Number(params.reward_pt);
+        if (!(reward_pt > 0)) { error = { message: "Некорректная награда" }; break; }
+        const max_uses = params.max_uses ? Number(params.max_uses) : null;
+        const expires_at = params.expires_at || null;
+        if (max_uses == null && !expires_at) {
+          error = { message: "Укажите лимит активаций или срок действия (можно оба)" };
+          break;
+        }
+        const res = await supabase.from("promo_codes").insert({
+          code, reward_pt, max_uses, expires_at,
+          is_active: true, is_paused: false, used_count: 0,
+        }).select().single();
+        data = res.data; error = res.error;
+        break;
+      }
+      case "pause_promo": {
+        const res = await supabase.from("promo_codes")
+          .update({ is_paused: !!params.is_paused })
+          .eq("id", params.promo_id);
+        data = res.data; error = res.error;
+        break;
+      }
+      case "restart_promo": {
+        // Reset counter and re-activate. Extend expiry only if provided.
+        const patch: Record<string, any> = { used_count: 0, is_active: true, is_paused: false };
+        if (params.expires_at !== undefined) patch.expires_at = params.expires_at || null;
+        if (params.max_uses !== undefined) patch.max_uses = params.max_uses ? Number(params.max_uses) : null;
+        // Also clear old redemptions so users can use again after restart.
+        await supabase.from("promo_redemptions").delete().eq("promo_id", params.promo_id);
+        const res = await supabase.from("promo_codes").update(patch).eq("id", params.promo_id);
+        data = res.data; error = res.error;
+        break;
+      }
+      case "delete_promo": {
+        const res = await supabase.from("promo_codes").delete().eq("id", params.promo_id);
+        data = res.data; error = res.error;
+        break;
+      }
+
       // ===== SETTINGS =====
       case "get_settings": {
         const res = await supabase.from("settings").select("*");

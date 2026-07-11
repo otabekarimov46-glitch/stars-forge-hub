@@ -583,6 +583,85 @@ const ky: Dict = {
 
 const DICTS: Record<MiniAppLang, Dict> = { ru, be, kk, uz, az, hy, ky };
 
+// Promo code translations — merged on top of the main dicts below.
+const PROMO_EXT: Record<MiniAppLang, Dict> = {
+  ru: {
+    promo_code: "Промокод",
+    promo_desc: "Активируйте код и получите бонус",
+    promo_enter: "Введите промокод",
+    promo_apply: "Применить",
+    promo_invalid: "Неверный или истёкший промокод",
+    promo_success: "Промокод активирован! +{amount} PT",
+    promo_already: "Вы уже активировали этот промокод",
+    promo_hint: "Промокод действует один раз на аккаунт",
+  },
+  be: {
+    promo_code: "Промакод",
+    promo_desc: "Актывуйце код і атрымайце бонус",
+    promo_enter: "Увядзіце промакод",
+    promo_apply: "Ужыць",
+    promo_invalid: "Няправільны або пратэрмінаваны промакод",
+    promo_success: "Промакод актываваны! +{amount} PT",
+    promo_already: "Вы ўжо актывавалі гэты промакод",
+    promo_hint: "Промакод дзейнічае адзін раз на акаўнт",
+  },
+  kk: {
+    promo_code: "Промокод",
+    promo_desc: "Кодты іске қосыңыз және бонус алыңыз",
+    promo_enter: "Промокодты енгізіңіз",
+    promo_apply: "Қолдану",
+    promo_invalid: "Жарамсыз немесе мерзімі өткен промокод",
+    promo_success: "Промокод іске қосылды! +{amount} PT",
+    promo_already: "Сіз бұл промокодты бұрын қолданғансыз",
+    promo_hint: "Промокод бір аккаунтқа бір рет жарамды",
+  },
+  uz: {
+    promo_code: "Promokod",
+    promo_desc: "Kodni faollashtiring va bonus oling",
+    promo_enter: "Promokodni kiriting",
+    promo_apply: "Qoʻllash",
+    promo_invalid: "Notoʻgʻri yoki muddati oʻtgan promokod",
+    promo_success: "Promokod faollashtirildi! +{amount} PT",
+    promo_already: "Siz bu promokodni allaqachon faollashtirgansiz",
+    promo_hint: "Promokod bir akkauntga faqat bir marta ishlaydi",
+  },
+  az: {
+    promo_code: "Promokod",
+    promo_desc: "Kodu aktivləşdirin və bonus qazanın",
+    promo_enter: "Promokodu daxil edin",
+    promo_apply: "Tətbiq et",
+    promo_invalid: "Yanlış və ya vaxtı keçmiş promokod",
+    promo_success: "Promokod aktivləşdi! +{amount} PT",
+    promo_already: "Siz bu promokodu artıq aktivləşdirmisiniz",
+    promo_hint: "Promokod hər hesab üçün bir dəfə etibarlıdır",
+  },
+  hy: {
+    promo_code: "Պրոմոկոդ",
+    promo_desc: "Ակտիվացրեք կոդը և ստացեք բոնուս",
+    promo_enter: "Մուտքագրեք պրոմոկոդը",
+    promo_apply: "Կիրառել",
+    promo_invalid: "Սխալ կամ ժամկետանց պրոմոկոդ",
+    promo_success: "Պրոմոկոդն ակտիվացված է! +{amount} PT",
+    promo_already: "Դուք արդեն ակտիվացրել եք այս պրոմոկոդը",
+    promo_hint: "Պրոմոկոդը գործում է մեկ անգամ մեկ հաշվի համար",
+  },
+  ky: {
+    promo_code: "Промокод",
+    promo_desc: "Кодду иштетип, бонус алыңыз",
+    promo_enter: "Промокодду киргизиңиз",
+    promo_apply: "Колдонуу",
+    promo_invalid: "Туура эмес же мөөнөтү өткөн промокод",
+    promo_success: "Промокод иштетилди! +{amount} PT",
+    promo_already: "Сиз бул промокодду мурун иштетип койгонсуз",
+    promo_hint: "Промокод бир аккаунтка бир жолу гана иштейт",
+  },
+};
+
+// Merge PROMO_EXT into main dicts.
+(Object.keys(DICTS) as MiniAppLang[]).forEach((l) => {
+  Object.assign(DICTS[l], PROMO_EXT[l]);
+});
+
 const STORAGE_KEY = "miniapp-lang";
 
 interface Ctx {

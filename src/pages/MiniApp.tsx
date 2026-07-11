@@ -106,6 +106,11 @@ export default function MiniApp() {
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [botUsername, setBotUsername] = useState<string>("");
   const [refSheetOpen, setRefSheetOpen] = useState(false);
+  const [promoSheetOpen, setPromoSheetOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSuccess, setPromoSuccess] = useState<{ amount: number } | null>(null);
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
   const [refData, setRefData] = useState<{
     user_id: string;
     bot_username: string;
@@ -197,6 +202,33 @@ export default function MiniApp() {
       .catch(() => {})
       .finally(() => setRefLoading(false));
   }, [telegramId, botUsername]);
+
+  const submitPromo = useCallback(async () => {
+    const code = promoInput.trim();
+    if (!code || !telegramId || promoSubmitting) return;
+    setPromoSubmitting(true);
+    setPromoError(null);
+    setPromoSuccess(null);
+    try {
+      const d = await miniAppApi("redeem_promo", { telegram_id: telegramId, code });
+      if (d?.ok) {
+        setPromoSuccess({ amount: Number(d.amount) });
+        setPromoInput("");
+        if (typeof d.new_balance === "number") {
+          setUser((u) => (u ? { ...u, balance_pt: d.new_balance } : u));
+        }
+      } else if (d?.reason === "already") {
+        setPromoError(t("promo_already"));
+      } else {
+        setPromoError(t("promo_invalid"));
+      }
+    } catch {
+      setPromoError(t("promo_invalid"));
+    } finally {
+      setPromoSubmitting(false);
+    }
+  }, [promoInput, telegramId, promoSubmitting, t]);
+
 
   const refLink = useMemo(() => {
     if (!refData?.user_id) return "";
@@ -1142,24 +1174,7 @@ export default function MiniApp() {
               </button>
             </div>
 
-            {telegramId && (
-              <button
-                onClick={openRefSheet}
-                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
-              >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                  <Send className="w-5 h-5 text-emerald-200" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("invite_friend")}</div>
-                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("invite_desc")}</div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
-              </button>
-            )}
-
-            {/* ===== Top by balance ===== */}
+            {/* ===== Top by balance (above invite) ===== */}
             <div className="rounded-2xl p-4"
                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
               <div className="flex items-center gap-2.5 mb-3">
@@ -1224,6 +1239,41 @@ export default function MiniApp() {
                 </>
               )}
             </div>
+
+            {telegramId && (
+              <button
+                onClick={openRefSheet}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Send className="w-5 h-5 text-emerald-200" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("invite_friend")}</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("invite_desc")}</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+              </button>
+            )}
+
+            {/* ===== Promo code ===== */}
+            {telegramId && (
+              <button
+                onClick={() => { setPromoInput(""); setPromoError(null); setPromoSuccess(null); setPromoSheetOpen(true); }}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-fuchsia-400/25 to-purple-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Gift className="w-5 h-5 text-fuchsia-200" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("promo_code")}</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("promo_desc")}</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+              </button>
+            )}
 
           </div>
         </section>
@@ -1582,6 +1632,90 @@ export default function MiniApp() {
       </Vaul.Root>
 
       {/* ===== Settings bottom sheet ===== */}
+      {/* ===== Promo code bottom sheet (compact) ===== */}
+      <Vaul.Root open={promoSheetOpen} onOpenChange={(o) => { setPromoSheetOpen(o); if (!o) { setPromoError(null); setPromoSuccess(null); } }}>
+        <Vaul.Portal>
+          <Vaul.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
+          <Vaul.Content
+            className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
+            style={{
+              background: "rgba(15,8,40,0.96)",
+              borderTop: "1px solid rgba(255,255,255,0.10)",
+              backdropFilter: "blur(28px)",
+            }}
+          >
+            <div className="pt-2.5 pb-2 flex items-center justify-center">
+              <div className="h-1.5 w-12 rounded-full bg-white/35" />
+            </div>
+            <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
+              <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white flex items-center gap-2">
+                <Gift className="w-4 h-4 text-fuchsia-200" />
+                {t("promo_code")}
+              </Vaul.Title>
+              <button
+                onClick={() => setPromoSheetOpen(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
+                aria-label={t("close")}
+              >
+                <X className="w-4 h-4 text-white/80" />
+              </button>
+            </div>
+
+            <div className="px-4 pt-5 pb-8">
+              <div className="max-w-md mx-auto space-y-3">
+                <input
+                  type="text"
+                  autoFocus
+                  value={promoInput}
+                  onChange={(e) => { setPromoInput(e.target.value); if (promoError) setPromoError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") submitPromo(); }}
+                  placeholder={t("promo_enter")}
+                  spellCheck={false}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  className={
+                    "w-full h-12 px-4 rounded-2xl text-[15px] font-medium tracking-wider text-white placeholder:text-white/35 placeholder:font-normal placeholder:tracking-normal outline-none transition-colors " +
+                    (promoError
+                      ? "bg-red-500/10 border border-red-400/60 focus:border-red-400"
+                      : "bg-white/[0.06] border border-white/10 focus:border-white/25")
+                  }
+                  style={{ backdropFilter: "blur(14px)" }}
+                />
+                {promoError && (
+                  <div className="px-1 text-[12.5px] text-red-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    {promoError}
+                  </div>
+                )}
+                {promoSuccess && (
+                  <div className="px-1 text-[12.5px] text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                    {t("promo_success", { amount: formatBalance(promoSuccess.amount) })}
+                  </div>
+                )}
+
+                <button
+                  onClick={submitPromo}
+                  disabled={promoSubmitting}
+                  className={
+                    "press-cta w-full h-12 rounded-2xl text-[15px] font-semibold text-white transition-all " +
+                    (promoInput.trim()
+                      ? "bg-gradient-to-r from-fuchsia-500 to-purple-500 shadow-lg shadow-purple-900/30"
+                      : "bg-white/[0.08] text-white/60 border border-white/10")
+                  }
+                >
+                  {promoSubmitting ? <Loader2 className="w-4 h-4 mx-auto animate-spin" /> : t("promo_apply")}
+                </button>
+
+                <div className="px-1 pt-1 text-[11.5px] text-white/40 text-center">
+                  {t("promo_hint")}
+                </div>
+              </div>
+            </div>
+          </Vaul.Content>
+        </Vaul.Portal>
+      </Vaul.Root>
+
       <Vaul.Root open={settingsOpen} onOpenChange={setSettingsOpen}>
         <Vaul.Portal>
           <Vaul.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
