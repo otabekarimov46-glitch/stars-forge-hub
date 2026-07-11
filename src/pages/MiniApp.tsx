@@ -782,7 +782,7 @@ export default function MiniApp() {
                  style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
               <Wallet className="w-3.5 h-3.5 text-white/75" />
               <span className="font-semibold tabular-nums text-[14px]">
-                {user ? user.balance_pt.toFixed(1) : "…"}
+                {user ? formatBalance(user.balance_pt) : "…"}
               </span>
               <span className="text-[11px] text-white/60">PT</span>
             </div>
@@ -983,14 +983,14 @@ export default function MiniApp() {
                 <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
-                    {user ? user.balance_pt.toFixed(1) : "…"}
+                    {user ? formatBalance(user.balance_pt) : "…"}
                   </span>
                   <span className="text-white/70 font-medium">PT</span>
                 </div>
                 <div className="mt-3 inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
                   <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
                   <span className="text-[13px] tabular-nums">
-                    ≈ {user ? (user.balance_pt * exchangeRate).toFixed(2) : "…"}
+                    ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
                   </span>
                   <span className="text-[11px] text-white/60">Stars</span>
                 </div>
@@ -1130,8 +1130,8 @@ export default function MiniApp() {
               <div className="flex-1 min-w-0">
                 <div className="text-[12px] text-white/60">{t("balance")}</div>
                 <div className="text-[15px] font-semibold tabular-nums">
-                  {user ? user.balance_pt.toFixed(1) : "…"} PT
-                  <span className="text-white/50 font-normal"> · ≈ {user ? (user.balance_pt * exchangeRate).toFixed(2) : "…"} ⭐</span>
+                  {user ? formatBalance(user.balance_pt) : "…"} PT
+                  <span className="text-white/50 font-normal"> · ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"} ⭐</span>
                 </div>
               </div>
               <button
@@ -1195,7 +1195,7 @@ export default function MiniApp() {
                           <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· {t("you")}</span>}</div>
                         </div>
                         <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
-                          {u.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
+                          {formatBalance(u.balance_pt)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
                         </div>
                       </li>
                     );
@@ -1218,7 +1218,7 @@ export default function MiniApp() {
                       <div className="text-[10.5px] text-white/40">{t("your_place")}</div>
                     </div>
                     <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
-                      {leaderboard.me.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
+                          {formatBalance(leaderboard.me.balance_pt)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
                     </div>
                   </div>
                 </>
