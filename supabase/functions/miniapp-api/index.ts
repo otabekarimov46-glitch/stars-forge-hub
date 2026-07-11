@@ -502,6 +502,7 @@ Deno.serve(async (req) => {
       case "list_tasks": {
         const { telegram_id } = params;
         let completedIds = new Set<string>();
+        let redoIds = new Set<string>();
         if (telegram_id) {
           const { data: user } = await supabase
             .from("users").select("id").eq("telegram_id", telegram_id).single();
@@ -509,6 +510,10 @@ Deno.serve(async (req) => {
             const { data: done } = await supabase
               .from("task_completions").select("task_id").eq("user_id", user.id);
             completedIds = new Set((done || []).map((d: any) => d.task_id));
+            const { data: unsubs } = await supabase
+              .from("subscription_checks")
+              .select("task_id").eq("user_id", user.id).eq("status", "unsub");
+            redoIds = new Set((unsubs || []).map((d: any) => d.task_id));
           }
         }
         const { data: tasks } = await supabase
@@ -517,8 +522,40 @@ Deno.serve(async (req) => {
           .eq("is_active", true)
           .neq("type", "video")
           .order("created_at", { ascending: false });
-        const filtered = (tasks || []).filter((t: any) => !completedIds.has(t.id));
+        const filtered = (tasks || [])
+          .filter((t: any) => !completedIds.has(t.id))
+          .map((t: any) => ({ ...t, requires_redo: redoIds.has(t.id) }));
         return jsonResponse({ data: { tasks: filtered } });
+      }
+
+      case "get_pending_unsubs": {
+        const { telegram_id } = params;
+        if (!telegram_id) return jsonResponse({ data: { tasks: [] } });
+        const { data: user } = await supabase.from("users")
+          .select("id").eq("telegram_id", telegram_id).maybeSingle();
+        if (!user) return jsonResponse({ data: { tasks: [] } });
+        const { data: unsubs } = await supabase
+          .from("subscription_checks")
+          .select("task_id, reward_pt, channel_username")
+          .eq("user_id", user.id).eq("status", "unsub");
+        const ids = (unsubs || []).map((u: any) => u.task_id);
+        if (ids.length === 0) return jsonResponse({ data: { tasks: [] } });
+        const { data: tasks } = await supabase.from("tasks")
+          .select("id, title, channel_username, reward_pt, is_active, max_completions, current_completions")
+          .in("id", ids);
+        // Skip ones the admin already deactivated / exhausted — clean up silently.
+        const stale: string[] = [];
+        const active = (tasks || []).filter((t: any) => {
+          const dead = !t.is_active || (t.max_completions && t.current_completions >= t.max_completions);
+          if (dead) stale.push(t.id);
+          return !dead;
+        });
+        if (stale.length) {
+          await supabase.from("subscription_checks")
+            .update({ status: "skipped", processed_at: new Date().toISOString() })
+            .eq("user_id", user.id).in("task_id", stale).eq("status", "unsub");
+        }
+        return jsonResponse({ data: { tasks: active } });
       }
 
 
