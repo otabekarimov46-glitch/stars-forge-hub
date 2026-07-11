@@ -1186,7 +1186,7 @@ export default function MiniApp() {
                           {initial}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· вы</span>}</div>
+                          <div className="text-[13px] text-white/90 truncate">{name}{isMe && <span className="text-[10.5px] text-white/50 ml-1">· {t("you")}</span>}</div>
                         </div>
                         <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
                           {u.balance_pt.toFixed(1)} <span className="text-white/40 font-normal text-[10.5px]">PT</span>
