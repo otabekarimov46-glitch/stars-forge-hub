@@ -595,7 +595,7 @@ Deno.serve(async (req) => {
 
         const { data: task } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away, sub_recheck_minutes")
           .eq("id", task_id).single();
         if (!task || !task.is_active) throw new Error("Task unavailable");
         if (task.max_completions && task.current_completions >= task.max_completions) {
@@ -695,9 +695,7 @@ Deno.serve(async (req) => {
             .update({ status: "resolved", processed_at: new Date().toISOString() })
             .eq("user_id", user.id).eq("task_id", task_id).in("status", ["unsub", "pending"]);
 
-          const { data: setting } = await supabase.from("settings")
-            .select("value").eq("key", "sub_recheck_minutes").maybeSingle();
-          const minutes = Math.max(0, Math.floor(Number(setting?.value ?? 60)));
+          const minutes = Math.max(0, Math.floor(Number(task.sub_recheck_minutes ?? 60)));
           if (minutes > 0) {
             await supabase.from("subscription_checks").insert({
               user_id: user.id,

@@ -304,6 +304,7 @@ export type Database = {
           post_url: string | null
           reaction_emoji: string | null
           reward_pt: number
+          sub_recheck_minutes: number
           title: string | null
           type: Database["public"]["Enums"]["task_type"]
         }
@@ -322,6 +323,7 @@ export type Database = {
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
+          sub_recheck_minutes?: number
           title?: string | null
           type: Database["public"]["Enums"]["task_type"]
         }
@@ -340,6 +342,7 @@ export type Database = {
           post_url?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
+          sub_recheck_minutes?: number
           title?: string | null
           type?: Database["public"]["Enums"]["task_type"]
         }
