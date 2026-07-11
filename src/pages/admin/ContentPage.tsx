@@ -587,10 +587,27 @@ export default function ContentPage() {
                               <Input className="rounded-xl" type="number" value={taskForm.max_completions} onChange={e => setTaskForm((f: any) => ({ ...f, max_completions: e.target.value }))} placeholder="0 = ∞" />
                             </div>
                           </div>
-                          <div>
-                            <Label>{t("content.holdDays")}</Label>
-                            <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
-                            <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label>{t("content.holdDays")}</Label>
+                              <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
+                              <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
+                            </div>
+                            {contentKind === "subscribe" && (
+                              <div>
+                                <Label>Проверка отписки (мин)</Label>
+                                <Input
+                                  className="rounded-xl"
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={taskForm.sub_recheck_minutes}
+                                  onChange={e => setTaskForm((f: any) => ({ ...f, sub_recheck_minutes: e.target.value }))}
+                                  placeholder="60"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">Через сколько минут бот проверит подписку. <b>0 — не проверять.</b></p>
+                              </div>
+                            )}
                           </div>
                           {showMinSeconds && (
                             <div>
