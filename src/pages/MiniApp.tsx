@@ -1504,7 +1504,7 @@ export default function MiniApp() {
                 {/* Referral link */}
                 <div className="rounded-2xl p-4 space-y-3"
                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
-                  <div className="text-[12px] uppercase tracking-widest text-white/50">Ваша ссылка</div>
+                  <div className="text-[12px] uppercase tracking-widest text-white/50">{t("your_link")}</div>
                   {refLink ? (
                     <button
                       onClick={copyRefLink}
