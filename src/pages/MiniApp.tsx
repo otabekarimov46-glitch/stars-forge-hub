@@ -946,7 +946,7 @@ export default function MiniApp() {
                     <a href={lastFinished.video.external_link_url} target="_blank" rel="noopener noreferrer"
                        className="press-soft mx-auto inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[12px] text-white/85 border border-white/10 bg-white/5 transition-all hover:bg-white/10">
                       <ExternalLink className="w-3.5 h-3.5" />
-                      {lastFinished.video.external_link_label || "Перейти к рекламодателю"}
+                      {lastFinished.video.external_link_label || t("goto_advertiser")}
                     </a>
                   )}
                 </div>
