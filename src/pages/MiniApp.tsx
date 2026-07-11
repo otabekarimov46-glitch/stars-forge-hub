@@ -974,7 +974,7 @@ export default function MiniApp() {
               <div className="absolute inset-0 pointer-events-none opacity-20"
                    style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
               <div className="relative">
-                <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">Ваш баланс</div>
+                <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
                     {user ? user.balance_pt.toFixed(1) : "…"}
