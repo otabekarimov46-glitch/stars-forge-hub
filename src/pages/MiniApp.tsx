@@ -1146,8 +1146,8 @@ export default function MiniApp() {
                   <Send className="w-5 h-5 text-emerald-200" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">Пригласить друга</div>
-                  <div className="text-[11.5px] text-white/50 mt-0.5">Приглашай и зарабатывай 5%</div>
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("invite_friend")}</div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("invite_desc")}</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
               </button>
