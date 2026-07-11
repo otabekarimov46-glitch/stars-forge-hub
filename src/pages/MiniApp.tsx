@@ -1241,9 +1241,9 @@ export default function MiniApp() {
       </button>
 
       {/* ===== Floating tab bar ===== */}
-      <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none">
+      <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none px-3">
         <div
-          className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full shadow-2xl shadow-black/40"
+          className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full shadow-2xl shadow-black/40 max-w-full"
           style={{
             background: "rgba(15,8,40,0.72)",
             border: "1px solid rgba(255,255,255,0.12)",
@@ -1261,15 +1261,18 @@ export default function MiniApp() {
               <button
                 key={id}
                 onClick={() => setTab(id as any)}
+                aria-label={label}
                 className={
-                  "press-soft h-11 px-4 rounded-full flex items-center gap-2 text-[13px] font-medium transition-all duration-200 " +
+                  "press-soft h-11 rounded-full flex items-center justify-center gap-2 text-[13px] font-medium transition-all duration-300 overflow-hidden shrink-0 " +
                   (active
-                    ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-purple-900/40"
-                    : "text-white/70 hover:text-white hover:bg-white/5")
+                    ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-purple-900/40 px-4 max-w-[55vw]"
+                    : "text-white/70 hover:text-white hover:bg-white/5 px-3.5")
                 }
               >
-                <Icon className="w-4 h-4" />
-                <span className="inline">{label}</span>
+                <Icon className="w-4 h-4 shrink-0" />
+                {active && (
+                  <span className="truncate">{label}</span>
+                )}
               </button>
             );
           })}
