@@ -37,7 +37,7 @@ export default function ContentPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2", sub_recheck_minutes: "60" };
+  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2" };
   const emptyVideoForm = { title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
 
   const [contentDialogOpen, setContentDialogOpen] = useState(false);
@@ -90,7 +90,6 @@ export default function ContentPage() {
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
       min_seconds_away: String(ta.min_seconds_away ?? "2"),
-      sub_recheck_minutes: String(ta.sub_recheck_minutes ?? "60"),
     });
     setContentDialogOpen(true);
   };
@@ -111,7 +110,6 @@ export default function ContentPage() {
         max_completions: Number(taskForm.max_completions) || 0,
         hold_days: Number(taskForm.hold_days) || 5,
         min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
-        sub_recheck_minutes: Math.max(0, Math.floor(Number(taskForm.sub_recheck_minutes) || 0)),
       };
       if (editingTaskId) {
         await adminApi("update_task", { task_id: editingTaskId, ...payload, channel_id: payload.channel_id });
@@ -587,27 +585,10 @@ export default function ContentPage() {
                               <Input className="rounded-xl" type="number" value={taskForm.max_completions} onChange={e => setTaskForm((f: any) => ({ ...f, max_completions: e.target.value }))} placeholder="0 = ∞" />
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label>{t("content.holdDays")}</Label>
-                              <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
-                              <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
-                            </div>
-                            {contentKind === "subscribe" && (
-                              <div>
-                                <Label>Проверка отписки (мин)</Label>
-                                <Input
-                                  className="rounded-xl"
-                                  type="number"
-                                  min={0}
-                                  step={1}
-                                  value={taskForm.sub_recheck_minutes}
-                                  onChange={e => setTaskForm((f: any) => ({ ...f, sub_recheck_minutes: e.target.value }))}
-                                  placeholder="60"
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">Через сколько минут бот проверит подписку. <b>0 — не проверять.</b></p>
-                              </div>
-                            )}
+                          <div>
+                            <Label>{t("content.holdDays")}</Label>
+                            <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
+                            <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
                           </div>
                           {showMinSeconds && (
                             <div>
@@ -677,11 +658,6 @@ export default function ContentPage() {
                               <Badge variant="outline" className="rounded-lg text-xs">{ta.current_completions || 0}/{ta.max_completions}</Badge>
                             )}
                             <Badge variant="outline" className="rounded-lg text-xs">{t("content.hold")}: {ta.hold_days || 5}d</Badge>
-                            {ta.type === "subscribe" && (
-                              <Badge variant="outline" className="rounded-lg text-xs">
-                                Recheck: {ta.sub_recheck_minutes === 0 ? "off" : `${ta.sub_recheck_minutes ?? 60}m`}
-                              </Badge>
-                            )}
                           </div>
                         </div>
                         <Switch checked={ta.is_active} onCheckedChange={(v) => toggleTask(ta.id, v)} />
