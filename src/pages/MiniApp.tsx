@@ -957,8 +957,8 @@ export default function MiniApp() {
           <div className="max-w-md mx-auto space-y-3">
             <div className="rounded-3xl p-6 text-center relative overflow-hidden"
                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
-              <div className="absolute inset-0 pointer-events-none opacity-30"
-                   style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(139,92,246,0.35) 0%, transparent 70%)" }} />
+              <div className="absolute inset-0 pointer-events-none opacity-20"
+                   style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
               <div className="relative">
                 <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">Ваш баланс</div>
                 <div className="flex items-baseline justify-center gap-2">
@@ -1001,7 +1001,7 @@ export default function MiniApp() {
                 shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
                 opacity-60 cursor-not-allowed"
             >
-              <Star className="w-4 h-4" /> Вывести в Stars
+              <Star className="w-4 h-4" /> Вывод
             </button>
             <p className="text-center text-[11px] text-white/50">Вывод откроется скоро</p>
 
