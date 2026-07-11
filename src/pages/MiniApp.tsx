@@ -1122,7 +1122,7 @@ export default function MiniApp() {
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[12px] text-white/60">Баланс</div>
+                <div className="text-[12px] text-white/60">{t("balance")}</div>
                 <div className="text-[15px] font-semibold tabular-nums">
                   {user ? user.balance_pt.toFixed(1) : "…"} PT
                   <span className="text-white/50 font-normal"> · ≈ {user ? (user.balance_pt * exchangeRate).toFixed(2) : "…"} ⭐</span>
@@ -1132,7 +1132,7 @@ export default function MiniApp() {
                 onClick={() => setTab("wallet")}
                 className="press-soft px-3 h-8 rounded-full text-[12px] border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
               >
-                Кошелёк
+                {t("wallet")}
               </button>
             </div>
 
