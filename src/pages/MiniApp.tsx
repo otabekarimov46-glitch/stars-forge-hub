@@ -325,6 +325,23 @@ export default function MiniApp() {
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
 
+  // Check for revoked subscriptions (background re-checks flagged the user as unsubscribed)
+  const checkUnsubs = useCallback(() => {
+    if (!telegramId || resubDismissed) return;
+    miniAppApi("get_pending_unsubs", { telegram_id: telegramId })
+      .then((d) => {
+        const n = Array.isArray(d?.tasks) ? d.tasks.length : 0;
+        if (n > 0) setResubPopup({ count: n });
+      })
+      .catch(() => {});
+  }, [telegramId, resubDismissed]);
+  useEffect(() => { checkUnsubs(); }, [checkUnsubs]);
+  useEffect(() => {
+    const onVis = () => { if (!document.hidden) checkUnsubs(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [checkUnsubs]);
+
   useEffect(() => {
     if (tab !== "profile" || !telegramId) return;
     miniAppApi("get_leaderboard", { telegram_id: telegramId })
