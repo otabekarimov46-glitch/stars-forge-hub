@@ -1514,7 +1514,7 @@ export default function MiniApp() {
                     </button>
                   ) : (
                     <div className="px-3 py-2.5 rounded-xl bg-black/25 border border-white/10 text-[12.5px] text-white/60 break-all">
-                      {refLoading ? "Загрузка…" : "Ссылка недоступна"}
+                      {refLoading ? t("loading") : t("link_unavailable")}
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-2.5">
