@@ -1572,6 +1572,100 @@ export default function MiniApp() {
         </Vaul.Portal>
       </Vaul.Root>
 
+      {/* ===== Settings bottom sheet ===== */}
+      <Vaul.Root open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <Vaul.Portal>
+          <Vaul.Overlay className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm" />
+          <Vaul.Content
+            className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
+            style={{
+              background: "rgba(15,8,40,0.96)",
+              borderTop: "1px solid rgba(255,255,255,0.10)",
+              backdropFilter: "blur(28px)",
+              maxHeight: "88vh",
+            }}
+          >
+            <div className="pt-2.5 pb-2 flex items-center justify-center">
+              <div className="h-1.5 w-12 rounded-full bg-white/35" />
+            </div>
+            <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
+              <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white flex items-center gap-2">
+                <SettingsIcon className="w-4 h-4 text-white/80" />
+                {t("settings")}
+              </Vaul.Title>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
+                aria-label={t("close")}
+              >
+                <X className="w-4 h-4 text-white/80" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
+              <div className="max-w-md mx-auto space-y-4">
+                {/* Language */}
+                <div>
+                  <div className="px-1 pb-2 text-[11px] uppercase tracking-[0.14em] text-white/50">{t("language")}</div>
+                  <div className="rounded-2xl overflow-hidden divide-y divide-white/5"
+                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    {MINIAPP_LANGS.map((l) => {
+                      const active = l.code === lang;
+                      return (
+                        <button
+                          key={l.code}
+                          onClick={() => setLang(l.code)}
+                          className="w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+                        >
+                          <span className="text-[20px] leading-none">{l.flag}</span>
+                          <span className="flex-1 text-[14px] text-white/90">{l.label}</span>
+                          {active && (
+                            <span className="w-6 h-6 rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-emerald-300" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Support */}
+                <div>
+                  <div className="px-1 pb-2 text-[11px] uppercase tracking-[0.14em] text-white/50">{t("support")}</div>
+                  <a
+                    href="https://t.me/starmenthelp_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      try {
+                        const tg = (window as any).Telegram?.WebApp;
+                        if (tg?.openTelegramLink) {
+                          e.preventDefault();
+                          tg.openTelegramLink("https://t.me/starmenthelp_bot");
+                        }
+                      } catch {}
+                    }}
+                    className="press w-full rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-400/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                      <LifeBuoy className="w-5 h-5 text-sky-200" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("contact_support")}</div>
+                      <div className="text-[11.5px] text-white/50 mt-0.5 tabular-nums">@starmenthelp_bot</div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-white/40 shrink-0" />
+                  </a>
+                  <div className="mt-2 px-1 text-[11px] text-white/40">{t("support_desc")}</div>
+                </div>
+              </div>
+            </div>
+          </Vaul.Content>
+        </Vaul.Portal>
+      </Vaul.Root>
+
     </div>
 
 
