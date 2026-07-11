@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp, Settings as SettingsIcon, LifeBuoy, Check } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
+import { useMiniAppI18n, MINIAPP_LANGS } from "@/lib/miniapp-i18n";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
