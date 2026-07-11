@@ -12,6 +12,7 @@ import UsersPage from "@/pages/admin/UsersPage";
 import AlertsPage from "@/pages/admin/AlertsPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import MiniApp from "@/pages/MiniApp";
+import { MiniAppI18nProvider } from "@/lib/miniapp-i18n";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
