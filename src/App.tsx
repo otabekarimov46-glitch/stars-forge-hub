@@ -27,7 +27,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/admin/statistics" replace />} />
-              <Route path="/app" element={<MiniApp />} />
+              <Route path="/app" element={<MiniAppI18nProvider><MiniApp /></MiniAppI18nProvider>} />
               <Route path="/admin/*" element={
                 <AdminLayout>
                   <Routes>
