@@ -1110,7 +1110,7 @@ export default function MiniApp() {
                   <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
                 ) : (initial)}
               </div>
-              <div className="mt-3 text-[17px] font-semibold">{tgUser.name || "Пользователь"}</div>
+              <div className="mt-3 text-[17px] font-semibold">{tgUser.name || t("user_fallback")}</div>
               {telegramId && (
                 <div className="text-[12px] text-white/50 tabular-nums mt-0.5">ID: {telegramId}</div>
               )}
