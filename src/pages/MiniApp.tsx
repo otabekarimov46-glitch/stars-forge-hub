@@ -1227,7 +1227,7 @@ export default function MiniApp() {
       {/* ===== Scroll to top ===== */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        aria-label="Наверх"
+        aria-label={t("scroll_top")}
         className={"fixed right-4 bottom-24 z-40 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 press-soft " +
           (showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none")}
         style={{
