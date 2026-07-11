@@ -677,6 +677,11 @@ export default function ContentPage() {
                               <Badge variant="outline" className="rounded-lg text-xs">{ta.current_completions || 0}/{ta.max_completions}</Badge>
                             )}
                             <Badge variant="outline" className="rounded-lg text-xs">{t("content.hold")}: {ta.hold_days || 5}d</Badge>
+                            {ta.type === "subscribe" && (
+                              <Badge variant="outline" className="rounded-lg text-xs">
+                                Recheck: {ta.sub_recheck_minutes === 0 ? "off" : `${ta.sub_recheck_minutes ?? 60}m`}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <Switch checked={ta.is_active} onCheckedChange={(v) => toggleTask(ta.id, v)} />
