@@ -111,6 +111,8 @@ export default function MiniApp() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoSuccess, setPromoSuccess] = useState<{ amount: number } | null>(null);
   const [promoSubmitting, setPromoSubmitting] = useState(false);
+  const [resubPopup, setResubPopup] = useState<{ count: number } | null>(null);
+  const [resubDismissed, setResubDismissed] = useState(false);
   const [refData, setRefData] = useState<{
     user_id: string;
     bot_username: string;
@@ -322,6 +324,23 @@ export default function MiniApp() {
       .catch(() => {});
   }, [telegramId]);
   useEffect(() => { loadBotTasks(); }, [loadBotTasks]);
+
+  // Check for revoked subscriptions (background re-checks flagged the user as unsubscribed)
+  const checkUnsubs = useCallback(() => {
+    if (!telegramId || resubDismissed) return;
+    miniAppApi("get_pending_unsubs", { telegram_id: telegramId })
+      .then((d) => {
+        const n = Array.isArray(d?.tasks) ? d.tasks.length : 0;
+        if (n > 0) setResubPopup({ count: n });
+      })
+      .catch(() => {});
+  }, [telegramId, resubDismissed]);
+  useEffect(() => { checkUnsubs(); }, [checkUnsubs]);
+  useEffect(() => {
+    const onVis = () => { if (!document.hidden) checkUnsubs(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [checkUnsubs]);
 
   useEffect(() => {
     if (tab !== "profile" || !telegramId) return;
@@ -1383,7 +1402,9 @@ export default function MiniApp() {
                     {SHEET_CONFIG[activeSheet].empty}
                   </div>
                 )}
-                {activeSheet && tasksByType[activeSheet].map((t) => {
+                {(() => {
+                  const redoBadgeLabel = t("resub_badge");
+                  return activeSheet && tasksByType[activeSheet].map((t) => {
                   const link = taskLink(t);
                   const cfg = SHEET_CONFIG[activeSheet];
                   const Icon = cfg.icon;
@@ -1436,6 +1457,7 @@ export default function MiniApp() {
                   }
 
                   const disabled = state === "checking" || state === "done";
+                  const redo = !!t.requires_redo;
                   const content = (
                     <div
                       className={
@@ -1443,18 +1465,33 @@ export default function MiniApp() {
                         (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
                       }
                       style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.09)",
+                        background: redo ? "rgba(239,68,68,0.09)" : "rgba(255,255,255,0.05)",
+                        border: redo
+                          ? "1px solid rgba(248,113,113,0.55)"
+                          : "1px solid rgba(255,255,255,0.09)",
+                        boxShadow: redo ? "0 0 0 1px rgba(248,113,113,0.15) inset" : undefined,
                       }}
                     >
-                      <div className="w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10">
-                        <Icon className="w-5 h-5 text-sky-200" />
+                      <div className={
+                        "w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 " +
+                        (redo
+                          ? "bg-gradient-to-br from-red-500/25 to-rose-500/25 border-red-400/30"
+                          : "bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10")
+                      }>
+                        <Icon className={"w-5 h-5 " + (redo ? "text-red-200" : "text-sky-200")} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[14.5px] font-medium text-white/95 truncate">{taskTitle(t)}</div>
+                        <div className="text-[14.5px] font-medium text-white/95 truncate flex items-center gap-1.5">
+                          {taskTitle(t)}
+                          {redo && (
+                            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-red-500/25 text-red-200 border border-red-400/40 shrink-0">
+                              {redoBadgeLabel}
+                            </span>
+                          )}
+                        </div>
                         <div className={
                           "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
-                          (state === "done" ? "text-emerald-400 line-through" : "text-yellow-300/90")
+                          (state === "done" ? "text-emerald-400 line-through" : (redo ? "text-red-300/90" : "text-yellow-300/90"))
                         }>
                           +{t.reward_pt} PT
                         </div>
@@ -1481,7 +1518,8 @@ export default function MiniApp() {
                   ) : (
                     <div key={t.id}>{content}</div>
                   );
-                })}
+                });
+                })()}
               </div>
             </div>
           </Vaul.Content>
@@ -1808,6 +1846,51 @@ export default function MiniApp() {
           </Vaul.Content>
         </Vaul.Portal>
       </Vaul.Root>
+
+      {/* ===== Unsubscribed popup ===== */}
+      {resubPopup && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center px-5 animate-fade-in"
+          style={{ background: "rgba(6,3,20,0.72)", backdropFilter: "blur(10px)" }}
+          onClick={() => { setResubDismissed(true); setResubPopup(null); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl p-5 relative animate-scale-in"
+            style={{
+              background: "linear-gradient(180deg, rgba(30,10,40,0.98), rgba(15,8,40,0.98))",
+              border: "1px solid rgba(248,113,113,0.35)",
+              boxShadow: "0 30px 60px -20px rgba(220,38,38,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 bg-gradient-to-br from-red-500/30 to-rose-500/30 border border-red-400/40">
+                <AlertTriangle className="w-7 h-7 text-red-200" />
+              </div>
+              <div className="text-[17px] font-semibold text-white tracking-tight">
+                {t("resub_title")}
+              </div>
+              <div className="text-[13.5px] text-white/70 mt-2 leading-relaxed">
+                {t("resub_body")}
+              </div>
+              <div className="mt-4 w-full grid grid-cols-[1fr_auto] gap-2">
+                <button
+                  onClick={() => { setResubPopup(null); setResubDismissed(true); setActiveSheet("subscribe"); }}
+                  className="h-11 rounded-2xl px-4 text-[14px] font-semibold text-white bg-gradient-to-r from-red-500 to-rose-500 shadow-lg shadow-red-900/40 active:scale-95 transition-transform"
+                >
+                  {t("resub_open")}
+                </button>
+                <button
+                  onClick={() => { setResubDismissed(true); setResubPopup(null); }}
+                  className="h-11 rounded-2xl px-4 text-[14px] text-white/75 bg-white/5 border border-white/10 active:scale-95 transition-transform"
+                >
+                  {t("resub_later")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
 

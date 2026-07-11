@@ -201,6 +201,57 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_checks: {
+        Row: {
+          attempts: number
+          channel_id: string | null
+          channel_username: string | null
+          check_at: string
+          created_at: string
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          reward_pt: number
+          status: string
+          task_id: string
+          telegram_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel_id?: string | null
+          channel_username?: string | null
+          check_at: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          reward_pt?: number
+          status?: string
+          task_id: string
+          telegram_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          channel_id?: string | null
+          channel_username?: string | null
+          check_at?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          reward_pt?: number
+          status?: string
+          task_id?: string
+          telegram_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_completions: {
         Row: {
           completed_at: string
