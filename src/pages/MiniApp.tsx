@@ -912,7 +912,7 @@ export default function MiniApp() {
                       <div className="w-14 h-14 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
                         <CheckCircle className="w-7 h-7 text-emerald-300" />
                       </div>
-                      <div className="text-[15px] text-white/90">Видео просмотрено</div>
+                      <div className="text-[15px] text-white/90">{t("video_watched")}</div>
                       <div className="text-2xl font-bold tabular-nums">
                         +<span className="text-yellow-300">{lastFinished.reward} PT</span>
                       </div>
@@ -922,9 +922,9 @@ export default function MiniApp() {
                       <div className="w-14 h-14 rounded-full bg-red-400/15 border border-red-400/30 flex items-center justify-center">
                         <XCircle className="w-7 h-7 text-red-300" />
                       </div>
-                      <div className="text-[15px] text-white/90">Просмотр не засчитан</div>
+                      <div className="text-[15px] text-white/90">{t("view_not_counted")}</div>
                       <div className="text-[12px] text-white/60 max-w-xs">
-                        Видео было прервано или закрыто слишком рано. Попробуйте ещё раз — досмотрите до конца.
+                        {t("view_interrupted")}
                       </div>
                     </>
                   )}
