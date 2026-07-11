@@ -621,12 +621,12 @@ export default function MiniApp() {
           <div className="w-14 h-14 mx-auto rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
             <CheckCircle className="w-7 h-7 text-emerald-300" />
           </div>
-          <h2 className="text-xl font-bold">Дневной лимит достигнут</h2>
+          <h2 className="text-xl font-bold">{t("daily_limit_reached")}</h2>
           <p className="text-2xl font-bold tabular-nums text-yellow-300">
             {limitInfo.watched}/{limitInfo.limit}
           </p>
           <p className="text-sm text-white/80">
-            Вы посмотрели все доступные на сегодня видео. Возвращайтесь завтра — лимит сбрасывается в 00:00 UTC.
+            {t("daily_limit_desc")}
           </p>
         </div>
       </div>
