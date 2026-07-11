@@ -579,9 +579,9 @@ export default function MiniApp() {
         <div className="w-full max-w-sm rounded-3xl p-8 space-y-4 text-center screen-enter"
           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
           <img src={logoImg} alt="" className="w-14 h-14 rounded-2xl mx-auto shadow-lg" />
-          <h2 className="text-lg font-semibold">Откройте через Telegram</h2>
+          <h2 className="text-lg font-semibold">{t("open_via_telegram")}</h2>
           <p className="text-[13px] text-white/70">
-            Это приложение работает только внутри Telegram. Откройте бота и нажмите «🎬 Смотреть видео».
+            {t("open_via_telegram_desc")}
           </p>
         </div>
       </div>
