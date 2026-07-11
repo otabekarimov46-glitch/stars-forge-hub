@@ -1847,6 +1847,51 @@ export default function MiniApp() {
         </Vaul.Portal>
       </Vaul.Root>
 
+      {/* ===== Unsubscribed popup ===== */}
+      {resubPopup && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center px-5 animate-fade-in"
+          style={{ background: "rgba(6,3,20,0.72)", backdropFilter: "blur(10px)" }}
+          onClick={() => { setResubDismissed(true); setResubPopup(null); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl p-5 relative animate-scale-in"
+            style={{
+              background: "linear-gradient(180deg, rgba(30,10,40,0.98), rgba(15,8,40,0.98))",
+              border: "1px solid rgba(248,113,113,0.35)",
+              boxShadow: "0 30px 60px -20px rgba(220,38,38,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 bg-gradient-to-br from-red-500/30 to-rose-500/30 border border-red-400/40">
+                <AlertTriangle className="w-7 h-7 text-red-200" />
+              </div>
+              <div className="text-[17px] font-semibold text-white tracking-tight">
+                {t("resub_title")}
+              </div>
+              <div className="text-[13.5px] text-white/70 mt-2 leading-relaxed">
+                {t("resub_body")}
+              </div>
+              <div className="mt-4 w-full grid grid-cols-[1fr_auto] gap-2">
+                <button
+                  onClick={() => { setResubPopup(null); setResubDismissed(true); setActiveSheet("subscribe"); }}
+                  className="h-11 rounded-2xl px-4 text-[14px] font-semibold text-white bg-gradient-to-r from-red-500 to-rose-500 shadow-lg shadow-red-900/40 active:scale-95 transition-transform"
+                >
+                  {t("resub_open")}
+                </button>
+                <button
+                  onClick={() => { setResubDismissed(true); setResubPopup(null); }}
+                  className="h-11 rounded-2xl px-4 text-[14px] text-white/75 bg-white/5 border border-white/10 active:scale-95 transition-transform"
+                >
+                  {t("resub_later")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
 
 
