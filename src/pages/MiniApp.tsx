@@ -1524,7 +1524,7 @@ export default function MiniApp() {
                       className="press h-11 rounded-xl font-medium text-[13.5px] text-white/90 border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       <Copy className="w-4 h-4" />
-                      {copyTip ? "Скопировано" : "Скопировать"}
+                      {copyTip ? t("copied") : t("copy")}
                     </button>
                     <button
                       onClick={shareRefLink}
