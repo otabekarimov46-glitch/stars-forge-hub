@@ -738,6 +738,76 @@ Deno.serve(async (req) => {
         return jsonResponse({ data: { items } });
       }
 
+      case "redeem_promo": {
+        const { telegram_id, code } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+        const raw = String(code || "").trim();
+        if (!raw) return jsonResponse({ data: { ok: false, reason: "invalid" } });
+
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, is_banned, captcha_pending, balance_pt")
+          .eq("telegram_id", telegram_id)
+          .maybeSingle();
+        if (!user) return jsonResponse({ data: { ok: false, reason: "invalid" } });
+        if (user.is_banned) return jsonResponse({ data: { ok: false, reason: "invalid" } });
+        if (user.captcha_pending) return jsonResponse({ data: { locked: true } });
+
+        // Case-insensitive lookup.
+        const { data: promo } = await supabase
+          .from("promo_codes")
+          .select("*")
+          .ilike("code", raw)
+          .maybeSingle();
+
+        // Uniform "invalid" for anything unusable — matches the spec.
+        const nowMs = Date.now();
+        const isExhausted = (p: any) => p.max_uses != null && p.used_count >= p.max_uses;
+        const isExpired = (p: any) => p.expires_at && new Date(p.expires_at).getTime() <= nowMs;
+
+        if (!promo || !promo.is_active || promo.is_paused || isExpired(promo) || isExhausted(promo)) {
+          // Auto-deactivate exhausted/expired so admin panel reflects it.
+          if (promo && promo.is_active && (isExhausted(promo) || isExpired(promo))) {
+            await supabase.from("promo_codes").update({ is_active: false }).eq("id", promo.id);
+          }
+          return jsonResponse({ data: { ok: false, reason: "invalid" } });
+        }
+
+        // Already redeemed by this user?
+        const { data: existing } = await supabase
+          .from("promo_redemptions")
+          .select("id")
+          .eq("promo_id", promo.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (existing) return jsonResponse({ data: { ok: false, reason: "already" } });
+
+        // Insert redemption first (unique constraint prevents double).
+        const { error: redErr } = await supabase.from("promo_redemptions").insert({
+          promo_id: promo.id,
+          user_id: user.id,
+          reward_pt: promo.reward_pt,
+        });
+        if (redErr) {
+          if (String(redErr.message).toLowerCase().includes("duplicate")) {
+            return jsonResponse({ data: { ok: false, reason: "already" } });
+          }
+          throw redErr;
+        }
+
+        const newBalance = Number(user.balance_pt) + Number(promo.reward_pt);
+        await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+
+        const newUsed = (promo.used_count || 0) + 1;
+        const nowExhausted = promo.max_uses != null && newUsed >= promo.max_uses;
+        await supabase.from("promo_codes").update({
+          used_count: newUsed,
+          is_active: nowExhausted ? false : promo.is_active,
+        }).eq("id", promo.id);
+
+        return jsonResponse({ data: { ok: true, amount: Number(promo.reward_pt), new_balance: newBalance } });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown action" }),
