@@ -111,6 +111,8 @@ export default function MiniApp() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoSuccess, setPromoSuccess] = useState<{ amount: number } | null>(null);
   const [promoSubmitting, setPromoSubmitting] = useState(false);
+  const [resubPopup, setResubPopup] = useState<{ count: number } | null>(null);
+  const [resubDismissed, setResubDismissed] = useState(false);
   const [refData, setRefData] = useState<{
     user_id: string;
     bot_username: string;
