@@ -2,21 +2,26 @@ import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy } from "lucide-react";
+import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy, Ticket } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
-import { format, subDays, parseISO } from "date-fns";
+import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
+import { ru } from "date-fns/locale";
 
 export default function StatisticsPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<any>(null);
+  const [topPromo, setTopPromo] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminApi("get_stats")
-      .then(setStats)
+    Promise.all([
+      adminApi("get_stats").then(setStats),
+      adminApi("get_top_promo_users").then((d) => setTopPromo(d || [])).catch(() => {}),
+    ])
       .catch((e: any) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []);
+
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
