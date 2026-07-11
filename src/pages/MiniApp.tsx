@@ -841,7 +841,7 @@ export default function MiniApp() {
               <p className="text-red-200 text-sm px-4">{error}</p>
               <button onClick={loadVideo}
                 className="press mt-1 px-5 h-10 rounded-xl border border-white/15 bg-white/5 text-sm transition-all hover:bg-white/10 active:scale-95">
-                Попробовать снова
+                {t("try_again")}
               </button>
             </div>
           )}
