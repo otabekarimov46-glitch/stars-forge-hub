@@ -203,6 +203,33 @@ export default function MiniApp() {
       .finally(() => setRefLoading(false));
   }, [telegramId, botUsername]);
 
+  const submitPromo = useCallback(async () => {
+    const code = promoInput.trim();
+    if (!code || !telegramId || promoSubmitting) return;
+    setPromoSubmitting(true);
+    setPromoError(null);
+    setPromoSuccess(null);
+    try {
+      const d = await miniAppApi("redeem_promo", { telegram_id: telegramId, code });
+      if (d?.ok) {
+        setPromoSuccess({ amount: Number(d.amount) });
+        setPromoInput("");
+        if (typeof d.new_balance === "number") {
+          setUser((u) => (u ? { ...u, balance_pt: d.new_balance } : u));
+        }
+      } else if (d?.reason === "already") {
+        setPromoError(t("promo_already"));
+      } else {
+        setPromoError(t("promo_invalid"));
+      }
+    } catch {
+      setPromoError(t("promo_invalid"));
+    } finally {
+      setPromoSubmitting(false);
+    }
+  }, [promoInput, telegramId, promoSubmitting, t]);
+
+
   const refLink = useMemo(() => {
     if (!refData?.user_id) return "";
     const bu = (botUsername || refData.bot_username || "").replace(/^@/, "");
