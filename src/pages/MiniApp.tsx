@@ -690,9 +690,9 @@ export default function MiniApp() {
 
 
   const SHEET_CONFIG: Record<string, { title: string; icon: any; empty: string; ctaLabel: string }> = {
-    subscribe:  { title: "Подписаться на канал",  icon: Send,          empty: "Пока нет каналов для подписки", ctaLabel: "Подписаться" },
-    view_story: { title: "Посмотреть историю",    icon: Camera,        empty: "Пока нет историй",                ctaLabel: "Открыть" },
-    view_post:  { title: "Посмотреть пост",       icon: Newspaper,     empty: "Пока нет публикаций",             ctaLabel: "Открыть" },
+    subscribe:  { title: t("subscribe_to_channel"), icon: Send,     empty: t("no_subscribe_channels"), ctaLabel: t("cta_subscribe") },
+    view_story: { title: t("view_story"),           icon: Camera,   empty: t("no_stories"),            ctaLabel: t("cta_open") },
+    view_post:  { title: t("view_post"),            icon: Newspaper,empty: t("no_posts"),              ctaLabel: t("cta_open") },
   };
 
   const taskLink = (t: BotTask) => {
