@@ -895,7 +895,7 @@ export default function MiniApp() {
                       shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
-                    <Play className="w-4 h-4" /> СМОТРЕТЬ
+                    <Play className="w-4 h-4" /> {t("watch")}
                   </button>
                 </div>
               </div>
