@@ -762,14 +762,25 @@ export default function MiniApp() {
               <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
             ) : (initial)}
           </div>
-          <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
-               style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
-            <Wallet className="w-3.5 h-3.5 text-white/75" />
-            <span className="font-semibold tabular-nums text-[14px]">
-              {user ? user.balance_pt.toFixed(1) : "…"}
-            </span>
-            <span className="text-[11px] text-white/60">PT</span>
-          </div>
+          {tab === "profile" ? (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label={t("settings")}
+              className="press-soft w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/10 active:scale-90"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}
+            >
+              <SettingsIcon className="w-4 h-4 text-white/85" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
+                 style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
+              <Wallet className="w-3.5 h-3.5 text-white/75" />
+              <span className="font-semibold tabular-nums text-[14px]">
+                {user ? user.balance_pt.toFixed(1) : "…"}
+              </span>
+              <span className="text-[11px] text-white/60">PT</span>
+            </div>
+          )}
         </div>
       </header>
 
