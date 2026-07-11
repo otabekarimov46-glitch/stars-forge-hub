@@ -676,6 +676,8 @@ export default function ContentPage() {
           </>
         )}
       </div>
+
+      <PromoCodesSection />
     </div>
   );
 }
