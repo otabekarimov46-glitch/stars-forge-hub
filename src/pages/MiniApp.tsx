@@ -677,7 +677,7 @@ export default function MiniApp() {
             <span className="text-yellow-300">+{video.reward_pt} PT</span>
           </div>
           <Progress value={progressPercent} className="h-1.5" />
-          <p className="text-center text-[11px] text-white/70">{isBuffering ? "Загружаем видео…" : "Не закрывайте — иначе просмотр не засчитается"}</p>
+          <p className="text-center text-[11px] text-white/70">{isBuffering ? t("loading_video") : t("dont_close")}</p>
         </div>
       </div>
     );
