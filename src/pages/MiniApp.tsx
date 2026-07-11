@@ -1252,9 +1252,9 @@ export default function MiniApp() {
           }}
         >
           {[
-            { id: "tasks",   label: "Задания", icon: ListChecks },
-            { id: "wallet",  label: "Кошелёк", icon: Wallet },
-            { id: "profile", label: "Профиль", icon: UserIcon },
+            { id: "tasks",   label: t("tab_tasks"),   icon: ListChecks },
+            { id: "wallet",  label: t("tab_wallet"),  icon: Wallet },
+            { id: "profile", label: t("tab_profile"), icon: UserIcon },
           ].map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
