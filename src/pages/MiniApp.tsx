@@ -1483,7 +1483,7 @@ export default function MiniApp() {
                           {taskTitle(t)}
                           {redo && (
                             <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-red-500/25 text-red-200 border border-red-400/40 shrink-0">
-                              {t("resub_badge")}
+                              {redoBadgeLabel}
                             </span>
                           )}
                         </div>
