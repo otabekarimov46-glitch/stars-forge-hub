@@ -90,6 +90,7 @@ export default function ContentPage() {
       max_completions: String(ta.max_completions ?? "0"),
       hold_days: String(ta.hold_days ?? "5"),
       min_seconds_away: String(ta.min_seconds_away ?? "2"),
+      sub_recheck_minutes: String(ta.sub_recheck_minutes ?? "60"),
     });
     setContentDialogOpen(true);
   };
