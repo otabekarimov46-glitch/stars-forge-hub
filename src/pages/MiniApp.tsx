@@ -66,6 +66,12 @@ function formatCountdown(ms: number) {
   return `${h}:${m}:${sec}`;
 }
 
+function formatBalance(n: number, maxDecimals = 2): string {
+  if (!Number.isFinite(n)) return "0";
+  const s = n.toFixed(maxDecimals);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+}
+
 export default function MiniApp() {
   const { t, lang, setLang } = useMiniAppI18n();
   const tgUser = useMemo(getTelegramUser, []);
