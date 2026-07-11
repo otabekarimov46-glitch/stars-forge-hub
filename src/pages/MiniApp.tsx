@@ -1544,7 +1544,7 @@ export default function MiniApp() {
                   <div className="rounded-2xl overflow-hidden"
                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
                     <div className="px-4 pt-3 pb-2 text-[13px] font-semibold text-white/85">
-                      Твои приглашённые
+                      {t("your_invited")}
                     </div>
                     <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
                       {refData.referrals.map((r) => (
