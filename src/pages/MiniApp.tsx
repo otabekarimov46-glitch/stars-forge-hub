@@ -1534,7 +1534,7 @@ export default function MiniApp() {
                         shadow-lg shadow-sky-900/30 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" />
-                      Поделиться
+                      {t("share")}
                     </button>
                   </div>
                 </div>
