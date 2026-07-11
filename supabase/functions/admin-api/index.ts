@@ -400,6 +400,92 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ===== PROMO STATS / LOGS =====
+      case "get_top_promo_users": {
+        const { data: reds, error: rErr } = await supabase
+          .from("promo_redemptions")
+          .select("user_id, reward_pt");
+        if (rErr) { error = rErr; break; }
+        const agg = new Map<string, { count: number; total: number }>();
+        (reds || []).forEach((r: any) => {
+          const cur = agg.get(r.user_id) || { count: 0, total: 0 };
+          cur.count += 1;
+          cur.total += Number(r.reward_pt || 0);
+          agg.set(r.user_id, cur);
+        });
+        const topIds = Array.from(agg.entries())
+          .sort((a, b) => b[1].count - a[1].count)
+          .slice(0, 10)
+          .map(([id]) => id);
+        if (topIds.length === 0) { data = []; break; }
+        const [usersRes, activityRes] = await Promise.all([
+          supabase.from("users").select("id, telegram_id, username").in("id", topIds),
+          supabase.from("logs_activity").select("user_id, created_at").in("user_id", topIds).order("created_at", { ascending: false }),
+        ]);
+        const lastSeen = new Map<string, string>();
+        (activityRes.data || []).forEach((l: any) => {
+          if (!lastSeen.has(l.user_id)) lastSeen.set(l.user_id, l.created_at);
+        });
+        const usersMap = new Map<string, any>();
+        (usersRes.data || []).forEach((u: any) => usersMap.set(u.id, u));
+        data = topIds.map((id) => {
+          const u = usersMap.get(id) || {};
+          const a = agg.get(id)!;
+          return {
+            user_id: id,
+            telegram_id: u.telegram_id,
+            username: u.username,
+            promo_count: a.count,
+            total_pt: a.total,
+            last_seen_at: lastSeen.get(id) || null,
+          };
+        });
+        break;
+      }
+      case "get_promo_logs": {
+        const { data: setting } = await supabase.from("settings").select("value").eq("key", "promo_log_retention_days").maybeSingle();
+        const days = setting ? Number(setting.value) : 3;
+        if (days > 0) {
+          const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+          await supabase.from("promo_redemptions").delete().lt("redeemed_at", cutoff);
+        }
+        const codeFilter = String(params.code_search || "").trim();
+        const userFilter = String(params.user_search || "").trim().replace(/^@/, "");
+        let promoIds: string[] | null = null;
+        if (codeFilter) {
+          const { data: pc } = await supabase.from("promo_codes").select("id").ilike("code", `%${codeFilter}%`);
+          promoIds = (pc || []).map((p: any) => p.id);
+          if (promoIds.length === 0) { data = { logs: [], retention_days: days }; break; }
+        }
+        let userIds: string[] | null = null;
+        if (userFilter) {
+          const { data: us } = await supabase.from("users").select("id").ilike("username", `%${userFilter}%`);
+          userIds = (us || []).map((u: any) => u.id);
+          if (userIds.length === 0) { data = { logs: [], retention_days: days }; break; }
+        }
+        let q = supabase
+          .from("promo_redemptions")
+          .select("id, redeemed_at, reward_pt, promo_id, user_id, promo_codes(code), users(username, telegram_id)")
+          .order("redeemed_at", { ascending: false })
+          .limit(500);
+        if (promoIds) q = q.in("promo_id", promoIds);
+        if (userIds) q = q.in("user_id", userIds);
+        const res = await q;
+        if (res.error) { error = res.error; break; }
+        data = { logs: res.data || [], retention_days: days };
+        break;
+      }
+      case "set_promo_retention": {
+        const days = Math.max(0, Math.floor(Number(params.days) || 0));
+        const res = await supabase.from("settings").upsert({
+          key: "promo_log_retention_days",
+          value: String(days),
+          updated_at: new Date().toISOString(),
+        });
+        data = { days }; error = res.error;
+        break;
+      }
+
       // ===== SETTINGS =====
       case "get_settings": {
         const res = await supabase.from("settings").select("*");

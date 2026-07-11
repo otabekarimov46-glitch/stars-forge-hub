@@ -2,21 +2,26 @@ import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy } from "lucide-react";
+import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy, Ticket } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
-import { format, subDays, parseISO } from "date-fns";
+import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
+import { ru } from "date-fns/locale";
 
 export default function StatisticsPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<any>(null);
+  const [topPromo, setTopPromo] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminApi("get_stats")
-      .then(setStats)
+    Promise.all([
+      adminApi("get_stats").then(setStats),
+      adminApi("get_top_promo_users").then((d) => setTopPromo(d || [])).catch(() => {}),
+    ])
       .catch((e: any) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []);
+
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
@@ -203,6 +208,51 @@ export default function StatisticsPage() {
           </div>
         );
       })()}
+
+      {/* Топ 10 промокодеров */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-brand-gold to-yellow-500">
+            <Ticket className="h-4 w-4 text-white" />
+          </div>
+          <h3 className="text-base font-semibold">Топ 10 промокодеров</h3>
+        </div>
+        <div className="glass-card p-6">
+          {topPromo.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Никто ещё не активировал промокоды</p>
+          ) : (
+            <div className="space-y-2">
+              {topPromo.map((u: any, i: number) => {
+                const name = u.username ? `@${u.username}` : `ID ${u.telegram_id}`;
+                const lastSeen = u.last_seen_at
+                  ? formatDistanceToNow(parseISO(u.last_seen_at), { addSuffix: true, locale: ru })
+                  : "нет данных";
+                return (
+                  <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br ${
+                      i === 0 ? "from-yellow-400 to-orange-500" :
+                      i === 1 ? "from-slate-300 to-slate-500" :
+                      i === 2 ? "from-amber-600 to-amber-800" :
+                      "from-brand-purple to-brand-blue"
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{name}</p>
+                      <p className="text-xs text-muted-foreground truncate">Заходил {lastSeen}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{u.promo_count} 🎟️</p>
+                      <p className="text-xs text-muted-foreground">{Number(u.total_pt).toFixed(2).replace(/\.?0+$/, "")} PT</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
 
       {stats.alerts && stats.alerts.length > 0 && (
         <div className="glass-card p-6">
