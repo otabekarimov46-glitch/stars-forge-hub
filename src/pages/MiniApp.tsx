@@ -1161,8 +1161,8 @@ export default function MiniApp() {
                   <Trophy className="w-4 h-4 text-white/80" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-[14px] font-medium text-white/95 leading-tight">Топ по балансу</div>
-                  <div className="text-[11px] text-white/45 mt-0.5">Лидеры в боте</div>
+                  <div className="text-[14px] font-medium text-white/95 leading-tight">{t("top_by_balance")}</div>
+                  <div className="text-[11px] text-white/45 mt-0.5">{t("top_leaders")}</div>
                 </div>
               </div>
 
