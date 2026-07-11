@@ -939,7 +939,7 @@ export default function MiniApp() {
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
                     <Play className="w-4 h-4" />
-                    {nextVideo ? "СМОТРЕТЬ СЛЕДУЮЩЕЕ" : "ОБНОВИТЬ"}
+                    {nextVideo ? t("watch_next") : t("refresh")}
                   </button>
 
                   {lastFinished.video.external_link_url && (
