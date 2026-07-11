@@ -1310,7 +1310,7 @@ export default function MiniApp() {
               <button
                 onClick={() => setActiveSheet(null)}
                 className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all hover:bg-white/10 active:scale-90"
-                aria-label="Закрыть"
+                aria-label={t("close")}
               >
                 <X className="w-4 h-4 text-white/80" />
               </button>
