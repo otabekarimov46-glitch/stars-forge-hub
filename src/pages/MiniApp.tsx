@@ -1470,8 +1470,7 @@ export default function MiniApp() {
                       <Send className="w-6 h-6 text-white" />
                     </div>
                     <div className="mt-3 text-[15px] text-white/85 leading-snug">
-                      Получай <span className="text-emerald-300 font-semibold">5%</span> от каждого задания,
-                      которое выполнит приглашённый друг
+                      {t("referral_hero_prefix")} <span className="text-emerald-300 font-semibold">5%</span> {t("referral_hero_suffix")}
                     </div>
                   </div>
                 </div>
