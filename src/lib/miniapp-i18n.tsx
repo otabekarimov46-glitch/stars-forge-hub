@@ -657,9 +657,62 @@ const PROMO_EXT: Record<MiniAppLang, Dict> = {
   },
 };
 
-// Merge PROMO_EXT into main dicts.
+// Resubscribe popup translations
+const RESUB_EXT: Record<MiniAppLang, Dict> = {
+  ru: {
+    resub_title: "Подписка отменена",
+    resub_body: "Вы отписались от каналов, за которые ранее получили PT. Мы вернули их со счёта. Откройте отмеченные красным задания и подпишитесь снова, чтобы вернуть PT.",
+    resub_open: "Открыть задания",
+    resub_later: "Позже",
+    resub_badge: "Верните подписку",
+  },
+  be: {
+    resub_title: "Падпіска адменена",
+    resub_body: "Вы адпісаліся ад каналаў, за якія атрымалі PT. Мы іх спісалі. Адкрыйце заданні, пазначаныя чырвоным, і падпішыцеся зноў, каб вярнуць PT.",
+    resub_open: "Адкрыць заданні",
+    resub_later: "Пазней",
+    resub_badge: "Вярніце падпіску",
+  },
+  kk: {
+    resub_title: "Жазылу тоқтатылды",
+    resub_body: "Сіз бұрын PT алған арналардан жазылудан бас тарттыңыз. PT есептен алынды. Қызылмен белгіленген тапсырмаларды ашып, қайта жазылыңыз.",
+    resub_open: "Тапсырмаларды ашу",
+    resub_later: "Кейінірек",
+    resub_badge: "Қайта жазылыңыз",
+  },
+  uz: {
+    resub_title: "Obuna bekor qilindi",
+    resub_body: "Siz PT olgan kanallardan obunani bekor qildingiz. PT hisobdan yechildi. Qizil bilan belgilangan vazifalarni oching va qayta obuna boʻling.",
+    resub_open: "Vazifalarni ochish",
+    resub_later: "Keyinroq",
+    resub_badge: "Qayta obuna boʻling",
+  },
+  az: {
+    resub_title: "Abunə ləğv edildi",
+    resub_body: "Siz PT qazandığınız kanallardan çıxdınız. PT geri götürüldü. Qırmızı ilə işarələnmiş tapşırıqları açın və yenidən abunə olun.",
+    resub_open: "Tapşırıqları aç",
+    resub_later: "Sonra",
+    resub_badge: "Yenidən abunə olun",
+  },
+  hy: {
+    resub_title: "Բաժանորդագրումը չեղարկվեց",
+    resub_body: "Դուք չեղարկել եք բաժանորդագրումն այն ալիքներից, որոնց համար PT եք ստացել: PT-ն հանվել է: Բացեք կարմիրով նշված առաջադրանքները և կրկին բաժանորդագրվեք:",
+    resub_open: "Բացել առաջադրանքները",
+    resub_later: "Հետո",
+    resub_badge: "Կրկին բաժանորդագրվեք",
+  },
+  ky: {
+    resub_title: "Жазылуу токтотулду",
+    resub_body: "Сиз PT алган каналдардан жазылууну токтоттуңуз. PT кайра алынды. Кызыл менен белгиленген тапшырмаларды ачып, кайра жазылыңыз.",
+    resub_open: "Тапшырмаларды ачуу",
+    resub_later: "Кийинчерээк",
+    resub_badge: "Кайра жазылыңыз",
+  },
+};
+
+// Merge PROMO_EXT + RESUB_EXT into main dicts.
 (Object.keys(DICTS) as MiniAppLang[]).forEach((l) => {
-  Object.assign(DICTS[l], PROMO_EXT[l]);
+  Object.assign(DICTS[l], PROMO_EXT[l], RESUB_EXT[l]);
 });
 
 const STORAGE_KEY = "miniapp-lang";
