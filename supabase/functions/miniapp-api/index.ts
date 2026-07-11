@@ -719,15 +719,17 @@ Deno.serve(async (req) => {
         const items = (rows || []).map((r: any) => {
           const meta = r.metadata || {};
           let kind = "task";
+          let sub = "task";
           let label = "Задание";
-          if (r.action === "video_reward") { kind = "video"; label = "Видеореклама"; }
-          else if (meta.type === "subscribe") label = "Подписка на канал";
-          else if (meta.type === "view_post") label = "Просмотр поста";
-          else if (meta.type === "view_story") label = "Просмотр истории";
-          else if (meta.type === "reaction") label = "Реакция";
+          if (r.action === "video_reward") { kind = "video"; sub = "video"; label = "Видеореклама"; }
+          else if (meta.type === "subscribe") { sub = "subscribe"; label = "Подписка на канал"; }
+          else if (meta.type === "view_post") { sub = "view_post"; label = "Просмотр поста"; }
+          else if (meta.type === "view_story") { sub = "view_story"; label = "Просмотр истории"; }
+          else if (meta.type === "reaction") { sub = "reaction"; label = "Реакция"; }
           return {
             id: r.id,
             kind,
+            sub,
             label,
             reward_pt: Number(meta.reward_pt || 0),
             at: r.created_at,
