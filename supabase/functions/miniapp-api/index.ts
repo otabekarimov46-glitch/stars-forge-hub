@@ -635,7 +635,7 @@ Deno.serve(async (req) => {
           .from("settings").select("key,value").in("key", ["bot_username"]);
         let bot_username = ((cfgRows || []).find((r: any) => r.key === "bot_username")?.value || "").replace(/^@/, "");
         if (!bot_username) {
-          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
           if (botToken) {
             try {
               const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
@@ -1259,7 +1259,7 @@ async function issueCaptcha(supabase: any, user: any, reason: string, freeze: bo
     message: `🤖 Антифрод: @${user.username || user.telegram_id} — ${reason}.${freeze ? " Баланс заморожен," : ""} отправлена капча.`,
   });
 
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
   if (botToken) {
     try {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
