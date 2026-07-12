@@ -1110,15 +1110,13 @@ export default function MiniApp() {
 
 
             <button
-              disabled
-              className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+              onClick={() => setWithdrawOpen(true)}
+              className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
-                opacity-60 cursor-not-allowed"
+                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
             >
-              <Star className="w-4 h-4" /> {t("withdraw")}
+              <ArrowUp className="w-4 h-4" /> {t("withdraw")}
             </button>
-            <p className="text-center text-[11px] text-white/50">{t("withdraw_soon")}</p>
 
             {/* ===== Transactions ===== */}
             <div className="pt-4">
