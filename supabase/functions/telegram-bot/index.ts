@@ -119,6 +119,18 @@ async function handleUpdate(update: any, supabase: any, botToken: string, groupI
     const text = (message.text || "").slice(0, 500);
     const username = message.from.username || null;
 
+    // Admin withdrawal channel: text reply as cancel reason
+    if (message.chat?.type !== "private" && message.reply_to_message?.message_id) {
+      const { data: settingsRow } = await supabase.from("settings").select("value").eq("key", "withdraw_channel_id").maybeSingle();
+      const withdrawChannelId = settingsRow?.value ? Number(settingsRow.value) : null;
+      if (withdrawChannelId && Number(chatId) === withdrawChannelId) {
+        await handleCancelReasonReply(message, botToken, supabase);
+        return jsonResponse({ ok: true });
+      }
+    }
+
+    if (message.chat?.type !== "private") return jsonResponse({ ok: true });
+
     let { data: user } = await supabase.from("users").select("*").eq("telegram_id", telegramId).single();
 
     if (!user) {
