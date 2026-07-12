@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp, Settings as SettingsIcon, LifeBuoy, Check } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp, Settings as SettingsIcon, LifeBuoy, Check, Link2, LogOut } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 import { useMiniAppI18n, MINIAPP_LANGS } from "@/lib/miniapp-i18n";
+import { useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -104,7 +105,10 @@ export default function MiniApp() {
   const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "view_post" | "view_story">(null);
   const [tab, setTab] = useState<"tasks" | "wallet" | "profile">("tasks");
   const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [usdtRate, setUsdtRate] = useState<number>(0.02);
   const [botUsername, setBotUsername] = useState<string>("");
+  const tonAddress = useTonAddress();
+  const [tonUI] = useTonConnectUI();
   const [refSheetOpen, setRefSheetOpen] = useState(false);
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
   const [promoInput, setPromoInput] = useState("");
@@ -185,15 +189,33 @@ export default function MiniApp() {
     return () => clearInterval(id);
   }, []);
 
-  // Load config (exchange rate, bot username)
+  // Load config (exchange rate, USDT rate, bot username)
   useEffect(() => {
     miniAppApi("get_config")
       .then((c) => {
         if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate);
+        if (c && typeof c.usdt_rate === "number") setUsdtRate(c.usdt_rate);
         if (c && typeof c.bot_username === "string") setBotUsername(c.bot_username);
       })
       .catch(() => {});
   }, []);
+
+  // Presence heartbeat — powers "online now" metric in admin
+  useEffect(() => {
+    if (!telegramId) return;
+    const ping = () => { miniAppApi("presence_ping", { telegram_id: telegramId }).catch(() => {}); };
+    ping();
+    const id = setInterval(ping, 45_000);
+    const onVis = () => { if (document.visibilityState === "visible") ping(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [telegramId]);
+
+  // Persist TON wallet whenever it connects/disconnects
+  useEffect(() => {
+    if (!telegramId) return;
+    miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: tonAddress || null }).catch(() => {});
+  }, [telegramId, tonAddress]);
 
   const openRefSheet = useCallback(() => {
     setRefSheetOpen(true);
