@@ -675,7 +675,7 @@ Deno.serve(async (req) => {
         if (!uid) { error = { message: "user_id required" }; break; }
         const onlineCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
 
-        const [uRes, ipsRes, activityRes, promoRes, alertsRes, refsRes, statsRes] = await Promise.all([
+        const [uRes, ipsRes, activityRes, promoRes, alertsRes, refsRes, statsRes, mathRes, pendRes] = await Promise.all([
           supabase.from("users").select("*").eq("id", uid).single(),
           supabase.from("user_ips").select("ip_address, first_seen_at, last_seen_at").eq("user_id", uid).order("last_seen_at", { ascending: false }),
           supabase.from("activity_logs").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(500),
@@ -683,6 +683,8 @@ Deno.serve(async (req) => {
           supabase.from("admin_alerts").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(200),
           supabase.from("users").select("id, telegram_id, username, created_at, balance_pt, is_banned").eq("referrer_id", uid).order("created_at", { ascending: false }),
           supabase.from("users").select("id, balance_pt, referral_earnings_pt"),
+          supabase.from("balance_math_log").select("delta, balance_after, reason, created_at").eq("user_id", uid).order("id", { ascending: true }),
+          supabase.from("withdrawals").select("id, amount_usdt, amount_pt, status, method, wallet_address, request_number, created_at, cancel_reason").eq("user_id", uid).order("created_at", { ascending: false }).limit(20),
         ]);
         if (uRes.error) { error = uRes.error; break; }
         const user = uRes.data;
@@ -702,16 +704,14 @@ Deno.serve(async (req) => {
         const promoRank = promoRanked.findIndex(([id]) => id === uid) + 1;
         const myPromoCount = promoCounts.get(uid) || 0;
 
-        // referrals earnings per referral (sum of referral_reward logs whose from_user_id === refId)
+        // referrals earnings per referral
         const refIds = (refsRes.data || []).map((r: any) => r.id);
         const refEarnMap = new Map<string, number>();
         let totalRefEarn = 0;
         if (refIds.length) {
           const { data: refLogs } = await supabase
-            .from("logs_activity")
-            .select("metadata")
-            .eq("user_id", uid)
-            .eq("action", "referral_reward");
+            .from("logs_activity").select("metadata")
+            .eq("user_id", uid).eq("action", "referral_reward");
           (refLogs || []).forEach((l: any) => {
             const m = l.metadata || {};
             const bonus = Number(m.bonus || 0);
@@ -742,6 +742,11 @@ Deno.serve(async (req) => {
             .map(([ip, others]) => ({ ip, others }));
         }
 
+        // math log summary
+        const mathRaw = mathRes.data || [];
+        const mathSum = mathRaw.reduce((a: number, r: any) => a + Number(r.delta), 0);
+        const pendingWithdrawal = (pendRes.data || []).find((w: any) => w.status === "pending") || null;
+
         data = {
           user,
           online: user.last_seen_at && user.last_seen_at >= onlineCutoff,
@@ -757,6 +762,12 @@ Deno.serve(async (req) => {
           rank_promo: promoRank || null,
           promo_count: myPromoCount,
           total_users: all.length,
+          farm_ips: farmIps,
+          ton_wallet_address: user.ton_wallet_address || null,
+          math_log: mathRaw,
+          math_sum: Math.round(mathSum * 100) / 100,
+          withdrawals: pendRes.data || [],
+          pending_withdrawal: pendingWithdrawal,
         };
         break;
       }
