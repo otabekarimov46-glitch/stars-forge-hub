@@ -507,6 +507,7 @@ export default function ContentPage() {
                   {advertisers.map((a) => (
                     <div
                       key={a.id}
+                      data-anchor={a.public_id || undefined}
                       className="group relative rounded-2xl p-4 bg-muted/30 hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-border"
                       onClick={() => setActiveAdvertiser(a)}
                     >
