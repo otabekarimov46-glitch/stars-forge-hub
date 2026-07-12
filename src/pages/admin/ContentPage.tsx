@@ -769,7 +769,7 @@ export default function ContentPage() {
               ) : (
                 <div className="space-y-3">
                   {advVideos.map(v => (
-                    <div key={`v-${v.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div key={`v-${v.id}`} data-anchor={v.public_id || undefined} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
                         <Film className="h-5 w-5" />
                       </div>
