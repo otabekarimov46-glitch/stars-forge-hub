@@ -2061,7 +2061,7 @@ export default function MiniApp() {
         </div>
       )}
 
-
+    </div>
 
 
   );
