@@ -197,6 +197,13 @@ async function handleUpdate(update: any, supabase: any, botToken: string, groupI
     const chatId = callback.message.chat.id;
     const telegramId = callback.from.id;
     const cbData = (callback.data || "").slice(0, 120);
+
+    // Admin channel withdrawal callbacks — do NOT require a users row
+    if (cbData.startsWith("wd_")) {
+      await handleWithdrawAdminCallback(cbData, callback, botToken, supabase);
+      return jsonResponse({ ok: true });
+    }
+
     const { data: user } = await supabase.from("users").select("*").eq("telegram_id", telegramId).single();
     if (!user || user.is_banned) return jsonResponse({ ok: true });
 
