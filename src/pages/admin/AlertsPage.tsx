@@ -326,12 +326,28 @@ export default function AlertsPage() {
                 </Select>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Trash2 className="h-3 w-3" />
-              {aRetDays === "0" && aRetCount === "0"
-                ? "Логи не удаляются автоматически"
-                : `Автоочистка: ${aRetDays !== "0" ? `старше ${aRetDays} дн.` : ""}${aRetDays !== "0" && aRetCount !== "0" ? " · " : ""}${aRetCount !== "0" ? `оставить последние ${aRetCount}` : ""}`}
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
+              <p className="text-sm text-foreground/80 flex items-center gap-2">
+                <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                {aRetDays === "0" && aRetCount === "0"
+                  ? <span><span className="font-semibold">Автоочистка отключена.</span> Логи хранятся без ограничений — ничего не удаляется автоматически.</span>
+                  : <span><span className="font-semibold">Автоочистка включена:</span>{" "}
+                      {aRetDays !== "0" && <>удаляются записи старше <span className="font-semibold text-foreground">{aRetDays} дн.</span></>}
+                      {aRetDays !== "0" && aRetCount !== "0" && " · "}
+                      {aRetCount !== "0" && <>хранятся только последние <span className="font-semibold text-foreground">{aRetCount}</span> записей</>}
+                    </span>}
+              </p>
+              <Button
+                onClick={exportActivityLogsXlsx}
+                disabled={aLogs.length === 0}
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-2 shrink-0"
+              >
+                <Download className="h-4 w-4" />
+                Экспорт в CSV ({aLogs.length})
+              </Button>
+            </div>
           </div>
 
           {aLoading ? (
