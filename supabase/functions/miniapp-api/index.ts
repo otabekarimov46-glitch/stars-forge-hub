@@ -655,7 +655,7 @@ Deno.serve(async (req) => {
 
         const { data: task } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away, recheck_minutes")
           .eq("id", task_id).single();
         if (!task || !task.is_active) throw new Error("Task unavailable");
         if (task.max_completions && task.current_completions >= task.max_completions) {
