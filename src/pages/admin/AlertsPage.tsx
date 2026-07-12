@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare, Ticket, Search, Clock, Trash2,
-  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download,
+  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download, RotateCcw, Gift,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import * as XLSX from "xlsx";
@@ -53,18 +53,20 @@ const COUNT_OPTIONS = [
   { value: "10000", label: "Последние 10 000" },
 ];
 
-type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey";
+type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward";
 
 const ACTION_META: Record<ActionType, { label: string; short: string; icon: any; bar: string; badge: string; row: string; }> = {
-  video:      { label: "Видеореклама",   short: "Видео",     icon: Film,       bar: "bg-brand-purple",       badge: "bg-brand-purple/10 text-brand-purple border-brand-purple/20", row: "bg-brand-purple/[0.04] hover:bg-brand-purple/[0.08]" },
-  subscribe:  { label: "Подписка",       short: "Подписка",  icon: UsersIcon,  bar: "bg-brand-blue",         badge: "bg-brand-blue/10 text-brand-blue border-brand-blue/20",       row: "bg-brand-blue/[0.04] hover:bg-brand-blue/[0.08]" },
-  view_post:  { label: "Просмотр поста", short: "Пост",      icon: Newspaper,  bar: "bg-brand-green",        badge: "bg-brand-green/10 text-brand-green border-brand-green/20",     row: "bg-brand-green/[0.04] hover:bg-brand-green/[0.08]" },
-  view_story: { label: "Просмотр истории", short: "История", icon: Camera,     bar: "bg-brand-gold",         badge: "bg-brand-gold/10 text-brand-gold border-brand-gold/20",       row: "bg-brand-gold/[0.04] hover:bg-brand-gold/[0.08]" },
-  reaction:   { label: "Реакция",        short: "Реакция",   icon: Heart,      bar: "bg-pink-500",           badge: "bg-pink-500/10 text-pink-500 border-pink-500/20",             row: "bg-pink-500/[0.04] hover:bg-pink-500/[0.08]" },
-  survey:     { label: "Опрос",          short: "Опрос",     icon: Heart,      bar: "bg-teal-500",           badge: "bg-teal-500/10 text-teal-500 border-teal-500/20",             row: "bg-teal-500/[0.04] hover:bg-teal-500/[0.08]" },
+  video:         { label: "Видеореклама",   short: "Видео",     icon: Film,       bar: "bg-brand-purple",       badge: "bg-brand-purple/10 text-brand-purple border-brand-purple/20", row: "bg-brand-purple/[0.04] hover:bg-brand-purple/[0.08]" },
+  subscribe:     { label: "Подписка",       short: "Подписка",  icon: UsersIcon,  bar: "bg-brand-blue",         badge: "bg-brand-blue/10 text-brand-blue border-brand-blue/20",       row: "bg-brand-blue/[0.04] hover:bg-brand-blue/[0.08]" },
+  view_post:     { label: "Просмотр поста", short: "Пост",      icon: Newspaper,  bar: "bg-brand-green",        badge: "bg-brand-green/10 text-brand-green border-brand-green/20",     row: "bg-brand-green/[0.04] hover:bg-brand-green/[0.08]" },
+  view_story:    { label: "Просмотр истории", short: "История", icon: Camera,     bar: "bg-brand-gold",         badge: "bg-brand-gold/10 text-brand-gold border-brand-gold/20",       row: "bg-brand-gold/[0.04] hover:bg-brand-gold/[0.08]" },
+  reaction:      { label: "Реакция",        short: "Реакция",   icon: Heart,      bar: "bg-pink-500",           badge: "bg-pink-500/10 text-pink-500 border-pink-500/20",             row: "bg-pink-500/[0.04] hover:bg-pink-500/[0.08]" },
+  survey:        { label: "Опрос",          short: "Опрос",     icon: Heart,      bar: "bg-teal-500",           badge: "bg-teal-500/10 text-teal-500 border-teal-500/20",             row: "bg-teal-500/[0.04] hover:bg-teal-500/[0.08]" },
+  balance_reset: { label: "Обнуление баланса", short: "Обнуление", icon: RotateCcw, bar: "bg-orange-500",       badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",       row: "bg-orange-500/[0.05] hover:bg-orange-500/[0.10]" },
+  promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story"];
+const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset"];
 
 export default function AlertsPage() {
   const { t } = useTranslation();
@@ -137,28 +139,29 @@ export default function AlertsPage() {
     const rows = aLogs.map((l) => {
       const meta = ACTION_META[(l.action_type as ActionType)] || ACTION_META.subscribe;
       const isVideo = l.action_type === "video";
+      const isReset = l.action_type === "balance_reset";
       const started = l.started_at ? parseISO(l.started_at) : null;
       const finished = l.finished_at ? parseISO(l.finished_at) : (l.created_at ? parseISO(l.created_at) : null);
       const reward = Number(l.reward_pt || 0);
       return {
         "Пользователь": l.user_username ? `@${l.user_username}` : (l.user_telegram_id ? `ID ${l.user_telegram_id}` : "—"),
         "Telegram ID": l.user_telegram_id ?? "",
-        "Тип задания": meta.label,
+        "Тип": meta.label,
         "ID задания": l.task_public_id ?? "",
-        "Название задания": l.task_title ?? "",
+        "Название / Причина": l.task_title ?? "",
         "Задание удалено": (l.task_deleted || l.video_deleted) ? "да" : "нет",
         "Рекламодатель": l.advertiser_deleted ? "Удалён" : (l.advertiser_name ?? "—"),
         "ID рекламодателя": l.advertiser_public_id ?? "",
         "Начало просмотра": isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
         "Окончание просмотра": isVideo && finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
         "Время": finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
-        "Награда (PT)": reward,
+        [isReset ? "Списание (PT)" : "Награда (PT)"]: reward,
       };
     });
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
-      { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 30 }, { wch: 14 },
-      { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 12 },
+      { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 34 }, { wch: 14 },
+      { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Все логи");
@@ -477,8 +480,8 @@ export default function AlertsPage() {
                       {/* time */}
                       <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">{timeStr}</div>
                       {/* reward */}
-                      <div className="text-sm font-semibold text-brand-gold whitespace-nowrap">
-                        +{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
+                      <div className={`text-sm font-semibold whitespace-nowrap ${Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
+                        {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
                     </div>
                   </div>

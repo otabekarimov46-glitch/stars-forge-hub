@@ -99,16 +99,40 @@ Deno.serve(async (req) => {
         break;
       }
       case "reset_balance": {
+        const reason = String(params.reason || "").trim().slice(0, 500) || null;
+        const { data: u0 } = await supabase
+          .from("users")
+          .select("id, telegram_id, username, balance_pt")
+          .eq("id", params.user_id)
+          .single();
+        const oldBalance = Number(u0?.balance_pt || 0);
         const res = await supabase
           .from("users")
           .update({ balance_pt: 0 })
           .eq("id", params.user_id);
-        data = res.data;
         error = res.error;
+        data = { old_balance: oldBalance };
+        const humanTag = u0?.username ? `@${u0.username}` : `ID ${u0?.telegram_id ?? params.user_id}`;
+        const alertMsg = `Баланс пользователя ${humanTag} сброшен админом (было ${oldBalance.toFixed(2)} PT → 0)${reason ? `. Причина: ${reason}` : " — без указания причины"}`;
         await supabase.from("admin_alerts").insert({
           type: "balance_reset",
           user_id: params.user_id,
-          message: `Баланс пользователя сброшен админом`,
+          message: alertMsg,
+        });
+        // Extended activity log — appears in "Все логи" and export
+        await supabase.from("activity_logs").insert({
+          user_id: params.user_id,
+          user_username: u0?.username || null,
+          user_telegram_id: u0?.telegram_id || null,
+          action_type: "balance_reset",
+          reward_pt: -oldBalance,
+          task_title: reason ? `Причина: ${reason}` : "Без указания причины",
+        });
+        // Miniapp transaction history entry
+        await supabase.from("logs_activity").insert({
+          user_id: params.user_id,
+          action: "balance_reset",
+          metadata: { amount: -oldBalance, old_balance: oldBalance, reason },
         });
         break;
       }
@@ -645,7 +669,99 @@ Deno.serve(async (req) => {
         break;
       }
 
-      default:
+      // ===== USER ROOM (full CRM per user) =====
+      case "get_user_room": {
+        const uid = params.user_id;
+        if (!uid) { error = { message: "user_id required" }; break; }
+        const onlineCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+        const [uRes, ipsRes, activityRes, promoRes, alertsRes, refsRes, statsRes] = await Promise.all([
+          supabase.from("users").select("*").eq("id", uid).single(),
+          supabase.from("user_ips").select("ip_address, first_seen_at, last_seen_at").eq("user_id", uid).order("last_seen_at", { ascending: false }),
+          supabase.from("activity_logs").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(500),
+          supabase.from("promo_redemptions").select("id, redeemed_at, reward_pt, promo_codes(code)").eq("user_id", uid).order("redeemed_at", { ascending: false }),
+          supabase.from("admin_alerts").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(200),
+          supabase.from("users").select("id, telegram_id, username, created_at, balance_pt, is_banned").eq("referrer_id", uid).order("created_at", { ascending: false }),
+          supabase.from("users").select("id, balance_pt, referral_earnings_pt"),
+        ]);
+        if (uRes.error) { error = uRes.error; break; }
+        const user = uRes.data;
+
+        // ranks
+        const all = statsRes.data || [];
+        const byBalance = [...all].sort((a: any, b: any) => Number(b.balance_pt) - Number(a.balance_pt));
+        const byRefEarn = [...all].sort((a: any, b: any) => Number(b.referral_earnings_pt || 0) - Number(a.referral_earnings_pt || 0));
+        const balanceRank = byBalance.findIndex((x: any) => x.id === uid) + 1;
+        const refRank = byRefEarn.findIndex((x: any) => x.id === uid) + 1;
+
+        // promo rank
+        const { data: allProm } = await supabase.from("promo_redemptions").select("user_id");
+        const promoCounts = new Map<string, number>();
+        (allProm || []).forEach((r: any) => promoCounts.set(r.user_id, (promoCounts.get(r.user_id) || 0) + 1));
+        const promoRanked = Array.from(promoCounts.entries()).sort((a, b) => b[1] - a[1]);
+        const promoRank = promoRanked.findIndex(([id]) => id === uid) + 1;
+        const myPromoCount = promoCounts.get(uid) || 0;
+
+        // referrals earnings per referral (sum of referral_reward logs whose from_user_id === refId)
+        const refIds = (refsRes.data || []).map((r: any) => r.id);
+        const refEarnMap = new Map<string, number>();
+        let totalRefEarn = 0;
+        if (refIds.length) {
+          const { data: refLogs } = await supabase
+            .from("logs_activity")
+            .select("metadata")
+            .eq("user_id", uid)
+            .eq("action", "referral_reward");
+          (refLogs || []).forEach((l: any) => {
+            const m = l.metadata || {};
+            const bonus = Number(m.bonus || 0);
+            totalRefEarn += bonus;
+            if (m.from_user_id) refEarnMap.set(m.from_user_id, (refEarnMap.get(m.from_user_id) || 0) + bonus);
+          });
+        }
+        const referrals = (refsRes.data || []).map((r: any) => ({
+          ...r,
+          earned_from: Math.round((refEarnMap.get(r.id) || 0) * 100) / 100,
+        }));
+
+        // farm ips
+        let farmIps: any[] = [];
+        const ipList = (ipsRes.data || []).map((r: any) => r.ip_address);
+        if (ipList.length) {
+          const { data: shared } = await supabase
+            .from("user_ips")
+            .select("ip_address, user_id, users(id, telegram_id, username, is_banned)")
+            .in("ip_address", ipList as any);
+          const byIp: Record<string, any[]> = {};
+          (shared || []).forEach((r: any) => {
+            if (!byIp[r.ip_address]) byIp[r.ip_address] = [];
+            if (r.users && r.user_id !== uid) byIp[r.ip_address].push(r.users);
+          });
+          farmIps = Object.entries(byIp)
+            .filter(([_, arr]) => arr.length > 0)
+            .map(([ip, others]) => ({ ip, others }));
+        }
+
+        data = {
+          user,
+          online: user.last_seen_at && user.last_seen_at >= onlineCutoff,
+          ips: ipsRes.data || [],
+          activity: activityRes.data || [],
+          promos: promoRes.data || [],
+          alerts: alertsRes.data || [],
+          referrals,
+          referrals_total: referrals.length,
+          referrals_earnings_total: Math.round(totalRefEarn * 100) / 100,
+          rank_balance: balanceRank || null,
+          rank_referrals: refRank || null,
+          rank_promo: promoRank || null,
+          promo_count: myPromoCount,
+          total_users: all.length,
+        };
+        break;
+      }
+
+
         return new Response(
           JSON.stringify({ error: "Unknown action" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
