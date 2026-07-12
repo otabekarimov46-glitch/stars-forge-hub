@@ -388,6 +388,7 @@ export type Database = {
           post_url: string | null
           public_id: string | null
           reaction_emoji: string | null
+          recheck_minutes: number | null
           reward_pt: number
           sub_recheck_minutes: number
           title: string | null
@@ -408,6 +409,7 @@ export type Database = {
           post_url?: string | null
           public_id?: string | null
           reaction_emoji?: string | null
+          recheck_minutes?: number | null
           reward_pt?: number
           sub_recheck_minutes?: number
           title?: string | null
@@ -428,6 +430,7 @@ export type Database = {
           post_url?: string | null
           public_id?: string | null
           reaction_emoji?: string | null
+          recheck_minutes?: number | null
           reward_pt?: number
           sub_recheck_minutes?: number
           title?: string | null
@@ -487,9 +490,11 @@ export type Database = {
           id: string
           is_banned: boolean
           is_suspicious: boolean
+          last_seen_at: string | null
           referral_earnings_pt: number
           referrer_id: string | null
           telegram_id: number
+          ton_wallet_address: string | null
           username: string | null
           violation_count: number
         }
@@ -504,9 +509,11 @@ export type Database = {
           id?: string
           is_banned?: boolean
           is_suspicious?: boolean
+          last_seen_at?: string | null
           referral_earnings_pt?: number
           referrer_id?: string | null
           telegram_id: number
+          ton_wallet_address?: string | null
           username?: string | null
           violation_count?: number
         }
@@ -521,9 +528,11 @@ export type Database = {
           id?: string
           is_banned?: boolean
           is_suspicious?: boolean
+          last_seen_at?: string | null
           referral_earnings_pt?: number
           referrer_id?: string | null
           telegram_id?: number
+          ton_wallet_address?: string | null
           username?: string | null
           violation_count?: number
         }
