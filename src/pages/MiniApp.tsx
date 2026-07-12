@@ -1053,6 +1053,32 @@ export default function MiniApp() {
               <div className="absolute inset-0 pointer-events-none opacity-20"
                    style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
               <div className="relative">
+                {/* Connect Wallet — above the balance label */}
+                <div className="flex justify-center mb-3">
+                  {tonAddress ? (
+                    <button
+                      onClick={() => tonUI?.disconnect().catch(() => {})}
+                      className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
+                      title={tonAddress}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span className="tabular-nums">
+                        {tonAddress.slice(0, 4)}…{tonAddress.slice(-4)}
+                      </span>
+                      <LogOut className="w-3 h-3 opacity-70" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => tonUI?.openModal().catch(() => {})}
+                      className="press inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px] font-semibold text-white
+                                 bg-gradient-to-r from-sky-500 to-blue-600 shadow-md shadow-blue-900/30 border border-white/10"
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      Подключить кошелёк
+                    </button>
+                  )}
+                </div>
+
                 <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
@@ -1060,32 +1086,25 @@ export default function MiniApp() {
                   </span>
                   <span className="text-white/70 font-medium">PT</span>
                 </div>
-                <div className="mt-3 inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
-                  <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-                  <span className="text-[13px] tabular-nums">
-                    ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
+                <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
+                    <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+                    <span className="text-[13px] tabular-nums">
+                      ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
+                    </span>
+                    <span className="text-[11px] text-white/60">Stars</span>
                   </span>
-                  <span className="text-[11px] text-white/60">Stars</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-emerald-500/10 border border-emerald-400/25">
+                    <span className="text-[10px] font-bold text-emerald-300">$</span>
+                    <span className="text-[13px] tabular-nums text-emerald-200">
+                      ≈ {user ? formatBalance(user.balance_pt * usdtRate, 2) : "…"}
+                    </span>
+                    <span className="text-[11px] text-emerald-300/70">USDT</span>
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
-              <div className="text-[13px] font-semibold text-white/85 mb-2">{t("exchange_rate")}</div>
-              <div className="flex items-center justify-between text-[13px]">
-                <span className="text-white/70">1 PT</span>
-                <span className="tabular-nums font-semibold">≈ {exchangeRate.toFixed(2)} ⭐</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[12px] text-white/50">
-                <span>10 PT</span>
-                <span className="tabular-nums">≈ {(exchangeRate * 10).toFixed(2)} ⭐</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[12px] text-white/50">
-                <span>100 PT</span>
-                <span className="tabular-nums">≈ {(exchangeRate * 100).toFixed(2)} ⭐</span>
-              </div>
-            </div>
 
             <button
               disabled
