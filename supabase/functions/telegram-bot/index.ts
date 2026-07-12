@@ -443,3 +443,120 @@ async function handleTaskComplete(chatId: number, botToken: string, user: any, t
 
   await sendTg(botToken, { chat_id: chatId, text: `✅ +${task.reward_pt} PT` });
 }
+
+// ============ WITHDRAWAL ADMIN CALLBACKS (channel) ============
+
+async function editChannelMessage(botToken: string, chatId: number, messageId: number, text: string, keyboard: any[][] | null) {
+  await fetch(`${TELEGRAM_API}${botToken}/editMessageText`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId, message_id: messageId,
+      text, parse_mode: "Markdown",
+      reply_markup: keyboard ? { inline_keyboard: keyboard } : undefined,
+    }),
+  }).catch(() => {});
+}
+
+async function loadSetting(supabase: any, key: string, fallback = ""): Promise<string> {
+  const { data } = await supabase.from("settings").select("value").eq("key", key).maybeSingle();
+  return data?.value ?? fallback;
+}
+
+async function handleWithdrawAdminCallback(cbData: string, callback: any, botToken: string, supabase: any) {
+  const channelId = Number(await loadSetting(supabase, "withdraw_channel_id"));
+  if (!channelId) return;
+  const supportUrl = await loadSetting(supabase, "support_bot_url", "https://t.me/starmenthelp_bot");
+
+  const parts = cbData.split("_"); // wd_pay_<id> | wd_cancel_<id> | wd_cancel_none_<id>
+  const action = parts[1];
+  const isNone = parts[2] === "none";
+  const wid = isNone ? parts[3] : parts[2];
+  if (!wid) return;
+
+  const { data: w } = await supabase.from("withdrawals")
+    .select("id, user_id, amount_usdt, amount_pt, wallet_address, status, request_number, channel_message_id, users(telegram_id, username, balance_pt)")
+    .eq("id", wid).maybeSingle();
+  if (!w) return;
+  if (w.status !== "pending") return; // idempotent
+
+  const user = (w as any).users;
+  const amountUsdt = Number(w.amount_usdt || 0);
+  const reqN = w.request_number;
+
+  if (action === "pay") {
+    await supabase.from("withdrawals").update({ status: "paid", processed_at: new Date().toISOString() }).eq("id", wid);
+    await editChannelMessage(botToken, channelId, w.channel_message_id, `✅ *Оплачено* — Заявка №${reqN}\n💵 ${amountUsdt.toFixed(2)} USDT\n👤 @${user.username || user.telegram_id}\n\`${w.wallet_address}\``, null);
+    // DM user
+    await sendTg(botToken, {
+      chat_id: user.telegram_id,
+      text: `✅ *${amountUsdt.toFixed(2)} USDT* успешно получено — спасибо, что пользуетесь Starment!`,
+      parse_mode: "Markdown",
+    });
+    return;
+  }
+
+  if (action === "cancel" && !isNone) {
+    // Ask for reason: post follow-up message in channel and mark awaiting
+    const follow = await fetch(`${TELEGRAM_API}${botToken}/sendMessage`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: channelId,
+        reply_to_message_id: w.channel_message_id,
+        text: `❓ Укажите причину отмены заявки №${reqN} — ответом на это сообщение.\nИли нажмите «Без причины».`,
+        reply_markup: { inline_keyboard: [[{ text: "Без причины", callback_data: `wd_cancel_none_${wid}` }]] },
+      }),
+    }).then((r) => r.json()).catch(() => null);
+    const followId = follow?.result?.message_id;
+    if (followId) {
+      await supabase.from("withdrawals").update({ cancel_reason: `await:${followId}` }).eq("id", wid);
+    }
+    return;
+  }
+
+  if (action === "cancel" && isNone) {
+    await finalizeCancel(supabase, botToken, wid, null, channelId, supportUrl);
+    return;
+  }
+}
+
+async function handleCancelReasonReply(message: any, botToken: string, supabase: any) {
+  const replyToId = message.reply_to_message?.message_id;
+  if (!replyToId) return;
+  // Find withdrawal whose cancel_reason == `await:<replyToId>`
+  const { data: w } = await supabase.from("withdrawals")
+    .select("id, status").eq("cancel_reason", `await:${replyToId}`).maybeSingle();
+  if (!w || w.status !== "pending") return;
+  const reason = String(message.text || "").slice(0, 200).trim() || null;
+  const channelId = Number(await loadSetting(supabase, "withdraw_channel_id"));
+  const supportUrl = await loadSetting(supabase, "support_bot_url", "https://t.me/starmenthelp_bot");
+  await finalizeCancel(supabase, botToken, w.id, reason, channelId, supportUrl);
+}
+
+async function finalizeCancel(supabase: any, botToken: string, wid: string, reason: string | null, channelId: number, supportUrl: string) {
+  const { data: w } = await supabase.from("withdrawals")
+    .select("id, user_id, amount_usdt, amount_pt, wallet_address, request_number, channel_message_id, users(telegram_id, username, balance_pt)")
+    .eq("id", wid).maybeSingle();
+  if (!w) return;
+  const user = (w as any).users;
+  const amountUsdt = Number(w.amount_usdt || 0);
+  const amountPt = Number(w.amount_pt || 0);
+  const reqN = w.request_number;
+
+  // Refund
+  const { data: fresh } = await supabase.from("users").select("balance_pt").eq("id", w.user_id).single();
+  const newBal = Number(fresh?.balance_pt || 0) + amountPt;
+  await supabase.from("users").update({ balance_pt: newBal }).eq("id", w.user_id);
+  await supabase.from("withdrawals").update({
+    status: "rejected",
+    processed_at: new Date().toISOString(),
+    cancel_reason: reason,
+  }).eq("id", wid);
+
+  await editChannelMessage(botToken, channelId, w.channel_message_id,
+    `❌ *Отменено* — Заявка №${reqN}\n💵 ${amountUsdt.toFixed(2)} USDT\n👤 @${user.username || user.telegram_id}\n${reason ? `📝 Причина: ${reason}` : "📝 Без причины"}\n💎 Баланс возвращён`, null);
+
+  const dm = reason
+    ? `❌ Ваш запрос на вывод *${amountUsdt.toFixed(2)} USDT* был отменён по причине «${reason}». Если вы не согласны с этим — пожалуйста, обратитесь в поддержку: ${supportUrl}`
+    : `❌ Ваш запрос на вывод *${amountUsdt.toFixed(2)} USDT* был отменён. Если вы не согласны с этим — пожалуйста, обратитесь в поддержку: ${supportUrl}`;
+  await sendTg(botToken, { chat_id: user.telegram_id, text: dm, parse_mode: "Markdown" });
+}
