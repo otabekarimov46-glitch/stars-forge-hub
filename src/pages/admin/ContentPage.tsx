@@ -397,6 +397,19 @@ export default function ContentPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="px-2 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                              <Hash className="h-3 w-3" />
+                              <span className="font-mono">{a.public_id || "—"}</span>
+                              {a.public_id && (
+                                <button
+                                  className="ml-auto p-1 rounded hover:bg-muted"
+                                  onClick={() => { navigator.clipboard.writeText(a.public_id); toast.success("ID скопирован"); }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
                               <Pencil className="h-4 w-4 mr-2" /> Переименовать
                             </DropdownMenuItem>
