@@ -331,8 +331,93 @@ export default function ContentPage() {
   const showMinSeconds = contentKind === "view_post" || contentKind === "view_story";
   const isVideoKind = contentKind === "video";
 
+  // Global search by public_id (prefix + 9 digits). Also matches by name substring for convenience.
+  const q = searchId.trim().toLowerCase();
+  const searchResults = q ? (() => {
+    const advById = new Map(advertisers.map((a) => [a.id, a]));
+    const matches: Array<{ kind: "advertiser" | "task" | "video"; item: any; advertiser: any | null; label: string; typeLabel: string }> = [];
+    for (const a of advertisers) {
+      if ((a.public_id || "").toLowerCase().includes(q) || (a.name || "").toLowerCase().includes(q)) {
+        matches.push({ kind: "advertiser", item: a, advertiser: a, label: a.name, typeLabel: "Рекламодатель" });
+      }
+    }
+    for (const v of videos) {
+      if ((v.public_id || "").toLowerCase().includes(q) || (v.title || "").toLowerCase().includes(q)) {
+        matches.push({ kind: "video", item: v, advertiser: advById.get(v.advertiser_id) || null, label: v.title, typeLabel: "Видеореклама" });
+      }
+    }
+    for (const ta of tasks) {
+      if ((ta.public_id || "").toLowerCase().includes(q) || (ta.title || "").toLowerCase().includes(q)) {
+        matches.push({ kind: "task", item: ta, advertiser: advById.get(ta.advertiser_id) || null, label: ta.title || ta.type, typeLabel: taskTypeLabel(ta.type) });
+      }
+    }
+    return matches.slice(0, 20);
+  })() : [];
+
   return (
     <div className="space-y-8">
+      <div className="glass-card p-4">
+        <div className="relative">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchId}
+            onChange={(e) => setSearchId(e.target.value)}
+            placeholder="Поиск по ID (например, v100000000) или названию…"
+            className="rounded-xl pl-9 pr-9"
+          />
+          {searchId && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
+              onClick={() => setSearchId("")}
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        {q && (
+          <div className="mt-3 space-y-2">
+            {searchResults.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Ничего не найдено</p>
+            ) : (
+              searchResults.map((r, i) => (
+                <div key={`${r.kind}-${r.item.id}-${i}`} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="rounded-lg text-xs">{r.typeLabel}</Badge>
+                      <span className="font-mono text-xs text-muted-foreground">{r.item.public_id || "—"}</span>
+                      {r.item.public_id && (
+                        <button
+                          className="p-1 rounded hover:bg-muted"
+                          onClick={() => { navigator.clipboard.writeText(r.item.public_id); toast.success("ID скопирован"); }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="font-medium text-sm truncate mt-1">{r.label}</p>
+                    {r.advertiser && r.kind !== "advertiser" && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Рекламодатель: <span className="font-medium">{r.advertiser.name}</span> · <span className="font-mono">{r.advertiser.public_id}</span>
+                      </p>
+                    )}
+                  </div>
+                  {r.advertiser && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl gap-1.5 shrink-0"
+                      onClick={() => { setActiveAdvertiser(r.advertiser); setSearchId(""); }}
+                    >
+                      Открыть <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="glass-card overflow-hidden">
         {!activeAdvertiser ? (
           <>
