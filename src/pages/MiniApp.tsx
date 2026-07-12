@@ -207,9 +207,21 @@ export default function MiniApp() {
         if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate);
         if (c && typeof c.usdt_rate === "number") setUsdtRate(c.usdt_rate);
         if (c && typeof c.bot_username === "string") setBotUsername(c.bot_username);
+        if (c && typeof c.min_withdraw_usdt === "number") setMinWithdrawUsdt(c.min_withdraw_usdt);
+        if (c && typeof c.support_bot_url === "string") setSupportBotUrl(c.support_bot_url);
       })
       .catch(() => {});
   }, []);
+
+  // Poll pending withdrawal
+  useEffect(() => {
+    if (!telegramId) return;
+    const load = () => miniAppApi("get_pending_withdrawal", { telegram_id: telegramId })
+      .then((d) => setPendingWithdrawal(d || null)).catch(() => {});
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [telegramId, user?.balance_pt]);
 
   // Presence heartbeat — powers "online now" metric in admin
   useEffect(() => {
