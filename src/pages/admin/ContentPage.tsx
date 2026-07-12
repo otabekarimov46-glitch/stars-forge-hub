@@ -50,6 +50,8 @@ export default function ContentPage() {
   const [advDialogOpen, setAdvDialogOpen] = useState(false);
   const [editingAdvId, setEditingAdvId] = useState<string | null>(null);
 
+  const [searchId, setSearchId] = useState("");
+
   const fetchData = async () => {
     try {
       const [ta, vi, ad] = await Promise.all([
