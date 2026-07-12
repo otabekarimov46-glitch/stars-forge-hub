@@ -132,6 +132,39 @@ export default function AlertsPage() {
     }
   };
 
+  const exportActivityLogsXlsx = () => {
+    if (!aLogs.length) return;
+    const rows = aLogs.map((l) => {
+      const meta = ACTION_META[(l.action_type as ActionType)] || ACTION_META.subscribe;
+      const isVideo = l.action_type === "video";
+      const started = l.started_at ? parseISO(l.started_at) : null;
+      const finished = l.finished_at ? parseISO(l.finished_at) : (l.created_at ? parseISO(l.created_at) : null);
+      const reward = Number(l.reward_pt || 0);
+      return {
+        "Пользователь": l.user_username ? `@${l.user_username}` : (l.user_telegram_id ? `ID ${l.user_telegram_id}` : "—"),
+        "Telegram ID": l.user_telegram_id ?? "",
+        "Тип задания": meta.label,
+        "ID задания": l.task_public_id ?? "",
+        "Название задания": l.task_title ?? "",
+        "Задание удалено": (l.task_deleted || l.video_deleted) ? "да" : "нет",
+        "Рекламодатель": l.advertiser_deleted ? "Удалён" : (l.advertiser_name ?? "—"),
+        "ID рекламодателя": l.advertiser_public_id ?? "",
+        "Начало просмотра": isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
+        "Окончание просмотра": isVideo && finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
+        "Время": finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
+        "Награда (PT)": reward,
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 30 }, { wch: 14 },
+      { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Все логи");
+    XLSX.writeFile(wb, `activity-logs-${format(new Date(), "yyyy-MM-dd-HHmm")}.xlsx`);
+  };
+
   useEffect(() => { fetchAlerts(); }, []);
   useEffect(() => {
     if (tab === "promo_logs") fetchLogs();
