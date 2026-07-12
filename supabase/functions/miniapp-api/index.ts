@@ -714,6 +714,31 @@ Deno.serve(async (req) => {
           metadata: { task_id, reward_pt: task.reward_pt, type: task.type },
         });
 
+        // Snapshot: extended activity log (survives entity deletion)
+        try {
+          const [{ data: t2 }, { data: u2 }] = await Promise.all([
+            supabase.from("tasks")
+              .select("id, title, type, public_id, advertiser_id, advertisers(name, public_id)")
+              .eq("id", task_id).maybeSingle(),
+            supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
+          ]);
+          const adv: any = (t2 as any)?.advertisers || null;
+          await supabase.from("activity_logs").insert({
+            user_id: user.id,
+            user_username: u2?.username || null,
+            user_telegram_id: u2?.telegram_id ?? null,
+            action_type: (t2?.type as string) || (task.type as string),
+            task_id,
+            task_title: t2?.title || null,
+            task_public_id: t2?.public_id || null,
+            advertiser_id: t2?.advertiser_id || null,
+            advertiser_name: adv?.name || null,
+            advertiser_public_id: adv?.public_id || null,
+            reward_pt: Number(task.reward_pt),
+            finished_at: new Date().toISOString(),
+          });
+        } catch (_) { /* logging must never break reward flow */ }
+
         // Schedule a background re-check for subscribe tasks, unless disabled.
         // Also clears any prior "unsub" row for this task (user re-subscribed).
         if (task.type === "subscribe") {
