@@ -459,7 +459,7 @@ export default function ContentPage() {
                       size="sm"
                       variant="outline"
                       className="rounded-xl gap-1.5 shrink-0"
-                      onClick={() => { setActiveAdvertiser(r.advertiser); setSearchId(""); }}
+                      onClick={() => { setActiveAdvertiser(r.advertiser); setSearchId(""); if (r.kind !== "advertiser" && r.item.public_id) setFocusId(r.item.public_id); else if (r.kind === "advertiser" && r.item.public_id) setFocusId(r.item.public_id); }}
                     >
                       Открыть <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
