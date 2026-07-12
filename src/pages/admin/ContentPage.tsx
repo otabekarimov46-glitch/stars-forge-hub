@@ -52,6 +52,8 @@ export default function ContentPage() {
   const [editingAdvId, setEditingAdvId] = useState<string | null>(null);
 
   const [searchId, setSearchId] = useState("");
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = async () => {
     try {
