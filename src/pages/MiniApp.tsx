@@ -109,6 +109,9 @@ export default function MiniApp() {
   const [botUsername, setBotUsername] = useState<string>("");
   const tonAddress = useTonAddress();
   const [tonUI] = useTonConnectUI();
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [walletCopied, setWalletCopied] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [refSheetOpen, setRefSheetOpen] = useState(false);
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
   const [promoInput, setPromoInput] = useState("");
@@ -1057,7 +1060,7 @@ export default function MiniApp() {
                 <div className="flex justify-center mb-3">
                   {tonAddress ? (
                     <button
-                      onClick={() => tonUI?.disconnect().catch(() => {})}
+                      onClick={() => setWalletMenuOpen(true)}
                       className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
                       title={tonAddress}
                     >
@@ -1065,7 +1068,7 @@ export default function MiniApp() {
                       <span className="tabular-nums">
                         {tonAddress.slice(0, 4)}…{tonAddress.slice(-4)}
                       </span>
-                      <LogOut className="w-3 h-3 opacity-70" />
+                      <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                   ) : (
                     <button
@@ -1107,15 +1110,13 @@ export default function MiniApp() {
 
 
             <button
-              disabled
-              className="press w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+              onClick={() => setWithdrawOpen(true)}
+              className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
-                opacity-60 cursor-not-allowed"
+                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
             >
-              <Star className="w-4 h-4" /> {t("withdraw")}
+              <ArrowUp className="w-4 h-4" /> {t("withdraw")}
             </button>
-            <p className="text-center text-[11px] text-white/50">{t("withdraw_soon")}</p>
 
             {/* ===== Transactions ===== */}
             <div className="pt-4">
@@ -1928,6 +1929,133 @@ export default function MiniApp() {
                   {t("resub_later")}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet bottom-sheet menu (when connected & tapped) */}
+      {walletMenuOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center fade-in"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}
+          onClick={() => setWalletMenuOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md mx-2 mb-2 rounded-3xl p-4 screen-enter"
+            style={{ background: "rgba(20,20,28,0.95)", border: "1px solid rgba(255,255,255,0.10)" }}
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
+            <div className="text-center mb-3">
+              <div className="text-[11px] uppercase tracking-widest text-white/50 mb-1">TON Wallet</div>
+              <div className="text-[13px] font-mono text-white/85 break-all px-2">{tonAddress}</div>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={async () => {
+                  try { await navigator.clipboard.writeText(tonAddress || ""); } catch {}
+                  setWalletCopied(true);
+                  setTimeout(() => { setWalletCopied(false); setWalletMenuOpen(false); }, 900);
+                }}
+                className="press w-full h-12 rounded-2xl flex items-center justify-center gap-2 text-[14px] font-semibold text-white
+                           bg-gradient-to-r from-sky-500 to-blue-600 border border-white/10 shadow-md shadow-blue-900/30"
+              >
+                {walletCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {walletCopied ? "Скопировано" : "Скопировать адрес"}
+              </button>
+              <button
+                onClick={() => { tonUI?.disconnect().catch(() => {}); setWalletMenuOpen(false); }}
+                className="press w-full h-12 rounded-2xl flex items-center justify-center gap-2 text-[14px] font-semibold text-red-300
+                           bg-red-500/10 border border-red-400/25"
+              >
+                <LogOut className="w-4 h-4" />
+                Отвязать
+              </button>
+              <button
+                onClick={() => setWalletMenuOpen(false)}
+                className="press-soft w-full h-11 rounded-2xl text-[13px] text-white/60 bg-white/5 border border-white/10"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw method popup */}
+      {withdrawOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 fade-in"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+          onClick={() => setWithdrawOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl p-5 screen-enter relative"
+            style={{ background: "rgba(20,20,28,0.96)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 30px 80px rgba(0,0,0,0.5)" }}
+          >
+            <button
+              onClick={() => setWithdrawOpen(false)}
+              className="press-soft absolute top-3 right-3 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70"
+              aria-label="close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center mb-4">
+              <div className="mx-auto mb-2 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 shadow-lg shadow-purple-900/40">
+                <ArrowUp className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-[17px] font-semibold text-white">Вывод</h3>
+              <p className="text-[12px] text-white/55 mt-0.5">Выберите способ вывода</p>
+            </div>
+
+            <div className="space-y-2">
+              {/* Telegram Stars */}
+              <button
+                className="press w-full text-left rounded-2xl p-3 flex items-center gap-3
+                           bg-gradient-to-r from-yellow-500/10 to-amber-400/10 border border-yellow-300/20 hover:border-yellow-300/40 transition-colors"
+              >
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-yellow-300 to-orange-400 shadow-md shadow-orange-900/30">
+                  <Star className="w-5 h-5 text-white fill-white" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-semibold text-white">Telegram Stars</span>
+                  <span className="block text-[11.5px] text-white/55">Выведите в Telegram Stars</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-white/30" />
+              </button>
+
+              {/* Gifts */}
+              <button
+                className="press w-full text-left rounded-2xl p-3 flex items-center gap-3
+                           bg-gradient-to-r from-pink-500/10 to-fuchsia-500/10 border border-pink-300/20 hover:border-pink-300/40 transition-colors"
+              >
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-400 to-fuchsia-500 shadow-md shadow-fuchsia-900/30">
+                  <Gift className="w-5 h-5 text-white" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-semibold text-white">Подарки</span>
+                  <span className="block text-[11.5px] text-white/55">Выведите в подарках</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-white/30" />
+              </button>
+
+              {/* USDT */}
+              <button
+                className="press w-full text-left rounded-2xl p-3 flex items-center gap-3
+                           bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/20 hover:border-emerald-300/40 transition-colors"
+              >
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-md shadow-emerald-900/30">
+                  <Wallet className="w-5 h-5 text-white" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-semibold text-white">USDT</span>
+                  <span className="block text-[11.5px] text-white/55">Выведите в крипто кошелёк</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-white/30" />
+              </button>
             </div>
           </div>
         </div>
