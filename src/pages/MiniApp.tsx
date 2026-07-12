@@ -112,6 +112,14 @@ export default function MiniApp() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [usdtSheetOpen, setUsdtSheetOpen] = useState(false);
+  const [usdtAmount, setUsdtAmount] = useState("");
+  const [usdtSubmitting, setUsdtSubmitting] = useState(false);
+  const [usdtError, setUsdtError] = useState<string | null>(null);
+  const [usdtSuccess, setUsdtSuccess] = useState<{ amount: number } | null>(null);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState<{ id: string; amount_usdt: number; amount_pt: number } | null>(null);
+  const [minWithdrawUsdt, setMinWithdrawUsdt] = useState(1);
+  const [supportBotUrl, setSupportBotUrl] = useState("https://t.me/starmenthelp_bot");
   const [refSheetOpen, setRefSheetOpen] = useState(false);
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
   const [promoInput, setPromoInput] = useState("");
