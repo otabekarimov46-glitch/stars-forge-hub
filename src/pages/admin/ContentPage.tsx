@@ -819,7 +819,7 @@ export default function ContentPage() {
                     const config = TASK_TYPE_CONFIG[ta.type] || TASK_TYPE_CONFIG.subscribe;
                     const Icon = config.icon;
                     return (
-                      <div key={`t-${ta.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div key={`t-${ta.id}`} data-anchor={ta.public_id || undefined} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className={`p-2.5 rounded-xl ${config.color}`}>
                           <Icon className="h-5 w-5" />
                         </div>
