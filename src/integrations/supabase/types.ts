@@ -130,6 +130,44 @@ export type Database = {
         }
         Relationships: []
       }
+      balance_math_log: {
+        Row: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: number
+          reason: string
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          delta: number
+          id?: number
+          reason: string
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          delta?: number
+          id?: number
+          reason?: string
+          ref_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_math_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logs_activity: {
         Row: {
           action: string
@@ -660,32 +698,53 @@ export type Database = {
         Row: {
           amount_pt: number
           amount_stars: number
+          amount_usdt: number | null
+          cancel_reason: string | null
+          channel_message_id: number | null
           created_at: string
           id: string
           ip_address: unknown
+          method: string
+          paid_tx_hash: string | null
           processed_at: string | null
+          request_number: number
           status: Database["public"]["Enums"]["withdrawal_status"]
           user_id: string
+          wallet_address: string | null
         }
         Insert: {
           amount_pt: number
           amount_stars: number
+          amount_usdt?: number | null
+          cancel_reason?: string | null
+          channel_message_id?: number | null
           created_at?: string
           id?: string
           ip_address: unknown
+          method?: string
+          paid_tx_hash?: string | null
           processed_at?: string | null
+          request_number?: number
           status?: Database["public"]["Enums"]["withdrawal_status"]
           user_id: string
+          wallet_address?: string | null
         }
         Update: {
           amount_pt?: number
           amount_stars?: number
+          amount_usdt?: number | null
+          cancel_reason?: string | null
+          channel_message_id?: number | null
           created_at?: string
           id?: string
           ip_address?: unknown
+          method?: string
+          paid_tx_hash?: string | null
           processed_at?: string | null
+          request_number?: number
           status?: Database["public"]["Enums"]["withdrawal_status"]
           user_id?: string
+          wallet_address?: string | null
         }
         Relationships: [
           {
