@@ -186,6 +186,30 @@ export type Database = {
           },
         ]
       }
+      public_ids_registry: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          prefix: string
+          public_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          prefix: string
+          public_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          prefix?: string
+          public_id?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           key: string
@@ -612,6 +636,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gen_public_id_prefixed: {
+        Args: { _entity_id: string; _entity_type: string; _prefix: string }
+        Returns: string
+      }
       gen_public_id9: { Args: never; Returns: string }
     }
     Enums: {
