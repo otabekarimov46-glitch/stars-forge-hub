@@ -421,10 +421,11 @@ Deno.serve(async (req) => {
         const { data: rows } = await supabase
           .from("settings")
           .select("key,value")
-          .in("key", ["exchange_rate", "bot_username"]);
+          .in("key", ["exchange_rate", "bot_username", "usdt_rate"]);
         const map: Record<string, string> = {};
         (rows || []).forEach((r: any) => (map[r.key] = r.value));
         const exchange_rate = Number(map.exchange_rate ?? "1") || 1;
+        const usdt_rate = Number(map.usdt_rate ?? "0.02") || 0;
         let bot_username = (map.bot_username || "").replace(/^@/, "");
         if (!bot_username) {
           const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
@@ -443,9 +444,42 @@ Deno.serve(async (req) => {
           data: {
             turnstile_site_key: Deno.env.get("TURNSTILE_SITE_KEY") || null,
             exchange_rate,
+            usdt_rate,
             bot_username,
           },
         });
+      }
+
+      case "presence_ping": {
+        const { telegram_id } = params;
+        if (!telegram_id) return jsonResponse({ data: { ok: false } });
+        await supabase.from("users")
+          .update({ last_seen_at: new Date().toISOString() })
+          .eq("telegram_id", telegram_id);
+        return jsonResponse({ data: { ok: true } });
+      }
+
+      case "set_wallet": {
+        const { telegram_id, wallet_address } = params;
+        if (!telegram_id) return jsonResponse({ error: "telegram_id required" }, 400);
+        const addr = wallet_address == null ? null : String(wallet_address).trim().slice(0, 128) || null;
+        // Simple sanity check for TON friendly/raw address (base64url or hex); reject empty-ish garbage.
+        if (addr !== null && !/^[A-Za-z0-9_\-:]{20,128}$/.test(addr)) {
+          return jsonResponse({ error: "invalid wallet address" }, 400);
+        }
+        const res = await supabase.from("users")
+          .update({ ton_wallet_address: addr })
+          .eq("telegram_id", telegram_id);
+        if (res.error) return jsonResponse({ error: res.error.message }, 500);
+        return jsonResponse({ data: { ok: true, wallet_address: addr } });
+      }
+
+      case "get_wallet": {
+        const { telegram_id } = params;
+        if (!telegram_id) return jsonResponse({ data: { wallet_address: null } });
+        const { data: u } = await supabase.from("users")
+          .select("ton_wallet_address").eq("telegram_id", telegram_id).maybeSingle();
+        return jsonResponse({ data: { wallet_address: u?.ton_wallet_address ?? null } });
       }
 
       case "get_referral": {
@@ -621,7 +655,7 @@ Deno.serve(async (req) => {
 
         const { data: task } = await supabase
           .from("tasks")
-          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away")
+          .select("id, type, channel_username, channel_id, post_url, reward_pt, is_active, max_completions, current_completions, min_seconds_away, recheck_minutes")
           .eq("id", task_id).single();
         if (!task || !task.is_active) throw new Error("Task unavailable");
         if (task.max_completions && task.current_completions >= task.max_completions) {
@@ -739,16 +773,14 @@ Deno.serve(async (req) => {
           });
         } catch (_) { /* logging must never break reward flow */ }
 
-        // Schedule a background re-check for subscribe tasks, unless disabled.
+        // Schedule a background re-check for subscribe tasks, using the PER-TASK interval.
         // Also clears any prior "unsub" row for this task (user re-subscribed).
         if (task.type === "subscribe") {
           await supabase.from("subscription_checks")
             .update({ status: "resolved", processed_at: new Date().toISOString() })
             .eq("user_id", user.id).eq("task_id", task_id).in("status", ["unsub", "pending"]);
 
-          const { data: setting } = await supabase.from("settings")
-            .select("value").eq("key", "sub_recheck_minutes").maybeSingle();
-          const minutes = Math.max(0, Math.floor(Number(setting?.value ?? 60)));
+          const minutes = Math.max(0, Math.floor(Number((task as any).recheck_minutes ?? 0)));
           if (minutes > 0) {
             await supabase.from("subscription_checks").insert({
               user_id: user.id,

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy, Ticket } from "lucide-react";
+import { Users, DollarSign, Eye, AlertTriangle, TrendingUp, UserPlus, Share2, Trophy, Ticket, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -12,14 +12,23 @@ export default function StatisticsPage() {
   const [stats, setStats] = useState<any>(null);
   const [topPromo, setTopPromo] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [onlineNow, setOnlineNow] = useState<number>(0);
 
   useEffect(() => {
     Promise.all([
-      adminApi("get_stats").then(setStats),
+      adminApi("get_stats").then((s: any) => { setStats(s); setOnlineNow(s?.onlineNow || 0); }),
       adminApi("get_top_promo_users").then((d) => setTopPromo(d || [])).catch(() => {}),
     ])
       .catch((e: any) => toast.error(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Poll online-now every 20s for live number
+  useEffect(() => {
+    const id = setInterval(() => {
+      adminApi("get_online_now").then((n: any) => setOnlineNow(Number(n?.count ?? 0))).catch(() => {});
+    }, 20000);
+    return () => clearInterval(id);
   }, []);
 
 
@@ -59,6 +68,7 @@ export default function StatisticsPage() {
   ];
 
   const kpis = [
+    { label: "Онлайн сейчас", value: onlineNow, icon: Activity, color: "from-emerald-500 to-teal-500" },
     { label: t("stats.totalUsers"), value: totalUsers, icon: Users, color: "from-brand-purple to-brand-blue" },
     { label: t("stats.suspicious"), value: suspiciousUsers, icon: AlertTriangle, color: "from-destructive to-orange-500" },
     { label: t("stats.totalBalance"), value: `${totalBalance.toFixed(0)} PT`, icon: DollarSign, color: "from-brand-gold to-yellow-500" },
@@ -68,7 +78,7 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="glass-card p-4 relative overflow-hidden group hover:scale-[1.02] transition-transform">
             <div className={`absolute inset-0 bg-gradient-to-br ${kpi.color} opacity-5 group-hover:opacity-10 transition-opacity`} />

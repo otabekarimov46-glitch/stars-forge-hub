@@ -38,7 +38,7 @@ export default function ContentPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", hold_days: "5", min_seconds_away: "2" };
+  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", min_seconds_away: "2", recheck_value: "1", recheck_unit: "h" as "m" | "h" };
   const emptyVideoForm = { title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
 
   const [contentDialogOpen, setContentDialogOpen] = useState(false);
@@ -135,6 +135,8 @@ export default function ContentPage() {
   const openEditTask = (ta: any) => {
     setEditingTaskId(ta.id);
     setContentKind(ta.type);
+    const rm: number | null = ta.recheck_minutes ?? null;
+    const useHours = rm != null && rm > 0 && rm % 60 === 0;
     setTaskForm({
       type: ta.type,
       title: ta.title || "",
@@ -143,8 +145,9 @@ export default function ContentPage() {
       reward_pt: String(ta.reward_pt ?? "10"),
       post_url: ta.post_url || "",
       max_completions: String(ta.max_completions ?? "0"),
-      hold_days: String(ta.hold_days ?? "5"),
       min_seconds_away: String(ta.min_seconds_away ?? "2"),
+      recheck_value: rm == null ? "0" : useHours ? String(rm / 60) : String(rm),
+      recheck_unit: useHours ? "h" : "m",
     });
     setContentDialogOpen(true);
   };
@@ -155,7 +158,10 @@ export default function ContentPage() {
     if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
     if (!taskForm.title.trim()) { toast.error("Введите название задания"); return; }
     try {
-      const payload = {
+      const recheck_minutes = contentKind === "subscribe"
+        ? Math.max(0, Math.floor(Number(taskForm.recheck_value) || 0)) * (taskForm.recheck_unit === "h" ? 60 : 1)
+        : null;
+      const payload: any = {
         type: contentKind,
         title: taskForm.title.trim(),
         channel_username: taskForm.channel_username || null,
@@ -163,8 +169,8 @@ export default function ContentPage() {
         reward_pt: Number(taskForm.reward_pt),
         post_url: taskForm.post_url || null,
         max_completions: Number(taskForm.max_completions) || 0,
-        hold_days: Number(taskForm.hold_days) || 5,
         min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
+        recheck_minutes,
       };
       if (editingTaskId) {
         await adminApi("update_task", { task_id: editingTaskId, ...payload, channel_id: payload.channel_id });
@@ -739,11 +745,36 @@ export default function ContentPage() {
                               <Input className="rounded-xl" type="number" value={taskForm.max_completions} onChange={e => setTaskForm((f: any) => ({ ...f, max_completions: e.target.value }))} placeholder="0 = ∞" />
                             </div>
                           </div>
-                          <div>
-                            <Label>{t("content.holdDays")}</Label>
-                            <Input className="rounded-xl" type="number" min={1} max={10} value={taskForm.hold_days} onChange={e => setTaskForm((f: any) => ({ ...f, hold_days: e.target.value }))} />
-                            <p className="text-xs text-muted-foreground mt-1">{t("content.holdDaysHint")}</p>
-                          </div>
+                          {contentKind === "subscribe" && (
+                            <div>
+                              <Label>Проверка отписки</Label>
+                              <div className="flex gap-2 mt-1">
+                                <Input
+                                  className="rounded-xl flex-1"
+                                  type="number"
+                                  min={0}
+                                  value={taskForm.recheck_value}
+                                  onChange={e => setTaskForm((f: any) => ({ ...f, recheck_value: e.target.value }))}
+                                />
+                                <div className="flex rounded-xl overflow-hidden border">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTaskForm((f: any) => ({ ...f, recheck_unit: "m" }))}
+                                    className={"px-3 text-sm " + (taskForm.recheck_unit === "m" ? "bg-primary text-primary-foreground" : "bg-transparent")}
+                                  >мин</button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setTaskForm((f: any) => ({ ...f, recheck_unit: "h" }))}
+                                    className={"px-3 text-sm " + (taskForm.recheck_unit === "h" ? "bg-primary text-primary-foreground" : "bg-transparent")}
+                                  >ч</button>
+                                </div>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Через сколько бот проверит, что пользователь всё ещё подписан. <b>0 = не проверять.</b>
+                                Если отписался — PT списываются, задание возвращается с красной рамкой.
+                              </p>
+                            </div>
+                          )}
                           {showMinSeconds && (
                             <div>
                               <Label>Сколько секунд пользователь должен пробыть вне Mini App</Label>
@@ -833,7 +864,11 @@ export default function ContentPage() {
                             {ta.max_completions > 0 && (
                               <Badge variant="outline" className="rounded-lg text-xs">{ta.current_completions || 0}/{ta.max_completions}</Badge>
                             )}
-                            <Badge variant="outline" className="rounded-lg text-xs">{t("content.hold")}: {ta.hold_days || 5}d</Badge>
+                            {ta.type === "subscribe" && ta.recheck_minutes != null && ta.recheck_minutes > 0 && (
+                              <Badge variant="outline" className="rounded-lg text-xs">
+                                Проверка через {ta.recheck_minutes % 60 === 0 ? `${ta.recheck_minutes / 60}ч` : `${ta.recheck_minutes}м`}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <Switch checked={ta.is_active} onCheckedChange={(v) => toggleTask(ta.id, v)} />

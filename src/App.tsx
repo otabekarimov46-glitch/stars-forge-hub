@@ -13,7 +13,10 @@ import AlertsPage from "@/pages/admin/AlertsPage";
 import SettingsPage from "@/pages/admin/SettingsPage";
 import MiniApp from "@/pages/MiniApp";
 import { MiniAppI18nProvider } from "@/lib/miniapp-i18n";
+import { TonConnectUIProvider } from "@tonconnect/ui-react";
 import NotFound from "./pages/NotFound.tsx";
+
+const TON_MANIFEST_URL = "https://starment.lovable.app/tonconnect-manifest.json";
 
 const queryClient = new QueryClient();
 
@@ -27,7 +30,11 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/admin/statistics" replace />} />
-              <Route path="/app" element={<MiniAppI18nProvider><MiniApp /></MiniAppI18nProvider>} />
+              <Route path="/app" element={
+                <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
+                  <MiniAppI18nProvider><MiniApp /></MiniAppI18nProvider>
+                </TonConnectUIProvider>
+              } />
               <Route path="/admin/*" element={
                 <AdminLayout>
                   <Routes>

@@ -252,8 +252,10 @@ Deno.serve(async (req) => {
           reaction_emoji: null,
           is_active: true,
           max_completions: params.max_completions || 0,
-          hold_days: params.hold_days || 5,
           min_seconds_away: params.min_seconds_away ?? 2,
+          recheck_minutes: params.type === "subscribe"
+            ? (Number.isFinite(Number(params.recheck_minutes)) ? Math.max(0, Math.floor(Number(params.recheck_minutes))) : null)
+            : null,
         }).select();
         data = res.data;
         error = res.error;
@@ -261,7 +263,7 @@ Deno.serve(async (req) => {
       }
       case "update_task": {
         const patch: Record<string, any> = {};
-        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "hold_days", "type", "min_seconds_away"].forEach((k) => {
+        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "type", "min_seconds_away", "recheck_minutes"].forEach((k) => {
           if (params[k] !== undefined) patch[k] = params[k];
         });
         if (params.channel_id !== undefined) patch.channel_id = params.channel_id ? Number(params.channel_id) : null;
@@ -365,8 +367,15 @@ Deno.serve(async (req) => {
         if (!(reward_pt > 0)) { error = { message: "Некорректная награда" }; break; }
         const max_uses = params.max_uses ? Number(params.max_uses) : null;
         const expires_at = params.expires_at || null;
-        if (max_uses == null && !expires_at) {
-          error = { message: "Укажите лимит активаций или срок действия (можно оба)" };
+        // If neither limit is set — treat as infinite (1 activation per account is enforced on redeem).
+        // Check for duplicates (case-insensitive) across all promo codes, active or not.
+        const { data: existing } = await supabase
+          .from("promo_codes")
+          .select("id, code, is_active")
+          .ilike("code", code)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          error = { message: `Промокод «${existing[0].code}» уже существует${existing[0].is_active ? "" : " (неактивный)"} — используйте другой код или перезапустите существующий` };
           break;
         }
         const res = await supabase.from("promo_codes").insert({
@@ -505,12 +514,14 @@ Deno.serve(async (req) => {
       // ===== STATISTICS =====
       case "get_stats": {
         const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
-        const [users, withdrawals, videoViewsCount, alerts, activeCompletions] = await Promise.all([
+        const onlineCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const [users, withdrawals, videoViewsCount, alerts, activeCompletions, online] = await Promise.all([
           supabase.from("users").select("id, telegram_id, username, balance_pt, is_banned, is_suspicious, created_at, referrer_id, referral_earnings_pt"),
           supabase.from("withdrawals").select("id, status, amount_pt, amount_stars, created_at"),
           supabase.from("video_views").select("id", { count: "exact", head: true }).eq("rewarded", true),
           supabase.from("admin_alerts").select("*").eq("is_read", false).order("created_at", { ascending: false }).limit(20),
           supabase.from("task_completions").select("user_id").gte("completed_at", fiveDaysAgo),
+          supabase.from("users").select("id", { count: "exact", head: true }).gte("last_seen_at", onlineCutoff),
         ]);
         const activeUserIds = Array.from(new Set((activeCompletions.data || []).map((c: any) => c.user_id)));
         data = {
@@ -519,7 +530,15 @@ Deno.serve(async (req) => {
           rewardedVideoViews: videoViewsCount.count || 0,
           alerts: alerts.data,
           activeUserIds,
+          onlineNow: online.count || 0,
         };
+        break;
+      }
+      case "get_online_now": {
+        const onlineCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const res = await supabase.from("users").select("id", { count: "exact", head: true }).gte("last_seen_at", onlineCutoff);
+        data = { count: res.count || 0 };
+        error = res.error;
         break;
       }
 

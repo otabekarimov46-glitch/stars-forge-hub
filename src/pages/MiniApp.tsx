@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Drawer as Vaul } from "vaul";
 import { Progress } from "@/components/ui/progress";
-import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp, Settings as SettingsIcon, LifeBuoy, Check } from "lucide-react";
+import { Play, CheckCircle, Loader2, AlertTriangle, Gift, ExternalLink, ShieldAlert, Wallet, Clock, XCircle, Send, Newspaper, Camera, ChevronRight, X, ListChecks, User as UserIcon, Star, Copy, Trophy, History, Film, ArrowUp, ChevronDown, ChevronUp, Settings as SettingsIcon, LifeBuoy, Check, Link2, LogOut } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 import { useMiniAppI18n, MINIAPP_LANGS } from "@/lib/miniapp-i18n";
+import { useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -104,7 +105,10 @@ export default function MiniApp() {
   const [activeSheet, setActiveSheet] = useState<null | "subscribe" | "view_post" | "view_story">(null);
   const [tab, setTab] = useState<"tasks" | "wallet" | "profile">("tasks");
   const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const [usdtRate, setUsdtRate] = useState<number>(0.02);
   const [botUsername, setBotUsername] = useState<string>("");
+  const tonAddress = useTonAddress();
+  const [tonUI] = useTonConnectUI();
   const [refSheetOpen, setRefSheetOpen] = useState(false);
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
   const [promoInput, setPromoInput] = useState("");
@@ -185,15 +189,33 @@ export default function MiniApp() {
     return () => clearInterval(id);
   }, []);
 
-  // Load config (exchange rate, bot username)
+  // Load config (exchange rate, USDT rate, bot username)
   useEffect(() => {
     miniAppApi("get_config")
       .then((c) => {
         if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate);
+        if (c && typeof c.usdt_rate === "number") setUsdtRate(c.usdt_rate);
         if (c && typeof c.bot_username === "string") setBotUsername(c.bot_username);
       })
       .catch(() => {});
   }, []);
+
+  // Presence heartbeat — powers "online now" metric in admin
+  useEffect(() => {
+    if (!telegramId) return;
+    const ping = () => { miniAppApi("presence_ping", { telegram_id: telegramId }).catch(() => {}); };
+    ping();
+    const id = setInterval(ping, 45_000);
+    const onVis = () => { if (document.visibilityState === "visible") ping(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [telegramId]);
+
+  // Persist TON wallet whenever it connects/disconnects
+  useEffect(() => {
+    if (!telegramId) return;
+    miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: tonAddress || null }).catch(() => {});
+  }, [telegramId, tonAddress]);
 
   const openRefSheet = useCallback(() => {
     setRefSheetOpen(true);
@@ -1031,6 +1053,32 @@ export default function MiniApp() {
               <div className="absolute inset-0 pointer-events-none opacity-20"
                    style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
               <div className="relative">
+                {/* Connect Wallet — above the balance label */}
+                <div className="flex justify-center mb-3">
+                  {tonAddress ? (
+                    <button
+                      onClick={() => tonUI?.disconnect().catch(() => {})}
+                      className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
+                      title={tonAddress}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span className="tabular-nums">
+                        {tonAddress.slice(0, 4)}…{tonAddress.slice(-4)}
+                      </span>
+                      <LogOut className="w-3 h-3 opacity-70" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => tonUI?.openModal().catch(() => {})}
+                      className="press inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px] font-semibold text-white
+                                 bg-gradient-to-r from-sky-500 to-blue-600 shadow-md shadow-blue-900/30 border border-white/10"
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      Подключить кошелёк
+                    </button>
+                  )}
+                </div>
+
                 <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
                   <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
@@ -1038,32 +1086,25 @@ export default function MiniApp() {
                   </span>
                   <span className="text-white/70 font-medium">PT</span>
                 </div>
-                <div className="mt-3 inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
-                  <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-                  <span className="text-[13px] tabular-nums">
-                    ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
+                <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
+                    <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+                    <span className="text-[13px] tabular-nums">
+                      ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
+                    </span>
+                    <span className="text-[11px] text-white/60">Stars</span>
                   </span>
-                  <span className="text-[11px] text-white/60">Stars</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-emerald-500/10 border border-emerald-400/25">
+                    <span className="text-[10px] font-bold text-emerald-300">$</span>
+                    <span className="text-[13px] tabular-nums text-emerald-200">
+                      ≈ {user ? formatBalance(user.balance_pt * usdtRate, 2) : "…"}
+                    </span>
+                    <span className="text-[11px] text-emerald-300/70">USDT</span>
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
-              <div className="text-[13px] font-semibold text-white/85 mb-2">{t("exchange_rate")}</div>
-              <div className="flex items-center justify-between text-[13px]">
-                <span className="text-white/70">1 PT</span>
-                <span className="tabular-nums font-semibold">≈ {exchangeRate.toFixed(2)} ⭐</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[12px] text-white/50">
-                <span>10 PT</span>
-                <span className="tabular-nums">≈ {(exchangeRate * 10).toFixed(2)} ⭐</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[12px] text-white/50">
-                <span>100 PT</span>
-                <span className="tabular-nums">≈ {(exchangeRate * 100).toFixed(2)} ⭐</span>
-              </div>
-            </div>
 
             <button
               disabled
