@@ -854,15 +854,19 @@ Deno.serve(async (req) => {
           .from("logs_activity")
           .select("id, action, created_at, metadata")
           .eq("user_id", user.id)
-          .in("action", ["task_reward", "video_reward"])
+          .in("action", ["task_reward", "video_reward", "promo_reward", "balance_reset", "referral_reward"])
           .order("created_at", { ascending: false })
-          .limit(50);
+          .limit(80);
         const items = (rows || []).map((r: any) => {
           const meta = r.metadata || {};
           let kind = "task";
           let sub = "task";
           let label = "Задание";
+          let amount = Number(meta.reward_pt || 0);
           if (r.action === "video_reward") { kind = "video"; sub = "video"; label = "Видеореклама"; }
+          else if (r.action === "promo_reward") { kind = "promo"; sub = "promo"; label = "Промокод"; amount = Number(meta.reward_pt || 0); }
+          else if (r.action === "referral_reward") { kind = "referral"; sub = "referral"; label = "Реферальный бонус"; amount = Number(meta.bonus || 0); }
+          else if (r.action === "balance_reset") { kind = "reset"; sub = "reset"; label = "Обнуление баланса"; amount = Number(meta.amount || 0); }
           else if (meta.type === "subscribe") { sub = "subscribe"; label = "Подписка на канал"; }
           else if (meta.type === "view_post") { sub = "view_post"; label = "Просмотр поста"; }
           else if (meta.type === "view_story") { sub = "view_story"; label = "Просмотр истории"; }
@@ -872,10 +876,11 @@ Deno.serve(async (req) => {
             kind,
             sub,
             label,
-            reward_pt: Number(meta.reward_pt || 0),
+            reward_pt: amount,
+            reason: meta.reason || null,
             at: r.created_at,
           };
-        }).filter((x: any) => x.reward_pt > 0);
+        }).filter((x: any) => x.reward_pt !== 0);
         return jsonResponse({ data: { items } });
       }
 
