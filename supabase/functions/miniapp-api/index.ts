@@ -421,14 +421,14 @@ Deno.serve(async (req) => {
         const { data: rows } = await supabase
           .from("settings")
           .select("key,value")
-          .in("key", ["exchange_rate", "bot_username", "usdt_rate"]);
+          .in("key", ["exchange_rate", "bot_username", "usdt_rate", "min_withdraw_usdt", "min_withdraw_stars", "support_bot_url"]);
         const map: Record<string, string> = {};
         (rows || []).forEach((r: any) => (map[r.key] = r.value));
         const exchange_rate = Number(map.exchange_rate ?? "1") || 1;
         const usdt_rate = Number(map.usdt_rate ?? "0.02") || 0;
         let bot_username = (map.bot_username || "").replace(/^@/, "");
         if (!bot_username) {
-          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
           if (botToken) {
             try {
               const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
@@ -446,8 +446,142 @@ Deno.serve(async (req) => {
             exchange_rate,
             usdt_rate,
             bot_username,
+            min_withdraw_usdt: Number(map.min_withdraw_usdt ?? "1") || 1,
+            min_withdraw_stars: Number(map.min_withdraw_stars ?? "50") || 50,
+            support_bot_url: map.support_bot_url || "https://t.me/starmenthelp_bot",
           },
         });
+      }
+
+      case "get_pending_withdrawal": {
+        const { telegram_id } = params;
+        if (!telegram_id) return jsonResponse({ data: null });
+        const { data: u } = await supabase.from("users").select("id").eq("telegram_id", telegram_id).maybeSingle();
+        if (!u) return jsonResponse({ data: null });
+        const { data: w } = await supabase
+          .from("withdrawals")
+          .select("id, amount_usdt, amount_pt, status, created_at, method")
+          .eq("user_id", u.id).eq("status", "pending")
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        return jsonResponse({ data: w || null });
+      }
+
+      case "create_withdrawal_usdt": {
+        const { telegram_id, amount_usdt } = params;
+        if (!telegram_id) return jsonResponse({ error: "telegram_id required" }, 400);
+        const amt = Number(amount_usdt);
+        if (!Number.isFinite(amt) || amt <= 0) return jsonResponse({ error: "invalid amount" }, 400);
+
+        const { data: user } = await supabase.from("users")
+          .select("id, telegram_id, username, balance_pt, balance_frozen, is_banned, is_suspicious, ton_wallet_address")
+          .eq("telegram_id", telegram_id).maybeSingle();
+        if (!user) return jsonResponse({ error: "user_not_found" }, 404);
+        if (user.is_banned) return jsonResponse({ error: "banned" }, 403);
+        if (user.balance_frozen) return jsonResponse({ error: "frozen" }, 403);
+        if (!user.ton_wallet_address) return jsonResponse({ error: "no_wallet" }, 400);
+
+        // Duplicate pending?
+        const { data: pend } = await supabase.from("withdrawals")
+          .select("id").eq("user_id", user.id).eq("status", "pending").maybeSingle();
+        if (pend) return jsonResponse({ error: "already_pending" }, 409);
+
+        // Load settings
+        const { data: sRows } = await supabase.from("settings").select("key,value")
+          .in("key", ["usdt_rate", "min_withdraw_usdt", "withdraw_channel_id", "usdt_jetton_address", "exchange_rate", "support_bot_url"]);
+        const s: Record<string, string> = {};
+        (sRows || []).forEach((r: any) => (s[r.key] = r.value));
+        const usdtRate = Number(s.usdt_rate ?? "0.02") || 0.02;
+        const minUsdt = Number(s.min_withdraw_usdt ?? "1") || 1;
+        const exchangeRate = Number(s.exchange_rate ?? "1") || 1;
+        const jetton = s.usdt_jetton_address || "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
+        const channelId = s.withdraw_channel_id || "";
+        const supportUrl = s.support_bot_url || "https://t.me/starmenthelp_bot";
+
+        if (amt < minUsdt) return jsonResponse({ error: "below_min", min: minUsdt });
+
+        const amountPt = Math.round((amt / usdtRate) * 100) / 100;
+        const currentBalance = Number(user.balance_pt);
+        if (amountPt > currentBalance + 0.001) return jsonResponse({ error: "insufficient" }, 400);
+
+        // Math consistency: sum(delta) from balance_math_log ~ current balance
+        const { data: mlog } = await supabase.from("balance_math_log")
+          .select("delta").eq("user_id", user.id);
+        const sum = (mlog || []).reduce((a: number, r: any) => a + Number(r.delta), 0);
+        if (Math.abs(sum - currentBalance) > 0.5) {
+          await supabase.from("admin_alerts").insert({
+            type: "fraud", user_id: user.id,
+            message: `⚠️ Расхождение баланса при выводе @${user.username || user.telegram_id}: math_log=${sum.toFixed(2)}, balance=${currentBalance.toFixed(2)}. Заявка заблокирована.`,
+          });
+          return jsonResponse({ error: "math_mismatch", support: supportUrl });
+        }
+
+        // IP
+        const { data: ips } = await supabase.from("user_ips")
+          .select("ip_address").eq("user_id", user.id)
+          .order("last_seen_at", { ascending: false }).limit(1);
+        const userIp = ips?.[0]?.ip_address || ip;
+
+        // Deduct balance (trigger logs math automatically)
+        const newBalance = Math.round((currentBalance - amountPt) * 100) / 100;
+        const upd = await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+        if (upd.error) return jsonResponse({ error: upd.error.message }, 500);
+
+        const amountStars = Math.floor(amountPt / exchangeRate);
+        const { data: wIns, error: wErr } = await supabase.from("withdrawals").insert({
+          user_id: user.id,
+          amount_pt: amountPt,
+          amount_stars: amountStars,
+          amount_usdt: amt,
+          wallet_address: user.ton_wallet_address,
+          method: "usdt",
+          ip_address: userIp,
+          status: "pending",
+        }).select("id, request_number").single();
+        if (wErr) {
+          // refund
+          await supabase.from("users").update({ balance_pt: currentBalance }).eq("id", user.id);
+          return jsonResponse({ error: wErr.message }, 500);
+        }
+
+        // Alerts count for report
+        const { count: alertsCount } = await supabase
+          .from("admin_alerts").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+
+        // Send channel message
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
+        if (botToken && channelId) {
+          const nanotons = Math.round(amt * 1_000_000); // USDT jetton has 6 decimals
+          const tonkeeperUrl = `https://app.tonkeeper.com/transfer/${user.ton_wallet_address}?jetton=${jetton}&amount=${nanotons}&text=Starment%20withdrawal%20%23${wIns.request_number}`;
+          const report =
+            `📤 *Запрос №${wIns.request_number}*\n` +
+            `👤 @${user.username || user.telegram_id} \`${user.telegram_id}\`\n` +
+            `⚠️ Алертов: *${alertsCount || 0}*${user.is_suspicious ? " · 🚨 подозрительный" : ""}\n` +
+            `💵 Сумма: *${amt.toFixed(2)} USDT* (${amountPt} PT)\n` +
+            `🕒 ${new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}\n` +
+            `📬 Кошелёк:\n\`${user.ton_wallet_address}\``;
+
+          try {
+            const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: Number(channelId),
+                text: report,
+                parse_mode: "Markdown",
+                reply_markup: { inline_keyboard: [
+                  [{ text: "💳 Оплатить в Tonkeeper", url: tonkeeperUrl }],
+                  [{ text: "✅ Готово", callback_data: `wd_pay_${wIns.id}` },
+                   { text: "❌ Отменить", callback_data: `wd_cancel_${wIns.id}` }],
+                ]},
+              }),
+            });
+            const tgJson = await tgRes.json();
+            if (tgJson?.ok && tgJson.result?.message_id) {
+              await supabase.from("withdrawals").update({ channel_message_id: tgJson.result.message_id }).eq("id", wIns.id);
+            }
+          } catch (e) { console.log("channel send fail", String(e)); }
+        }
+
+        return jsonResponse({ data: { ok: true, id: wIns.id, amount_usdt: amt, amount_pt: amountPt, new_balance: newBalance } });
       }
 
       case "presence_ping": {
