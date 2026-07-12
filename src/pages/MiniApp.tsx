@@ -1060,7 +1060,7 @@ export default function MiniApp() {
                 <div className="flex justify-center mb-3">
                   {tonAddress ? (
                     <button
-                      onClick={() => tonUI?.disconnect().catch(() => {})}
+                      onClick={() => setWalletMenuOpen(true)}
                       className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
                       title={tonAddress}
                     >
@@ -1068,7 +1068,7 @@ export default function MiniApp() {
                       <span className="tabular-nums">
                         {tonAddress.slice(0, 4)}…{tonAddress.slice(-4)}
                       </span>
-                      <LogOut className="w-3 h-3 opacity-70" />
+                      <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                   ) : (
                     <button
