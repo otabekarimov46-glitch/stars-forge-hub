@@ -1084,11 +1084,16 @@ export default function MiniApp() {
 
                 <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
+                  <span className={`text-5xl font-bold tabular-nums ${pendingWithdrawal ? "text-white/40" : "bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent"}`}>
                     {user ? formatBalance(user.balance_pt) : "…"}
                   </span>
-                  <span className="text-white/70 font-medium">PT</span>
+                  <span className={`font-medium ${pendingWithdrawal ? "text-white/30" : "text-white/70"}`}>PT</span>
                 </div>
+                {pendingWithdrawal && (
+                  <div className="mt-2 text-center text-[11.5px] text-amber-300/90">
+                    ⏳ Заявка на вывод {Number(pendingWithdrawal.amount_usdt).toFixed(2)} USDT на рассмотрении
+                  </div>
+                )}
                 <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
                     <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
@@ -1110,12 +1115,15 @@ export default function MiniApp() {
 
 
             <button
-              onClick={() => setWithdrawOpen(true)}
-              className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
+              onClick={() => !pendingWithdrawal && setWithdrawOpen(true)}
+              disabled={!!pendingWithdrawal}
+              className={`press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                shadow-lg flex items-center justify-center gap-2
+                ${pendingWithdrawal
+                  ? "bg-white/10 text-white/50 shadow-none cursor-not-allowed"
+                  : "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-purple-900/30"}`}
             >
-              <ArrowUp className="w-4 h-4" /> {t("withdraw")}
+              <ArrowUp className="w-4 h-4" /> {pendingWithdrawal ? "На рассмотрении" : t("withdraw")}
             </button>
 
             {/* ===== Transactions ===== */}
