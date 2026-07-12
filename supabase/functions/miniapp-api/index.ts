@@ -951,6 +951,13 @@ Deno.serve(async (req) => {
           is_active: nowExhausted ? false : promo.is_active,
         }).eq("id", promo.id);
 
+        // Log to activity history (miniapp transactions)
+        await supabase.from("logs_activity").insert({
+          user_id: user.id,
+          action: "promo_reward",
+          metadata: { promo_id: promo.id, code: promo.code, reward_pt: Number(promo.reward_pt) },
+        });
+
         return jsonResponse({ data: { ok: true, amount: Number(promo.reward_pt), new_balance: newBalance } });
       }
 
