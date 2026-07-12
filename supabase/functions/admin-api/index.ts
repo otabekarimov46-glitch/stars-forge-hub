@@ -99,16 +99,40 @@ Deno.serve(async (req) => {
         break;
       }
       case "reset_balance": {
+        const reason = String(params.reason || "").trim().slice(0, 500) || null;
+        const { data: u0 } = await supabase
+          .from("users")
+          .select("id, telegram_id, username, balance_pt")
+          .eq("id", params.user_id)
+          .single();
+        const oldBalance = Number(u0?.balance_pt || 0);
         const res = await supabase
           .from("users")
           .update({ balance_pt: 0 })
           .eq("id", params.user_id);
-        data = res.data;
         error = res.error;
+        data = { old_balance: oldBalance };
+        const humanTag = u0?.username ? `@${u0.username}` : `ID ${u0?.telegram_id ?? params.user_id}`;
+        const alertMsg = `Баланс пользователя ${humanTag} сброшен админом (было ${oldBalance.toFixed(2)} PT → 0)${reason ? `. Причина: ${reason}` : " — без указания причины"}`;
         await supabase.from("admin_alerts").insert({
           type: "balance_reset",
           user_id: params.user_id,
-          message: `Баланс пользователя сброшен админом`,
+          message: alertMsg,
+        });
+        // Extended activity log — appears in "Все логи" and export
+        await supabase.from("activity_logs").insert({
+          user_id: params.user_id,
+          user_username: u0?.username || null,
+          user_telegram_id: u0?.telegram_id || null,
+          action_type: "balance_reset",
+          reward_pt: -oldBalance,
+          task_title: reason ? `Причина: ${reason}` : "Без указания причины",
+        });
+        // Miniapp transaction history entry
+        await supabase.from("logs_activity").insert({
+          user_id: params.user_id,
+          action: "balance_reset",
+          metadata: { amount: -oldBalance, old_balance: oldBalance, reason },
         });
         break;
       }
