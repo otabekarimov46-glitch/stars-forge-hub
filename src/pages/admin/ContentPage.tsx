@@ -647,10 +647,31 @@ export default function ContentPage() {
                         </div>
                       </div>
                       <Switch checked={v.is_active} onCheckedChange={(val) => toggleVideo(v.id, val)} />
-                      <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteVideo(v.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 opacity-70 hover:opacity-100">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                          <div className="px-2 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                            <Hash className="h-3 w-3" />
+                            <span className="font-mono">{v.public_id || "—"}</span>
+                            {v.public_id && (
+                              <button
+                                className="ml-auto p-1 rounded hover:bg-muted"
+                                onClick={() => { navigator.clipboard.writeText(v.public_id); toast.success("ID скопирован"); }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => deleteVideo(v.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" /> Удалить
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   ))}
                   {advTasks.map(ta => {
                     const config = TASK_TYPE_CONFIG[ta.type] || TASK_TYPE_CONFIG.subscribe;
