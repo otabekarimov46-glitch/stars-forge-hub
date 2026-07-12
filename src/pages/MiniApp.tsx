@@ -112,6 +112,14 @@ export default function MiniApp() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [usdtSheetOpen, setUsdtSheetOpen] = useState(false);
+  const [usdtAmount, setUsdtAmount] = useState("");
+  const [usdtSubmitting, setUsdtSubmitting] = useState(false);
+  const [usdtError, setUsdtError] = useState<string | null>(null);
+  const [usdtSuccess, setUsdtSuccess] = useState<{ amount: number } | null>(null);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState<{ id: string; amount_usdt: number; amount_pt: number } | null>(null);
+  const [minWithdrawUsdt, setMinWithdrawUsdt] = useState(1);
+  const [supportBotUrl, setSupportBotUrl] = useState("https://t.me/starmenthelp_bot");
   const [refSheetOpen, setRefSheetOpen] = useState(false);
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
   const [promoInput, setPromoInput] = useState("");
@@ -199,9 +207,21 @@ export default function MiniApp() {
         if (c && typeof c.exchange_rate === "number") setExchangeRate(c.exchange_rate);
         if (c && typeof c.usdt_rate === "number") setUsdtRate(c.usdt_rate);
         if (c && typeof c.bot_username === "string") setBotUsername(c.bot_username);
+        if (c && typeof c.min_withdraw_usdt === "number") setMinWithdrawUsdt(c.min_withdraw_usdt);
+        if (c && typeof c.support_bot_url === "string") setSupportBotUrl(c.support_bot_url);
       })
       .catch(() => {});
   }, []);
+
+  // Poll pending withdrawal
+  useEffect(() => {
+    if (!telegramId) return;
+    const load = () => miniAppApi("get_pending_withdrawal", { telegram_id: telegramId })
+      .then((d) => setPendingWithdrawal(d || null)).catch(() => {});
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [telegramId, user?.balance_pt]);
 
   // Presence heartbeat — powers "online now" metric in admin
   useEffect(() => {
@@ -1084,11 +1104,16 @@ export default function MiniApp() {
 
                 <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-5xl font-bold tabular-nums bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
+                  <span className={`text-5xl font-bold tabular-nums ${pendingWithdrawal ? "text-white/40" : "bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent"}`}>
                     {user ? formatBalance(user.balance_pt) : "…"}
                   </span>
-                  <span className="text-white/70 font-medium">PT</span>
+                  <span className={`font-medium ${pendingWithdrawal ? "text-white/30" : "text-white/70"}`}>PT</span>
                 </div>
+                {pendingWithdrawal && (
+                  <div className="mt-2 text-center text-[11.5px] text-amber-300/90">
+                    ⏳ Заявка на вывод {Number(pendingWithdrawal.amount_usdt).toFixed(2)} USDT на рассмотрении
+                  </div>
+                )}
                 <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
                     <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
@@ -1110,12 +1135,15 @@ export default function MiniApp() {
 
 
             <button
-              onClick={() => setWithdrawOpen(true)}
-              className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
+              onClick={() => !pendingWithdrawal && setWithdrawOpen(true)}
+              disabled={!!pendingWithdrawal}
+              className={`press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
+                shadow-lg flex items-center justify-center gap-2
+                ${pendingWithdrawal
+                  ? "bg-white/10 text-white/50 shadow-none cursor-not-allowed"
+                  : "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-purple-900/30"}`}
             >
-              <ArrowUp className="w-4 h-4" /> {t("withdraw")}
+              <ArrowUp className="w-4 h-4" /> {pendingWithdrawal ? "На рассмотрении" : t("withdraw")}
             </button>
 
             {/* ===== Transactions ===== */}
@@ -2053,19 +2081,152 @@ export default function MiniApp() {
 
               {/* USDT */}
               <button
-                className="press w-full text-left rounded-2xl p-3 flex items-center gap-3
-                           bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/20 hover:border-emerald-300/40 transition-colors"
+                disabled={!tonAddress}
+                onClick={() => {
+                  if (!tonAddress) return;
+                  setWithdrawOpen(false);
+                  setUsdtError(null);
+                  setUsdtAmount("");
+                  setUsdtSuccess(null);
+                  setUsdtSheetOpen(true);
+                }}
+                className={`press w-full text-left rounded-2xl p-3 flex items-center gap-3 transition-colors
+                  ${tonAddress
+                    ? "bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/20 hover:border-emerald-300/40"
+                    : "bg-white/[0.03] border border-white/10 opacity-60 cursor-not-allowed"}`}
               >
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-md shadow-emerald-900/30">
+                <span className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md
+                  ${tonAddress ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-900/30" : "bg-white/10"}`}>
                   <Wallet className="w-5 h-5 text-white" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-semibold text-white">USDT</span>
-                  <span className="block text-[11.5px] text-white/55">Выведите в крипто кошелёк</span>
+                  <span className="block text-[11.5px] text-white/55">
+                    {tonAddress ? "Выведите в крипто кошелёк" : "Подключите крипто кошелёк"}
+                  </span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-white/30" />
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* USDT withdraw bottom sheet */}
+      {usdtSheetOpen && (
+        <div
+          className="fixed inset-0 z-[85] flex items-end sm:items-center justify-center p-0 sm:p-4 fade-in"
+          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
+          onClick={() => { if (!usdtSubmitting) setUsdtSheetOpen(false); }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 screen-enter relative"
+            style={{ background: "rgba(20,20,28,0.98)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 -30px 80px rgba(0,0,0,0.5)" }}
+          >
+            <button
+              onClick={() => { if (!usdtSubmitting) setUsdtSheetOpen(false); }}
+              className="press-soft absolute top-3 right-3 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70"
+              aria-label="close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {usdtSuccess ? (
+              <div className="text-center py-4">
+                <div className="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg">
+                  <ArrowUp className="w-7 h-7 text-white rotate-45" />
+                </div>
+                <h3 className="text-[18px] font-semibold text-white">Успешно!</h3>
+                <p className="text-[13px] text-white/60 mt-1 px-4">
+                  Ваш запрос на вывод <b className="text-white">{usdtSuccess.amount.toFixed(2)} USDT</b> отправлен на рассмотрение. Обычно занимает до 24 часов.
+                </p>
+                <button
+                  onClick={() => setUsdtSheetOpen(false)}
+                  className="press-cta mt-5 h-11 w-full rounded-2xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-900/30"
+                >
+                  Отлично
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="text-center mb-4">
+                  <div className="mx-auto mb-2 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-900/30">
+                    <Wallet className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-[17px] font-semibold text-white">Вывод USDT</h3>
+                  <p className="text-[12px] text-white/55 mt-0.5">Минимум {minWithdrawUsdt} USDT</p>
+                </div>
+
+                <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-3 mb-3">
+                  <div className="text-[11px] text-white/50 uppercase tracking-wide mb-1">Кошелёк</div>
+                  <div className="text-[12px] font-mono text-white/80 break-all">{tonAddress}</div>
+                </div>
+
+                <label className="block text-[12px] text-white/60 mb-1.5">Сумма (USDT)</label>
+                <div className="relative">
+                  <input
+                    inputMode="decimal"
+                    value={usdtAmount}
+                    onChange={(e) => { setUsdtAmount(e.target.value.replace(",", ".")); setUsdtError(null); }}
+                    placeholder="0.00"
+                    className="w-full h-12 rounded-2xl bg-white/[0.05] border border-white/10 px-4 pr-16 text-[16px] text-white outline-none focus:border-emerald-400/40"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-300 text-[13px] font-semibold">USDT</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[11.5px] text-white/50">
+                  <span>≈ {(Number(usdtAmount || 0) / (usdtRate || 0.02)).toFixed(2)} PT</span>
+                  <button
+                    className="press-soft text-emerald-300"
+                    onClick={() => setUsdtAmount(((user?.balance_pt || 0) * usdtRate).toFixed(2))}
+                  >
+                    Max: {((user?.balance_pt || 0) * usdtRate).toFixed(2)} USDT
+                  </button>
+                </div>
+
+                {usdtError && (
+                  <div className="mt-3 rounded-xl bg-red-500/10 border border-red-400/30 px-3 py-2 text-[12.5px] text-red-200">
+                    {usdtError}{" "}
+                    {usdtError.toLowerCase().includes("ошибк") && (
+                      <a href={supportBotUrl} target="_blank" rel="noopener" className="underline text-red-100">
+                        Написать в поддержку
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  disabled={usdtSubmitting || !usdtAmount || Number(usdtAmount) <= 0}
+                  onClick={async () => {
+                    const amt = Number(usdtAmount);
+                    if (!Number.isFinite(amt) || amt <= 0) { setUsdtError("Введите сумму"); return; }
+                    if (amt < minWithdrawUsdt) { setUsdtError(`Минимум ${minWithdrawUsdt} USDT`); return; }
+                    setUsdtSubmitting(true); setUsdtError(null);
+                    try {
+                      const r = await miniAppApi("create_withdrawal_usdt", { telegram_id: telegramId, amount_usdt: amt });
+                      setUsdtSuccess({ amount: amt });
+                      setUser((u) => u ? { ...u, balance_pt: r.new_balance } : u);
+                      setPendingWithdrawal({ id: r.id, amount_usdt: r.amount_usdt, amount_pt: r.amount_pt });
+                    } catch (e: any) {
+                      const msg = String(e?.message || "").toLowerCase();
+                      if (msg.includes("no_wallet")) setUsdtError("Подключите крипто кошелёк");
+                      else if (msg.includes("already_pending")) setUsdtError("У вас уже есть заявка на рассмотрении");
+                      else if (msg.includes("below_min")) setUsdtError(`Минимум ${minWithdrawUsdt} USDT`);
+                      else if (msg.includes("insufficient")) setUsdtError("Недостаточно средств");
+                      else if (msg.includes("math_mismatch")) setUsdtError("Ошибка проверки, повторите позже или напишите в поддержку");
+                      else if (msg.includes("frozen")) setUsdtError("Баланс заморожен");
+                      else if (msg.includes("banned")) setUsdtError("Аккаунт заблокирован");
+                      else setUsdtError("Ошибка, повторите позже или напишите в поддержку");
+                    } finally {
+                      setUsdtSubmitting(false);
+                    }
+                  }}
+                  className="press-cta mt-4 h-12 w-full rounded-2xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {usdtSubmitting ? "Отправляем…" : "Вывести"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

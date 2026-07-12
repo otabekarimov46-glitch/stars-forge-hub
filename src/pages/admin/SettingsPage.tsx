@@ -129,6 +129,52 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      {/* Withdrawal minimums */}
+      <div className="glass-card p-6 space-y-4">
+        <h3 className="font-semibold">Минимальный вывод</h3>
+
+        <div>
+          <Label>Минимум USDT</Label>
+          <div className="flex gap-2 mt-2">
+            <Input
+              className="rounded-xl"
+              type="number"
+              step="0.01"
+              value={settings.min_withdraw_usdt ?? "1"}
+              onChange={(e) => setSettings((s) => ({ ...s, min_withdraw_usdt: e.target.value }))}
+            />
+            <Button
+              className="rounded-xl gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+              onClick={() => saveSetting("min_withdraw_usdt")}
+            >
+              <Save className="h-4 w-4" /> {t("common.save")}
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label>Минимум Stars</Label>
+          <div className="flex gap-2 mt-2">
+            <Input
+              className="rounded-xl"
+              type="number"
+              step="1"
+              value={settings.min_withdraw_stars ?? "50"}
+              onChange={(e) => setSettings((s) => ({ ...s, min_withdraw_stars: e.target.value }))}
+            />
+            <Button
+              className="rounded-xl gap-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white"
+              onClick={() => saveSetting("min_withdraw_stars")}
+            >
+              <Save className="h-4 w-4" /> {t("common.save")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Пользователи не смогут отправить заявку на вывод ниже этих сумм.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

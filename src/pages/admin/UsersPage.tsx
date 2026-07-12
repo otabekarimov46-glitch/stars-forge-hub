@@ -617,9 +617,48 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                   <InfoRow label="Кол-во капч" value={String(user.captcha_count || 0)} />
                   <InfoRow label="Нарушений" value={String(user.violation_count || 0)} />
                   {user.ton_wallet_address && (
-                    <InfoRow label="TON кошелёк" value={<span className="font-mono text-xs break-all">{user.ton_wallet_address}</span>} />
+                    <InfoRow label="TON кошелёк" value={
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-xs break-all">{user.ton_wallet_address}</span>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(user.ton_wallet_address); }}
+                          className="press-soft text-[11px] px-2 py-0.5 rounded bg-primary/10 text-primary shrink-0"
+                        >Копировать</button>
+                      </span>
+                    } />
                   )}
                 </div>
+
+                {/* Balance math log */}
+                {room.math_log && room.math_log.length > 0 && (
+                  <details className="glass-card p-3">
+                    <summary className="cursor-pointer text-sm flex items-center gap-2 press-soft">
+                      <ListChecks className="h-4 w-4 text-muted-foreground" />
+                      Мат. лог баланса: <span className="font-mono">{room.math_sum?.toFixed(2)} PT</span>
+                      <span className="text-xs text-muted-foreground">({room.math_log.length} операций)</span>
+                    </summary>
+                    <div className="mt-3 space-y-1 text-[12px] font-mono max-h-64 overflow-y-auto">
+                      {(() => {
+                        const parts = room.math_log.map((r: any) => (Number(r.delta) >= 0 ? `+${Number(r.delta)}` : `${Number(r.delta)}`));
+                        const preview = parts.slice(-30);
+                        const truncated = parts.length > 30;
+                        return (
+                          <>
+                            <div className="break-all leading-relaxed">
+                              {truncated && <span className="text-muted-foreground">0…</span>}
+                              {!truncated && <span className="text-muted-foreground">0</span>}
+                              {preview.join("")}
+                              <span className="text-primary font-semibold"> = {room.math_sum?.toFixed(2)}</span>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground pt-1">
+                              Показаны последние 30 операций. Всего: {parts.length}.
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </details>
+                )}
 
                 {/* Farms shared IPs */}
                 {room.ips.length > 0 && (

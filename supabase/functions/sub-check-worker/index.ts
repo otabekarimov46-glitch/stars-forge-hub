@@ -22,9 +22,7 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2")
-    || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW")
-    || Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
 
   if (!botToken) {
     return new Response(JSON.stringify({ error: "bot token not configured" }), {
