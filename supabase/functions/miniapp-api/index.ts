@@ -800,9 +800,7 @@ Deno.serve(async (req) => {
         let failReason = "";
 
         if (task.type === "subscribe") {
-          // IMPORTANT: use the NEW bot token first — the active bot (channel admin)
-          // is the one configured in TELEGRAM_BOT_TOKEN_NEW (same as telegram-bot fn).
-          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2") || Deno.env.get("TELEGRAM_BOT_TOKEN_NEW") || Deno.env.get("TELEGRAM_BOT_TOKEN");
+          const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
           if (!botToken) return jsonResponse({ data: { completed: false, subscribed: false, reason: "bot_not_configured" } });
 
           const candidates: (string | number)[] = [];
