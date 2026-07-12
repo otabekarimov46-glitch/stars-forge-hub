@@ -109,6 +109,9 @@ export default function MiniApp() {
   const [botUsername, setBotUsername] = useState<string>("");
   const tonAddress = useTonAddress();
   const [tonUI] = useTonConnectUI();
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [walletCopied, setWalletCopied] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [refSheetOpen, setRefSheetOpen] = useState(false);
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
   const [promoInput, setPromoInput] = useState("");
