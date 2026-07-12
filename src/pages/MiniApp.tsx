@@ -1154,6 +1154,9 @@ export default function MiniApp() {
                         : sub === "subscribe" ? Send
                         : sub === "view_post" ? Newspaper
                         : sub === "view_story" ? Camera
+                        : sub === "promo" ? Gift
+                        : sub === "referral" ? UserIcon
+                        : sub === "reset" ? XCircle
                         : ListChecks;
                       const label = sub === "video" ? t("video_ads")
                         : sub === "subscribe" ? t("subscribe_to_channel")
@@ -1165,19 +1168,25 @@ export default function MiniApp() {
                       const loc = localeMap[lang] || "ru-RU";
                       const dd = d.toLocaleDateString(loc, { day: "2-digit", month: "short" });
                       const tt = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
+                      const amount = Number(tx.reward_pt || 0);
+                      const negative = amount < 0;
+                      const amountStr = `${negative ? "" : "+"}${amount.toFixed(2).replace(/\.?0+$/, "")}`;
                       return (
                         <li key={tx.id}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
-                            <Icon className="w-3.5 h-3.5 text-white/70" />
+                          <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${negative ? "bg-orange-500/15 border-orange-500/30" : "bg-white/[0.05] border-white/10"}`}>
+                            <Icon className={`w-3.5 h-3.5 ${negative ? "text-orange-300" : "text-white/70"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-[13px] text-white/90 truncate">{label}</div>
+                            {tx.reason && (
+                              <div className="text-[10.5px] text-white/50 truncate mt-0.5">{tx.reason}</div>
+                            )}
                             <div className="text-[10.5px] text-white/40 tabular-nums mt-0.5">{dd} · {tt}</div>
                           </div>
-                          <div className="text-[13px] font-medium tabular-nums text-white shrink-0">
-                            +{tx.reward_pt} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
+                          <div className={`text-[13px] font-medium tabular-nums shrink-0 ${negative ? "text-orange-300" : "text-white"}`}>
+                            {amountStr} <span className="text-white/40 text-[10.5px] font-normal">PT</span>
                           </div>
                         </li>
                       );
