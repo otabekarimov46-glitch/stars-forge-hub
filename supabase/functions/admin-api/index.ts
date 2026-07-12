@@ -544,6 +544,88 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ===== ACTIVITY LOGS (extended) =====
+      case "get_activity_logs": {
+        // Auto-cleanup based on settings
+        const [retDaysRow, retCountRow] = await Promise.all([
+          supabase.from("settings").select("value").eq("key", "activity_log_retention_days").maybeSingle(),
+          supabase.from("settings").select("value").eq("key", "activity_log_retention_count").maybeSingle(),
+        ]);
+        const retDays = Math.max(0, Math.floor(Number(retDaysRow.data?.value ?? 0)));
+        const retCount = Math.max(0, Math.floor(Number(retCountRow.data?.value ?? 0)));
+        if (retDays > 0) {
+          const cutoff = new Date(Date.now() - retDays * 24 * 60 * 60 * 1000).toISOString();
+          await supabase.from("activity_logs").delete().lt("created_at", cutoff);
+        }
+        if (retCount > 0) {
+          const { data: kept } = await supabase
+            .from("activity_logs")
+            .select("created_at")
+            .order("created_at", { ascending: false })
+            .range(retCount - 1, retCount - 1);
+          const threshold = kept?.[0]?.created_at;
+          if (threshold) await supabase.from("activity_logs").delete().lt("created_at", threshold);
+        }
+
+        const rawTypes = Array.isArray(params.types) ? params.types : [];
+        const types = rawTypes.filter((t: any) => typeof t === "string");
+        const q = String(params.q || "").trim();
+        const userQ = String(params.user || "").trim().replace(/^@/, "");
+
+        let query = supabase
+          .from("activity_logs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(Math.min(1000, Math.max(1, Number(params.limit) || 300)));
+
+        if (types.length > 0) query = query.in("action_type", types);
+        if (q) query = query.or(`task_public_id.ilike.%${q}%,advertiser_public_id.ilike.%${q}%`);
+        if (userQ) {
+          if (/^\d+$/.test(userQ)) query = query.eq("user_telegram_id", Number(userQ));
+          else query = query.ilike("user_username", `%${userQ}%`);
+        }
+
+        const res = await query;
+        if (res.error) { error = res.error; break; }
+        const rows = res.data || [];
+
+        // Existence check for deletion badges
+        const taskIds = Array.from(new Set(rows.map((r: any) => r.task_id).filter(Boolean)));
+        const videoIds = Array.from(new Set(rows.map((r: any) => r.video_ad_id).filter(Boolean)));
+        const advIds = Array.from(new Set(rows.map((r: any) => r.advertiser_id).filter(Boolean)));
+
+        const [tRes, vRes, aRes] = await Promise.all([
+          taskIds.length ? supabase.from("tasks").select("id").in("id", taskIds) : Promise.resolve({ data: [] as any[] }),
+          videoIds.length ? supabase.from("video_ads").select("id").in("id", videoIds) : Promise.resolve({ data: [] as any[] }),
+          advIds.length ? supabase.from("advertisers").select("id").in("id", advIds) : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const aliveTasks = new Set((tRes.data || []).map((x: any) => x.id));
+        const aliveVideos = new Set((vRes.data || []).map((x: any) => x.id));
+        const aliveAdvs = new Set((aRes.data || []).map((x: any) => x.id));
+
+        const logs = rows.map((r: any) => ({
+          ...r,
+          task_deleted: !!r.task_id && !aliveTasks.has(r.task_id),
+          video_deleted: !!r.video_ad_id && !aliveVideos.has(r.video_ad_id),
+          advertiser_deleted: !!r.advertiser_id && !aliveAdvs.has(r.advertiser_id),
+        }));
+
+        data = { logs, retention_days: retDays, retention_count: retCount };
+        break;
+      }
+      case "set_activity_retention": {
+        const days = Math.max(0, Math.floor(Number(params.days) || 0));
+        const count = Math.max(0, Math.floor(Number(params.count) || 0));
+        const now = new Date().toISOString();
+        const [r1, r2] = await Promise.all([
+          supabase.from("settings").upsert({ key: "activity_log_retention_days", value: String(days), updated_at: now }),
+          supabase.from("settings").upsert({ key: "activity_log_retention_count", value: String(count), updated_at: now }),
+        ]);
+        data = { days, count };
+        error = r1.error || r2.error;
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown action" }),
