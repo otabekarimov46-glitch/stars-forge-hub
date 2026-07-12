@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare, Ticket, Search, Clock, Trash2,
-  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight,
+  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import * as XLSX from "xlsx";
 
 const TYPE_ICONS: Record<string, any> = {
   suspicious_ip: ShieldAlert,
@@ -129,6 +130,39 @@ export default function AlertsPage() {
     } finally {
       setALoading(false);
     }
+  };
+
+  const exportActivityLogsXlsx = () => {
+    if (!aLogs.length) return;
+    const rows = aLogs.map((l) => {
+      const meta = ACTION_META[(l.action_type as ActionType)] || ACTION_META.subscribe;
+      const isVideo = l.action_type === "video";
+      const started = l.started_at ? parseISO(l.started_at) : null;
+      const finished = l.finished_at ? parseISO(l.finished_at) : (l.created_at ? parseISO(l.created_at) : null);
+      const reward = Number(l.reward_pt || 0);
+      return {
+        "Пользователь": l.user_username ? `@${l.user_username}` : (l.user_telegram_id ? `ID ${l.user_telegram_id}` : "—"),
+        "Telegram ID": l.user_telegram_id ?? "",
+        "Тип задания": meta.label,
+        "ID задания": l.task_public_id ?? "",
+        "Название задания": l.task_title ?? "",
+        "Задание удалено": (l.task_deleted || l.video_deleted) ? "да" : "нет",
+        "Рекламодатель": l.advertiser_deleted ? "Удалён" : (l.advertiser_name ?? "—"),
+        "ID рекламодателя": l.advertiser_public_id ?? "",
+        "Начало просмотра": isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
+        "Окончание просмотра": isVideo && finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
+        "Время": finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
+        "Награда (PT)": reward,
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 30 }, { wch: 14 },
+      { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Все логи");
+    XLSX.writeFile(wb, `activity-logs-${format(new Date(), "yyyy-MM-dd-HHmm")}.xlsx`);
   };
 
   useEffect(() => { fetchAlerts(); }, []);
@@ -325,12 +359,28 @@ export default function AlertsPage() {
                 </Select>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Trash2 className="h-3 w-3" />
-              {aRetDays === "0" && aRetCount === "0"
-                ? "Логи не удаляются автоматически"
-                : `Автоочистка: ${aRetDays !== "0" ? `старше ${aRetDays} дн.` : ""}${aRetDays !== "0" && aRetCount !== "0" ? " · " : ""}${aRetCount !== "0" ? `оставить последние ${aRetCount}` : ""}`}
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
+              <p className="text-sm text-foreground/80 flex items-center gap-2">
+                <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                {aRetDays === "0" && aRetCount === "0"
+                  ? <span><span className="font-semibold">Автоочистка отключена.</span> Логи хранятся без ограничений — ничего не удаляется автоматически.</span>
+                  : <span><span className="font-semibold">Автоочистка включена:</span>{" "}
+                      {aRetDays !== "0" && <>удаляются записи старше <span className="font-semibold text-foreground">{aRetDays} дн.</span></>}
+                      {aRetDays !== "0" && aRetCount !== "0" && " · "}
+                      {aRetCount !== "0" && <>хранятся только последние <span className="font-semibold text-foreground">{aRetCount}</span> записей</>}
+                    </span>}
+              </p>
+              <Button
+                onClick={exportActivityLogsXlsx}
+                disabled={aLogs.length === 0}
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-2 shrink-0"
+              >
+                <Download className="h-4 w-4" />
+                Экспорт в CSV ({aLogs.length})
+              </Button>
+            </div>
           </div>
 
           {aLoading ? (
