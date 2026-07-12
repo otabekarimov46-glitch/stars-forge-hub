@@ -672,6 +672,7 @@ export default function ContentPage() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                    </div>
                   ))}
                   {advTasks.map(ta => {
                     const config = TASK_TYPE_CONFIG[ta.type] || TASK_TYPE_CONFIG.subscribe;
