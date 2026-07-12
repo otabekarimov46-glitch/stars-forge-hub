@@ -269,6 +269,32 @@ Deno.serve(async (req) => {
           metadata: { video_ad_id: view.video_ad_id, reward_pt: video.reward_pt },
         });
 
+        // Snapshot: extended activity log (survives entity deletion)
+        try {
+          const [{ data: v2 }, { data: u2 }] = await Promise.all([
+            supabase.from("video_ads")
+              .select("id, title, public_id, advertiser_id, advertisers(name, public_id)")
+              .eq("id", view.video_ad_id).maybeSingle(),
+            supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
+          ]);
+          const adv: any = (v2 as any)?.advertisers || null;
+          await supabase.from("activity_logs").insert({
+            user_id: user.id,
+            user_username: u2?.username || null,
+            user_telegram_id: u2?.telegram_id ?? null,
+            action_type: "video",
+            video_ad_id: view.video_ad_id,
+            task_title: v2?.title || null,
+            task_public_id: v2?.public_id || null,
+            advertiser_id: v2?.advertiser_id || null,
+            advertiser_name: adv?.name || null,
+            advertiser_public_id: adv?.public_id || null,
+            reward_pt: Number(video.reward_pt),
+            started_at: view.started_at,
+            finished_at: new Date().toISOString(),
+          });
+        } catch (_) { /* logging must never break reward flow */ }
+
         // NOTE: We intentionally do NOT send a Telegram message on every reward.
         // Per-view chat spam caused the bot to be rate-limited / temporarily restricted
         // by Telegram's anti-spam system. Balance is shown live in the Mini App header.
@@ -687,6 +713,31 @@ Deno.serve(async (req) => {
           ip_address: ip,
           metadata: { task_id, reward_pt: task.reward_pt, type: task.type },
         });
+
+        // Snapshot: extended activity log (survives entity deletion)
+        try {
+          const [{ data: t2 }, { data: u2 }] = await Promise.all([
+            supabase.from("tasks")
+              .select("id, title, type, public_id, advertiser_id, advertisers(name, public_id)")
+              .eq("id", task_id).maybeSingle(),
+            supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
+          ]);
+          const adv: any = (t2 as any)?.advertisers || null;
+          await supabase.from("activity_logs").insert({
+            user_id: user.id,
+            user_username: u2?.username || null,
+            user_telegram_id: u2?.telegram_id ?? null,
+            action_type: (t2?.type as string) || (task.type as string),
+            task_id,
+            task_title: t2?.title || null,
+            task_public_id: t2?.public_id || null,
+            advertiser_id: t2?.advertiser_id || null,
+            advertiser_name: adv?.name || null,
+            advertiser_public_id: adv?.public_id || null,
+            reward_pt: Number(task.reward_pt),
+            finished_at: new Date().toISOString(),
+          });
+        } catch (_) { /* logging must never break reward flow */ }
 
         // Schedule a background re-check for subscribe tasks, unless disabled.
         // Also clears any prior "unsub" row for this task (user re-subscribed).

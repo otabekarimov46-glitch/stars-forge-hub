@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,8 @@ export default function ContentPage() {
   const [editingAdvId, setEditingAdvId] = useState<string | null>(null);
 
   const [searchId, setSearchId] = useState("");
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchData = async () => {
     try {
@@ -70,6 +73,56 @@ export default function ContentPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  // Handle ?focus=<public_id> from external navigation (e.g. Alerts logs).
+  useEffect(() => {
+    const f = searchParams.get("focus");
+    if (f && f !== focusId) {
+      setSearchId(f);
+      setFocusId(f);
+    }
+  }, [searchParams]);
+
+  // When focusId is set: locate entity, open its advertiser if needed, scroll + pulse.
+  useEffect(() => {
+    if (!focusId || loading) return;
+    const fid = focusId;
+    // Find target
+    const adv = advertisers.find((x) => x.public_id === fid);
+    const vid = videos.find((x) => x.public_id === fid);
+    const ta = tasks.find((x) => x.public_id === fid);
+    const targetAdvId = adv?.id || vid?.advertiser_id || ta?.advertiser_id || null;
+
+    if (adv) {
+      if (activeAdvertiser) setActiveAdvertiser(null);
+    } else if (targetAdvId && (!activeAdvertiser || activeAdvertiser.id !== targetAdvId)) {
+      const a = advertisers.find((x) => x.id === targetAdvId);
+      if (a) setActiveAdvertiser(a);
+      return; // wait for re-render, effect re-runs since deps change
+    }
+
+    // Give layout a tick, then scroll+pulse the [data-anchor] element.
+    const h = window.setTimeout(() => {
+      const el = document.querySelector(`[data-anchor="${CSS.escape(fid)}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.remove("anchor-pulse");
+        // force reflow to restart animation if same element re-focused
+        void el.offsetWidth;
+        el.classList.add("anchor-pulse");
+        window.setTimeout(() => el.classList.remove("anchor-pulse"), 2400);
+      }
+      // Clear ?focus so re-navigating to same id re-triggers
+      if (searchParams.get("focus")) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("focus");
+        setSearchParams(next, { replace: true });
+      }
+      setFocusId(null);
+    }, 150);
+    return () => window.clearTimeout(h);
+  }, [focusId, loading, advertisers, videos, tasks, activeAdvertiser]);
+
 
   const openCreateContent = () => {
     setEditingTaskId(null);
@@ -406,7 +459,7 @@ export default function ContentPage() {
                       size="sm"
                       variant="outline"
                       className="rounded-xl gap-1.5 shrink-0"
-                      onClick={() => { setActiveAdvertiser(r.advertiser); setSearchId(""); }}
+                      onClick={() => { setActiveAdvertiser(r.advertiser); setSearchId(""); if (r.kind !== "advertiser" && r.item.public_id) setFocusId(r.item.public_id); else if (r.kind === "advertiser" && r.item.public_id) setFocusId(r.item.public_id); }}
                     >
                       Открыть <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
@@ -454,6 +507,7 @@ export default function ContentPage() {
                   {advertisers.map((a) => (
                     <div
                       key={a.id}
+                      data-anchor={a.public_id || undefined}
                       className="group relative rounded-2xl p-4 bg-muted/30 hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-border"
                       onClick={() => setActiveAdvertiser(a)}
                     >
@@ -715,7 +769,7 @@ export default function ContentPage() {
               ) : (
                 <div className="space-y-3">
                   {advVideos.map(v => (
-                    <div key={`v-${v.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div key={`v-${v.id}`} data-anchor={v.public_id || undefined} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
                         <Film className="h-5 w-5" />
                       </div>
@@ -765,7 +819,7 @@ export default function ContentPage() {
                     const config = TASK_TYPE_CONFIG[ta.type] || TASK_TYPE_CONFIG.subscribe;
                     const Icon = config.icon;
                     return (
-                      <div key={`t-${ta.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div key={`t-${ta.id}`} data-anchor={ta.public_id || undefined} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
                         <div className={`p-2.5 rounded-xl ${config.color}`}>
                           <Icon className="h-5 w-5" />
                         </div>

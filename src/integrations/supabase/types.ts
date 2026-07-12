@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action_type: string
+          advertiser_id: string | null
+          advertiser_name: string | null
+          advertiser_public_id: string | null
+          created_at: string
+          finished_at: string | null
+          id: string
+          reward_pt: number
+          started_at: string | null
+          task_id: string | null
+          task_public_id: string | null
+          task_title: string | null
+          user_id: string | null
+          user_telegram_id: number | null
+          user_username: string | null
+          video_ad_id: string | null
+        }
+        Insert: {
+          action_type: string
+          advertiser_id?: string | null
+          advertiser_name?: string | null
+          advertiser_public_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          reward_pt?: number
+          started_at?: string | null
+          task_id?: string | null
+          task_public_id?: string | null
+          task_title?: string | null
+          user_id?: string | null
+          user_telegram_id?: number | null
+          user_username?: string | null
+          video_ad_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          advertiser_id?: string | null
+          advertiser_name?: string | null
+          advertiser_public_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          reward_pt?: number
+          started_at?: string | null
+          task_id?: string | null
+          task_public_id?: string | null
+          task_title?: string | null
+          user_id?: string | null
+          user_telegram_id?: number | null
+          user_username?: string | null
+          video_ad_id?: string | null
+        }
+        Relationships: []
+      }
       admin_alerts: {
         Row: {
           created_at: string
