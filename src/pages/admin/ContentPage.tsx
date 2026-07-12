@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical, Newspaper, Camera } from "lucide-react";
+import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical, Newspaper, Camera, Hash, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -397,6 +397,19 @@ export default function ContentPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="px-2 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                              <Hash className="h-3 w-3" />
+                              <span className="font-mono">{a.public_id || "—"}</span>
+                              {a.public_id && (
+                                <button
+                                  className="ml-auto p-1 rounded hover:bg-muted"
+                                  onClick={() => { navigator.clipboard.writeText(a.public_id); toast.success("ID скопирован"); }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
                               <Pencil className="h-4 w-4 mr-2" /> Переименовать
                             </DropdownMenuItem>
@@ -634,9 +647,31 @@ export default function ContentPage() {
                         </div>
                       </div>
                       <Switch checked={v.is_active} onCheckedChange={(val) => toggleVideo(v.id, val)} />
-                      <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteVideo(v.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 opacity-70 hover:opacity-100">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                          <div className="px-2 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                            <Hash className="h-3 w-3" />
+                            <span className="font-mono">{v.public_id || "—"}</span>
+                            {v.public_id && (
+                              <button
+                                className="ml-auto p-1 rounded hover:bg-muted"
+                                onClick={() => { navigator.clipboard.writeText(v.public_id); toast.success("ID скопирован"); }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => deleteVideo(v.id)}>
+                            <Trash2 className="h-4 w-4 mr-2" /> Удалить
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                   {advTasks.map(ta => {
@@ -661,12 +696,34 @@ export default function ContentPage() {
                           </div>
                         </div>
                         <Switch checked={ta.is_active} onCheckedChange={(v) => toggleTask(ta.id, v)} />
-                        <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => openEditTask(ta)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => deleteTask(ta.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 opacity-70 hover:opacity-100">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <div className="px-2 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                              <Hash className="h-3 w-3" />
+                              <span className="font-mono">{ta.public_id || "—"}</span>
+                              {ta.public_id && (
+                                <button
+                                  className="ml-auto p-1 rounded hover:bg-muted"
+                                  onClick={() => { navigator.clipboard.writeText(ta.public_id); toast.success("ID скопирован"); }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => openEditTask(ta)}>
+                              <Pencil className="h-4 w-4 mr-2" /> Редактировать
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => deleteTask(ta.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Удалить
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     );
                   })}

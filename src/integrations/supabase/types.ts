@@ -54,18 +54,21 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          public_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          public_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          public_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -302,8 +305,10 @@ export type Database = {
           max_completions: number | null
           min_seconds_away: number
           post_url: string | null
+          public_id: string | null
           reaction_emoji: string | null
           reward_pt: number
+          sub_recheck_minutes: number
           title: string | null
           type: Database["public"]["Enums"]["task_type"]
         }
@@ -320,8 +325,10 @@ export type Database = {
           max_completions?: number | null
           min_seconds_away?: number
           post_url?: string | null
+          public_id?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
+          sub_recheck_minutes?: number
           title?: string | null
           type: Database["public"]["Enums"]["task_type"]
         }
@@ -338,8 +345,10 @@ export type Database = {
           max_completions?: number | null
           min_seconds_away?: number
           post_url?: string | null
+          public_id?: string | null
           reaction_emoji?: string | null
           reward_pt?: number
+          sub_recheck_minutes?: number
           title?: string | null
           type?: Database["public"]["Enums"]["task_type"]
         }
@@ -459,6 +468,7 @@ export type Database = {
           is_active: boolean
           is_extra: boolean
           media_type: string
+          public_id: string | null
           reward_pt: number
           title: string
           video_url: string
@@ -474,6 +484,7 @@ export type Database = {
           is_active?: boolean
           is_extra?: boolean
           media_type?: string
+          public_id?: string | null
           reward_pt?: number
           title: string
           video_url: string
@@ -489,6 +500,7 @@ export type Database = {
           is_active?: boolean
           is_extra?: boolean
           media_type?: string
+          public_id?: string | null
           reward_pt?: number
           title?: string
           video_url?: string
@@ -600,7 +612,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      gen_public_id9: { Args: never; Returns: string }
     }
     Enums: {
       task_type: "subscribe" | "video" | "view_post" | "reaction" | "view_story"
