@@ -320,7 +320,7 @@ export default function PromoCodesSection() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Можно выбрать одно из ограничений или сразу оба. Промокод отключится, когда сработает первое.
+                Можно выбрать одно из ограничений, оба или ни одного. Если ничего не выбрано — промокод бесконечный (но всё равно <b>1 активация на аккаунт</b>). Одинаковые коды создать нельзя.
               </p>
 
               <Button onClick={submit} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
