@@ -74,6 +74,56 @@ export default function ContentPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Handle ?focus=<public_id> from external navigation (e.g. Alerts logs).
+  useEffect(() => {
+    const f = searchParams.get("focus");
+    if (f && f !== focusId) {
+      setSearchId(f);
+      setFocusId(f);
+    }
+  }, [searchParams]);
+
+  // When focusId is set: locate entity, open its advertiser if needed, scroll + pulse.
+  useEffect(() => {
+    if (!focusId || loading) return;
+    const fid = focusId;
+    // Find target
+    const adv = advertisers.find((x) => x.public_id === fid);
+    const vid = videos.find((x) => x.public_id === fid);
+    const ta = tasks.find((x) => x.public_id === fid);
+    const targetAdvId = adv?.id || vid?.advertiser_id || ta?.advertiser_id || null;
+
+    if (adv) {
+      if (activeAdvertiser) setActiveAdvertiser(null);
+    } else if (targetAdvId && (!activeAdvertiser || activeAdvertiser.id !== targetAdvId)) {
+      const a = advertisers.find((x) => x.id === targetAdvId);
+      if (a) setActiveAdvertiser(a);
+      return; // wait for re-render, effect re-runs since deps change
+    }
+
+    // Give layout a tick, then scroll+pulse the [data-anchor] element.
+    const h = window.setTimeout(() => {
+      const el = document.querySelector(`[data-anchor="${CSS.escape(fid)}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.remove("anchor-pulse");
+        // force reflow to restart animation if same element re-focused
+        void el.offsetWidth;
+        el.classList.add("anchor-pulse");
+        window.setTimeout(() => el.classList.remove("anchor-pulse"), 2400);
+      }
+      // Clear ?focus so re-navigating to same id re-triggers
+      if (searchParams.get("focus")) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("focus");
+        setSearchParams(next, { replace: true });
+      }
+      setFocusId(null);
+    }, 150);
+    return () => window.clearTimeout(h);
+  }, [focusId, loading, advertisers, videos, tasks, activeAdvertiser]);
+
+
   const openCreateContent = () => {
     setEditingTaskId(null);
     setContentKind("subscribe");
