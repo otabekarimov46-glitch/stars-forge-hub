@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare, Ticket, Search, Clock, Trash2,
-  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight,
+  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import * as XLSX from "xlsx";
 
 const TYPE_ICONS: Record<string, any> = {
   suspicious_ip: ShieldAlert,
