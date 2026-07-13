@@ -530,6 +530,15 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: wErr.message }, 500);
         }
 
+        // Log to mini app history
+        await supabase.from("logs_activity").insert({
+          user_id: user.id,
+          action: "withdrawal_request",
+          ip_address: userIp,
+          metadata: { amount_pt: amountPt, amount_usdt: amt, method: "usdt", request_number: wIns.request_number, wallet: user.ton_wallet_address },
+        });
+
+
         // Gather violation context for admin report
         const { count: alertsCount } = await supabase
           .from("admin_alerts").select("id", { count: "exact", head: true }).eq("user_id", user.id);
