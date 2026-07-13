@@ -487,6 +487,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
             <Tabs defaultValue="tx">
               <TabsList className="rounded-xl w-full flex-wrap h-auto">
                 <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> Транзакции ({room.activity.length})</TabsTrigger>
+                <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> Выводы ({(room.withdrawals || []).length})</TabsTrigger>
                 <TabsTrigger value="alerts" className="rounded-lg gap-1.5"><Bell className="h-3.5 w-3.5" /> Алерты ({room.alerts.length})</TabsTrigger>
                 <TabsTrigger value="promo" className="rounded-lg gap-1.5"><Ticket className="h-3.5 w-3.5" /> Промокоды ({room.promos.length})</TabsTrigger>
                 <TabsTrigger value="refs" className="rounded-lg gap-1.5"><UsersIcon className="h-3.5 w-3.5" /> Рефералы ({room.referrals_total})</TabsTrigger>
