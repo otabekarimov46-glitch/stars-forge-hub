@@ -1013,33 +1013,37 @@ Deno.serve(async (req) => {
           .from("logs_activity")
           .select("id, action, created_at, metadata")
           .eq("user_id", user.id)
-          .in("action", ["task_reward", "video_reward", "promo_reward", "balance_reset", "referral_reward"])
-          .order("created_at", { ascending: false })
-          .limit(80);
-        const items = (rows || []).map((r: any) => {
-          const meta = r.metadata || {};
-          let kind = "task";
-          let sub = "task";
-          let label = "Задание";
-          let amount = Number(meta.reward_pt || 0);
-          if (r.action === "video_reward") { kind = "video"; sub = "video"; label = "Видеореклама"; }
-          else if (r.action === "promo_reward") { kind = "promo"; sub = "promo"; label = "Промокод"; amount = Number(meta.reward_pt || 0); }
-          else if (r.action === "referral_reward") { kind = "referral"; sub = "referral"; label = "Реферальный бонус"; amount = Number(meta.bonus || 0); }
-          else if (r.action === "balance_reset") { kind = "reset"; sub = "reset"; label = "Обнуление баланса"; amount = Number(meta.amount || 0); }
-          else if (meta.type === "subscribe") { sub = "subscribe"; label = "Подписка на канал"; }
-          else if (meta.type === "view_post") { sub = "view_post"; label = "Просмотр поста"; }
-          else if (meta.type === "view_story") { sub = "view_story"; label = "Просмотр истории"; }
-          else if (meta.type === "reaction") { sub = "reaction"; label = "Реакция"; }
-          return {
-            id: r.id,
-            kind,
-            sub,
-            label,
-            reward_pt: amount,
-            reason: meta.reason || null,
-            at: r.created_at,
-          };
-        }).filter((x: any) => x.reward_pt !== 0);
+           .in("action", ["task_reward", "video_reward", "promo_reward", "balance_reset", "referral_reward", "withdrawal_request", "withdrawal_paid", "withdrawal_rejected"])
+           .order("created_at", { ascending: false })
+           .limit(80);
+         const items = (rows || []).map((r: any) => {
+           const meta = r.metadata || {};
+           let kind = "task";
+           let sub = "task";
+           let label = "Задание";
+           let amount = Number(meta.reward_pt || 0);
+           if (r.action === "video_reward") { kind = "video"; sub = "video"; label = "Видеореклама"; }
+           else if (r.action === "promo_reward") { kind = "promo"; sub = "promo"; label = "Промокод"; amount = Number(meta.reward_pt || 0); }
+           else if (r.action === "referral_reward") { kind = "referral"; sub = "referral"; label = "Реферальный бонус"; amount = Number(meta.bonus || 0); }
+           else if (r.action === "balance_reset") { kind = "reset"; sub = "reset"; label = "Обнуление баланса"; amount = Number(meta.amount || 0); }
+           else if (r.action === "withdrawal_request") { kind = "withdrawal"; sub = "withdrawal_request"; label = `Заявка на вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT`; amount = -Number(meta.amount_pt || 0); }
+           else if (r.action === "withdrawal_paid") { kind = "withdrawal"; sub = "withdrawal_paid"; label = `Вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT выполнен`; amount = 0; }
+           else if (r.action === "withdrawal_rejected") { kind = "withdrawal"; sub = "withdrawal_rejected"; label = `Вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT отменён`; amount = Number(meta.amount_pt || 0); }
+           else if (meta.type === "subscribe") { sub = "subscribe"; label = "Подписка на канал"; }
+           else if (meta.type === "view_post") { sub = "view_post"; label = "Просмотр поста"; }
+           else if (meta.type === "view_story") { sub = "view_story"; label = "Просмотр истории"; }
+           else if (meta.type === "reaction") { sub = "reaction"; label = "Реакция"; }
+           return {
+             id: r.id,
+             kind,
+             sub,
+             label,
+             reward_pt: amount,
+             reason: meta.reason || null,
+             at: r.created_at,
+           };
+         }).filter((x: any) => x.sub === "withdrawal_paid" || x.reward_pt !== 0);
+
         return jsonResponse({ data: { items } });
       }
 
