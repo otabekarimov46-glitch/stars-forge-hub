@@ -1137,7 +1137,11 @@ export default function MiniApp() {
 
 
             <button
-              onClick={() => !pendingWithdrawal && setWithdrawOpen(true)}
+              onClick={() => {
+                if (pendingWithdrawal) return;
+                if (user?.balance_frozen) { setFrozenOpen(true); return; }
+                setWithdrawOpen(true);
+              }}
               disabled={!!pendingWithdrawal}
               className={`press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                 shadow-lg flex items-center justify-center gap-2
