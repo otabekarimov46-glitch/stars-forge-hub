@@ -741,9 +741,6 @@ Deno.serve(async (req) => {
             .map(([ip, others]) => ({ ip, others }));
         }
 
-        // math log summary
-        const mathRaw = mathRes.data || [];
-        const mathSum = mathRaw.reduce((a: number, r: any) => a + Number(r.delta), 0);
         const pendingWithdrawal = (pendRes.data || []).find((w: any) => w.status === "pending") || null;
 
         data = {
@@ -763,8 +760,6 @@ Deno.serve(async (req) => {
           total_users: all.length,
           farm_ips: farmIps,
           ton_wallet_address: user.ton_wallet_address || null,
-          math_log: mathRaw,
-          math_sum: Math.round(mathSum * 100) / 100,
           withdrawals: pendRes.data || [],
           pending_withdrawal: pendingWithdrawal,
         };
