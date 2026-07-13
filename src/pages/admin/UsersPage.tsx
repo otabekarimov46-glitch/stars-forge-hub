@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Network, Skull,
   X, Trophy, Users as UsersIcon, Ticket, Bell, Wallet, Gift, Clock, ChevronDown, ChevronUp,
-  Film, Newspaper, Camera, Send, ListChecks, ArrowUpRight, Circle, ExternalLink, AlertTriangle,
+  Film, Newspaper, Camera, Send, ListChecks, ArrowUpRight, ArrowUp, Circle, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
