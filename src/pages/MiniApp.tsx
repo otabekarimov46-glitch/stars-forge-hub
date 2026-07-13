@@ -34,7 +34,6 @@ interface VideoAd {
 interface UserSnap {
   balance_pt: number;
   daily_bonus_at: string | null;
-  balance_frozen?: boolean;
 }
 
 async function miniAppApi(action: string, params: Record<string, any> = {}) {
@@ -113,7 +112,6 @@ export default function MiniApp() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [frozenOpen, setFrozenOpen] = useState(false);
   const [usdtSheetOpen, setUsdtSheetOpen] = useState(false);
   const [usdtAmount, setUsdtAmount] = useState("");
   const [usdtSubmitting, setUsdtSubmitting] = useState(false);
@@ -1137,11 +1135,7 @@ export default function MiniApp() {
 
 
             <button
-              onClick={() => {
-                if (pendingWithdrawal) return;
-                if (user?.balance_frozen) { setFrozenOpen(true); return; }
-                setWithdrawOpen(true);
-              }}
+              onClick={() => !pendingWithdrawal && setWithdrawOpen(true)}
               disabled={!!pendingWithdrawal}
               className={`press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
                 shadow-lg flex items-center justify-center gap-2
@@ -2022,52 +2016,6 @@ export default function MiniApp() {
                 Отмена
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Frozen balance popup */}
-      {frozenOpen && (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center p-4 fade-in"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
-          onClick={() => setFrozenOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-3xl p-6 screen-enter relative text-center"
-            style={{ background: "linear-gradient(180deg, rgba(40,20,20,0.98), rgba(20,10,15,0.98))", border: "1px solid rgba(255,90,90,0.25)", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
-          >
-            <button
-              onClick={() => setFrozenOpen(false)}
-              className="press-soft absolute top-3 right-3 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70"
-              aria-label="close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-red-500 via-rose-500 to-orange-500 shadow-lg shadow-red-900/40">
-              <ShieldAlert className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="text-[18px] font-semibold text-white">Баланс заморожен</h3>
-            <p className="text-[13px] text-white/70 mt-2 leading-relaxed">
-              Ваш баланс был заморожен из-за нарушений или подозрительной активности.
-              Если вы не согласны с этим — напишите в поддержку.
-            </p>
-            <a
-              href="https://t.me/starmenthelp_bot"
-              target="_blank"
-              rel="noreferrer"
-              className="press-cta mt-5 w-full h-11 rounded-2xl font-semibold text-[14px] text-white flex items-center justify-center gap-2
-                         bg-gradient-to-r from-red-500 via-rose-500 to-orange-500 shadow-lg shadow-red-900/30"
-            >
-              Написать в поддержку — @starmenthelp_bot
-            </a>
-            <button
-              onClick={() => setFrozenOpen(false)}
-              className="press-soft mt-2 w-full h-10 rounded-2xl text-[13px] text-white/70 bg-white/5 border border-white/10"
-            >
-              Закрыть
-            </button>
           </div>
         </div>
       )}
