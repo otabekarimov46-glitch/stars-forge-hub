@@ -530,6 +530,45 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                 })}
               </TabsContent>
 
+              {/* Withdrawals */}
+              <TabsContent value="withdrawals" className="mt-3 space-y-1.5">
+                {(room.withdrawals || []).length === 0 && <EmptyState text="Заявок на вывод не было" />}
+                {(room.withdrawals || []).map((w: any) => {
+                  const statusMeta = w.status === "paid"
+                    ? { label: "Оплачено", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
+                    : w.status === "rejected"
+                    ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }
+                    : { label: "В ожидании", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" };
+                  return (
+                    <div key={w.id} className="glass-card p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                            <ArrowUp className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {Number(w.amount_usdt || 0).toFixed(2)} USDT
+                              <span className="text-muted-foreground font-normal text-xs ml-1.5">({Number(w.amount_pt || 0)} PT)</span>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              №{w.request_number} · {format(parseISO(w.created_at), "dd.MM.yyyy HH:mm")}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={`rounded-md text-[10px] ${statusMeta.cls}`}>{statusMeta.label}</Badge>
+                      </div>
+                      {w.wallet_address && (
+                        <div className="text-[11px] font-mono text-muted-foreground break-all pl-11">{w.wallet_address}</div>
+                      )}
+                      {w.cancel_reason && !w.cancel_reason.startsWith("await:") && (
+                        <div className="text-[11px] text-destructive pl-11 mt-1">Причина: {w.cancel_reason}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
               {/* Alerts */}
               <TabsContent value="alerts" className="mt-3 space-y-1.5">
                 {room.alerts.length === 0 && <EmptyState text="Алертов по этому пользователю нет" />}
