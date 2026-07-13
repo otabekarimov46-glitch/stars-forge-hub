@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Network, Skull,
   X, Trophy, Users as UsersIcon, Ticket, Bell, Wallet, Gift, Clock, ChevronDown, ChevronUp,
-  Film, Newspaper, Camera, Send, ListChecks, ArrowUpRight, Circle, ExternalLink, AlertTriangle,
+  Film, Newspaper, Camera, Send, ListChecks, ArrowUpRight, ArrowUp, Circle, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -487,6 +487,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
             <Tabs defaultValue="tx">
               <TabsList className="rounded-xl w-full flex-wrap h-auto">
                 <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> Транзакции ({room.activity.length})</TabsTrigger>
+                <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> Выводы ({(room.withdrawals || []).length})</TabsTrigger>
                 <TabsTrigger value="alerts" className="rounded-lg gap-1.5"><Bell className="h-3.5 w-3.5" /> Алерты ({room.alerts.length})</TabsTrigger>
                 <TabsTrigger value="promo" className="rounded-lg gap-1.5"><Ticket className="h-3.5 w-3.5" /> Промокоды ({room.promos.length})</TabsTrigger>
                 <TabsTrigger value="refs" className="rounded-lg gap-1.5"><UsersIcon className="h-3.5 w-3.5" /> Рефералы ({room.referrals_total})</TabsTrigger>
@@ -524,6 +525,45 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                       <div className={`font-semibold whitespace-nowrap ${negative ? "text-orange-500" : "text-brand-gold"}`}>
                         {negative ? "" : "+"}{reward.toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
+              {/* Withdrawals */}
+              <TabsContent value="withdrawals" className="mt-3 space-y-1.5">
+                {(room.withdrawals || []).length === 0 && <EmptyState text="Заявок на вывод не было" />}
+                {(room.withdrawals || []).map((w: any) => {
+                  const statusMeta = w.status === "paid"
+                    ? { label: "Оплачено", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
+                    : w.status === "rejected"
+                    ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }
+                    : { label: "В ожидании", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" };
+                  return (
+                    <div key={w.id} className="glass-card p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                            <ArrowUp className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold tabular-nums">
+                              {Number(w.amount_usdt || 0).toFixed(2)} USDT
+                              <span className="text-muted-foreground font-normal text-xs ml-1.5">({Number(w.amount_pt || 0)} PT)</span>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              №{w.request_number} · {format(parseISO(w.created_at), "dd.MM.yyyy HH:mm")}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={`rounded-md text-[10px] ${statusMeta.cls}`}>{statusMeta.label}</Badge>
+                      </div>
+                      {w.wallet_address && (
+                        <div className="text-[11px] font-mono text-muted-foreground break-all pl-11">{w.wallet_address}</div>
+                      )}
+                      {w.cancel_reason && !w.cancel_reason.startsWith("await:") && (
+                        <div className="text-[11px] text-destructive pl-11 mt-1">Причина: {w.cancel_reason}</div>
+                      )}
                     </div>
                   );
                 })}

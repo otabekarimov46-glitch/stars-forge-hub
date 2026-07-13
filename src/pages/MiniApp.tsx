@@ -221,7 +221,7 @@ export default function MiniApp() {
     const load = () => miniAppApi("get_pending_withdrawal", { telegram_id: telegramId })
       .then((d) => setPendingWithdrawal(d || null)).catch(() => {});
     load();
-    const id = setInterval(load, 30_000);
+    const id = setInterval(load, 8_000);
     return () => clearInterval(id);
   }, [telegramId, user?.balance_pt]);
 
@@ -1191,6 +1191,7 @@ export default function MiniApp() {
                         : sub === "promo" ? Gift
                         : sub === "referral" ? UserIcon
                         : sub === "reset" ? XCircle
+                        : sub === "withdrawal_request" || sub === "withdrawal_paid" || sub === "withdrawal_rejected" ? ArrowUp
                         : ListChecks;
                       const label = sub === "video" ? t("video_ads")
                         : sub === "subscribe" ? t("subscribe_to_channel")
