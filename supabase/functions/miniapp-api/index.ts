@@ -473,7 +473,7 @@ Deno.serve(async (req) => {
         if (!Number.isFinite(amt) || amt <= 0) return jsonResponse({ error: "invalid amount" }, 400);
 
         const { data: user } = await supabase.from("users")
-          .select("id, telegram_id, username, balance_pt, balance_frozen, is_banned, is_suspicious, ton_wallet_address")
+          .select("id, telegram_id, username, balance_pt, balance_frozen, is_banned, is_suspicious, violation_count, ton_wallet_address, created_at")
           .eq("telegram_id", telegram_id).maybeSingle();
         if (!user) return jsonResponse({ error: "user_not_found" }, 404);
         if (user.is_banned) return jsonResponse({ error: "banned" }, 403);
@@ -495,7 +495,6 @@ Deno.serve(async (req) => {
         const exchangeRate = Number(s.exchange_rate ?? "1") || 1;
         const jetton = s.usdt_jetton_address || "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs";
         const channelId = s.withdraw_channel_id || "";
-        const supportUrl = s.support_bot_url || "https://t.me/starmenthelp_bot";
 
         if (amt < minUsdt) return jsonResponse({ error: "below_min", min: minUsdt });
 
@@ -503,25 +502,13 @@ Deno.serve(async (req) => {
         const currentBalance = Number(user.balance_pt);
         if (amountPt > currentBalance + 0.001) return jsonResponse({ error: "insufficient" }, 400);
 
-        // Math consistency: sum(delta) from balance_math_log ~ current balance
-        const { data: mlog } = await supabase.from("balance_math_log")
-          .select("delta").eq("user_id", user.id);
-        const sum = (mlog || []).reduce((a: number, r: any) => a + Number(r.delta), 0);
-        if (Math.abs(sum - currentBalance) > 0.5) {
-          await supabase.from("admin_alerts").insert({
-            type: "fraud", user_id: user.id,
-            message: `⚠️ Расхождение баланса при выводе @${user.username || user.telegram_id}: math_log=${sum.toFixed(2)}, balance=${currentBalance.toFixed(2)}. Заявка заблокирована.`,
-          });
-          return jsonResponse({ error: "math_mismatch", support: supportUrl });
-        }
-
         // IP
         const { data: ips } = await supabase.from("user_ips")
           .select("ip_address").eq("user_id", user.id)
           .order("last_seen_at", { ascending: false }).limit(1);
         const userIp = ips?.[0]?.ip_address || ip;
 
-        // Deduct balance (trigger logs math automatically)
+        // Deduct balance
         const newBalance = Math.round((currentBalance - amountPt) * 100) / 100;
         const upd = await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
         if (upd.error) return jsonResponse({ error: upd.error.message }, 500);
@@ -538,27 +525,56 @@ Deno.serve(async (req) => {
           status: "pending",
         }).select("id, request_number").single();
         if (wErr) {
-          // refund
           await supabase.from("users").update({ balance_pt: currentBalance }).eq("id", user.id);
           return jsonResponse({ error: wErr.message }, 500);
         }
 
-        // Alerts count for report
+        // Gather violation context for admin report
         const { count: alertsCount } = await supabase
           .from("admin_alerts").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+
+        // Farm / shared IPs (>=2 other users on same IPs)
+        let sharedIpCount = 0;
+        let farmUsers = 0;
+        const myIps = (await supabase.from("user_ips").select("ip_address").eq("user_id", user.id)).data || [];
+        const ipArr = myIps.map((r: any) => r.ip_address);
+        if (ipArr.length) {
+          const { data: shared } = await supabase.from("user_ips")
+            .select("ip_address, user_id").in("ip_address", ipArr as any).neq("user_id", user.id);
+          const others = new Set((shared || []).map((r: any) => r.user_id));
+          farmUsers = others.size;
+          const ipsWithOthers = new Set((shared || []).map((r: any) => r.ip_address));
+          sharedIpCount = ipsWithOthers.size;
+        }
+
+        const vCount = Number(user.violation_count || 0);
+        const hasViolations = vCount > 0 || user.is_suspicious || farmUsers > 0 || (alertsCount || 0) > 0;
+        const accAgeDays = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
 
         // Send channel message
         const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN_V2");
         if (botToken && channelId) {
-          const nanotons = Math.round(amt * 1_000_000); // USDT jetton has 6 decimals
+          const nanotons = Math.round(amt * 1_000_000);
           const tonkeeperUrl = `https://app.tonkeeper.com/transfer/${user.ton_wallet_address}?jetton=${jetton}&amount=${nanotons}&text=Starment%20withdrawal%20%23${wIns.request_number}`;
+
+          const flagLines: string[] = [];
+          if (user.is_suspicious) flagLines.push("🚨 подозрительный аккаунт");
+          if (vCount > 0) flagLines.push(`⚠️ нарушений: *${vCount}*`);
+          if ((alertsCount || 0) > 0) flagLines.push(`🔔 алертов: *${alertsCount}*`);
+          if (farmUsers > 0) flagLines.push(`👥 ферма: *${farmUsers}* аккаунт(ов) на ${sharedIpCount} общих IP`);
+
+          const flagsBlock = hasViolations
+            ? `\n🛑 *ВНИМАНИЕ — НАРУШЕНИЯ*\n${flagLines.map(l => `• ${l}`).join("\n")}\n`
+            : `\n✅ Нарушений не обнаружено\n`;
+
           const report =
             `📤 *Запрос №${wIns.request_number}*\n` +
             `👤 @${user.username || user.telegram_id} \`${user.telegram_id}\`\n` +
-            `⚠️ Алертов: *${alertsCount || 0}*${user.is_suspicious ? " · 🚨 подозрительный" : ""}\n` +
+            `📅 Аккаунт: ${accAgeDays}д\n` +
             `💵 Сумма: *${amt.toFixed(2)} USDT* (${amountPt} PT)\n` +
             `🕒 ${new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })}\n` +
-            `📬 Кошелёк:\n\`${user.ton_wallet_address}\``;
+            `📬 Кошелёк:\n\`${user.ton_wallet_address}\`` +
+            flagsBlock;
 
           try {
             const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -583,6 +599,7 @@ Deno.serve(async (req) => {
 
         return jsonResponse({ data: { ok: true, id: wIns.id, amount_usdt: amt, amount_pt: amountPt, new_balance: newBalance } });
       }
+
 
       case "presence_ping": {
         const { telegram_id } = params;
