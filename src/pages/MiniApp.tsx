@@ -113,6 +113,7 @@ export default function MiniApp() {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [frozenOpen, setFrozenOpen] = useState(false);
   const [usdtSheetOpen, setUsdtSheetOpen] = useState(false);
   const [usdtAmount, setUsdtAmount] = useState("");
   const [usdtSubmitting, setUsdtSubmitting] = useState(false);
