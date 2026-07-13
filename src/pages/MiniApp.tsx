@@ -34,6 +34,7 @@ interface VideoAd {
 interface UserSnap {
   balance_pt: number;
   daily_bonus_at: string | null;
+  balance_frozen?: boolean;
 }
 
 async function miniAppApi(action: string, params: Record<string, any> = {}) {
