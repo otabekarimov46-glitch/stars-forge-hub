@@ -85,6 +85,7 @@ Deno.serve(async (req) => {
         const userPayload = {
           balance_pt: Number(user.balance_pt),
           daily_bonus_at: user.daily_bonus_at,
+          balance_frozen: !!user.balance_frozen,
         };
         if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload } });
 
