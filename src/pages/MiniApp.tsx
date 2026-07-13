@@ -1191,6 +1191,7 @@ export default function MiniApp() {
                         : sub === "promo" ? Gift
                         : sub === "referral" ? UserIcon
                         : sub === "reset" ? XCircle
+                        : sub === "withdrawal_request" || sub === "withdrawal_paid" || sub === "withdrawal_rejected" ? ArrowUp
                         : ListChecks;
                       const label = sub === "video" ? t("video_ads")
                         : sub === "subscribe" ? t("subscribe_to_channel")
