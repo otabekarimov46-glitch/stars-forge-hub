@@ -2026,6 +2026,52 @@ export default function MiniApp() {
         </div>
       )}
 
+      {/* Frozen balance popup */}
+      {frozenOpen && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center p-4 fade-in"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          onClick={() => setFrozenOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl p-6 screen-enter relative text-center"
+            style={{ background: "linear-gradient(180deg, rgba(40,20,20,0.98), rgba(20,10,15,0.98))", border: "1px solid rgba(255,90,90,0.25)", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
+          >
+            <button
+              onClick={() => setFrozenOpen(false)}
+              className="press-soft absolute top-3 right-3 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/70"
+              aria-label="close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-red-500 via-rose-500 to-orange-500 shadow-lg shadow-red-900/40">
+              <ShieldAlert className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-[18px] font-semibold text-white">Баланс заморожен</h3>
+            <p className="text-[13px] text-white/70 mt-2 leading-relaxed">
+              Ваш баланс был заморожен из-за нарушений или подозрительной активности.
+              Если вы не согласны с этим — напишите в поддержку.
+            </p>
+            <a
+              href="https://t.me/starmenthelp_bot"
+              target="_blank"
+              rel="noreferrer"
+              className="press-cta mt-5 w-full h-11 rounded-2xl font-semibold text-[14px] text-white flex items-center justify-center gap-2
+                         bg-gradient-to-r from-red-500 via-rose-500 to-orange-500 shadow-lg shadow-red-900/30"
+            >
+              Написать в поддержку — @starmenthelp_bot
+            </a>
+            <button
+              onClick={() => setFrozenOpen(false)}
+              className="press-soft mt-2 w-full h-10 rounded-2xl text-[13px] text-white/70 bg-white/5 border border-white/10"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Withdraw method popup */}
       {withdrawOpen && (
         <div
