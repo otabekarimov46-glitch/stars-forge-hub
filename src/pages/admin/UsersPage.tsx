@@ -403,7 +403,7 @@ export default function UsersPage() {
   );
 }
 
-function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser }: any) {
+function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser, onResolveWithdrawal }: any) {
   if (!user) return null;
   const display = user.username ? `@${user.username}` : `ID ${user.telegram_id}`;
   return (
