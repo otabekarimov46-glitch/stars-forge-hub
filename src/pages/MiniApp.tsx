@@ -302,7 +302,7 @@ export default function MiniApp() {
 
   const shareRefLink = useCallback(() => {
     if (!refLink) return;
-    const text = "🚀 Заходи в Starment — смотри видео и получай Stars. По моей ссылке начнём вместе:";
+    const text = t("share_ref_text");
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(text)}`;
     try {
       const tg = (window as any).Telegram?.WebApp;
@@ -1099,7 +1099,7 @@ export default function MiniApp() {
                                  bg-gradient-to-r from-sky-500 to-blue-600 shadow-md shadow-blue-900/30 border border-white/10"
                     >
                       <Link2 className="w-3.5 h-3.5" />
-                      Подключить кошелёк
+                      {t("connect_wallet")}
                     </button>
                   )}
                 </div>
@@ -1113,7 +1113,7 @@ export default function MiniApp() {
                 </div>
                 {pendingWithdrawal && (
                   <div className="mt-2 text-center text-[11.5px] text-amber-300/90">
-                    ⏳ Заявка на вывод {Number(pendingWithdrawal.amount_usdt).toFixed(2)} USDT на рассмотрении
+                    {t("pending_withdraw_notice", { amount: Number(pendingWithdrawal.amount_usdt).toFixed(2) })}
                   </div>
                 )}
                 <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
@@ -1149,7 +1149,7 @@ export default function MiniApp() {
                   ? "bg-white/10 text-white/50 shadow-none cursor-not-allowed"
                   : "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-purple-900/30"}`}
             >
-              <ArrowUp className="w-4 h-4" /> {pendingWithdrawal ? "На рассмотрении" : t("withdraw")}
+              <ArrowUp className="w-4 h-4" /> {pendingWithdrawal ? t("pending_review") : t("withdraw")}
             </button>
 
             {/* ===== Transactions ===== */}
@@ -2006,7 +2006,7 @@ export default function MiniApp() {
                            bg-gradient-to-r from-sky-500 to-blue-600 border border-white/10 shadow-md shadow-blue-900/30"
               >
                 {walletCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {walletCopied ? "Скопировано" : "Скопировать адрес"}
+                {walletCopied ? t("copied") : t("copy_address")}
               </button>
               <button
                 onClick={() => { tonUI?.disconnect().catch(() => {}); setWalletMenuOpen(false); }}
@@ -2014,13 +2014,13 @@ export default function MiniApp() {
                            bg-red-500/10 border border-red-400/25"
               >
                 <LogOut className="w-4 h-4" />
-                Отвязать
+                {t("disconnect")}
               </button>
               <button
                 onClick={() => setWalletMenuOpen(false)}
                 className="press-soft w-full h-11 rounded-2xl text-[13px] text-white/60 bg-white/5 border border-white/10"
               >
-                Отмена
+                {t("cancel_btn")}
               </button>
             </div>
           </div>
@@ -2049,10 +2049,9 @@ export default function MiniApp() {
             <div className="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-red-500 via-rose-500 to-orange-500 shadow-lg shadow-red-900/40">
               <ShieldAlert className="w-7 h-7 text-white" />
             </div>
-            <h3 className="text-[18px] font-semibold text-white">Баланс заморожен</h3>
+            <h3 className="text-[18px] font-semibold text-white">{t("frozen_title")}</h3>
             <p className="text-[13px] text-white/70 mt-2 leading-relaxed">
-              Ваш баланс был заморожен из-за нарушений или подозрительной активности.
-              Если вы не согласны с этим — напишите в поддержку.
+              {t("frozen_desc")}
             </p>
             <a
               href="https://t.me/starmenthelp_bot"
@@ -2061,13 +2060,13 @@ export default function MiniApp() {
               className="press-cta mt-5 w-full h-11 rounded-2xl font-semibold text-[14px] text-white flex items-center justify-center gap-2
                          bg-gradient-to-r from-red-500 via-rose-500 to-orange-500 shadow-lg shadow-red-900/30"
             >
-              Написать в поддержку — @starmenthelp_bot
+              {t("contact_support_at")}
             </a>
             <button
               onClick={() => setFrozenOpen(false)}
               className="press-soft mt-2 w-full h-10 rounded-2xl text-[13px] text-white/70 bg-white/5 border border-white/10"
             >
-              Закрыть
+              {t("close")}
             </button>
           </div>
         </div>
@@ -2097,8 +2096,8 @@ export default function MiniApp() {
               <div className="mx-auto mb-2 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 shadow-lg shadow-purple-900/40">
                 <ArrowUp className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-[17px] font-semibold text-white">Вывод</h3>
-              <p className="text-[12px] text-white/55 mt-0.5">Выберите способ вывода</p>
+              <h3 className="text-[17px] font-semibold text-white">{t("withdraw_title")}</h3>
+              <p className="text-[12px] text-white/55 mt-0.5">{t("withdraw_choose_method")}</p>
             </div>
 
             <div className="space-y-2">
@@ -2112,7 +2111,7 @@ export default function MiniApp() {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-semibold text-white">Telegram Stars</span>
-                  <span className="block text-[11.5px] text-white/55">Выведите в Telegram Stars</span>
+                  <span className="block text-[11.5px] text-white/55">{t("withdraw_via_stars")}</span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-white/30" />
               </button>
@@ -2126,8 +2125,8 @@ export default function MiniApp() {
                   <Gift className="w-5 h-5 text-white" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[14px] font-semibold text-white">Подарки</span>
-                  <span className="block text-[11.5px] text-white/55">Выведите в подарках</span>
+                  <span className="block text-[14px] font-semibold text-white">{t("gifts")}</span>
+                  <span className="block text-[11.5px] text-white/55">{t("withdraw_via_gifts")}</span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-white/30" />
               </button>
@@ -2155,7 +2154,7 @@ export default function MiniApp() {
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-semibold text-white">USDT</span>
                   <span className="block text-[11.5px] text-white/55">
-                    {tonAddress ? "Выведите в крипто кошелёк" : "Подключите крипто кошелёк"}
+                    {tonAddress ? t("withdraw_via_crypto") : t("connect_crypto_wallet")}
                   </span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-white/30" />
@@ -2190,15 +2189,15 @@ export default function MiniApp() {
                 <div className="mx-auto mb-3 w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg">
                   <ArrowUp className="w-7 h-7 text-white rotate-45" />
                 </div>
-                <h3 className="text-[18px] font-semibold text-white">Успешно!</h3>
+                <h3 className="text-[18px] font-semibold text-white">{t("success_bang")}</h3>
                 <p className="text-[13px] text-white/60 mt-1 px-4">
-                  Ваш запрос на вывод <b className="text-white">{usdtSuccess.amount.toFixed(2)} USDT</b> отправлен на рассмотрение. Обычно занимает до 24 часов.
+                  {t("withdraw_success_desc", { amount: usdtSuccess.amount.toFixed(2) })}
                 </p>
                 <button
                   onClick={() => setUsdtSheetOpen(false)}
                   className="press-cta mt-5 h-11 w-full rounded-2xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-900/30"
                 >
-                  Отлично
+                  {t("great")}
                 </button>
               </div>
             ) : (
@@ -2207,16 +2206,16 @@ export default function MiniApp() {
                   <div className="mx-auto mb-2 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-900/30">
                     <Wallet className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-[17px] font-semibold text-white">Вывод USDT</h3>
-                  <p className="text-[12px] text-white/55 mt-0.5">Минимум {minWithdrawUsdt} USDT</p>
+                  <h3 className="text-[17px] font-semibold text-white">{t("withdraw_usdt_title")}</h3>
+                  <p className="text-[12px] text-white/55 mt-0.5">{t("min_usdt", { n: minWithdrawUsdt })}</p>
                 </div>
 
                 <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-3 mb-3">
-                  <div className="text-[11px] text-white/50 uppercase tracking-wide mb-1">Кошелёк</div>
+                  <div className="text-[11px] text-white/50 uppercase tracking-wide mb-1">{t("wallet_label")}</div>
                   <div className="text-[12px] font-mono text-white/80 break-all">{tonAddress}</div>
                 </div>
 
-                <label className="block text-[12px] text-white/60 mb-1.5">Сумма (USDT)</label>
+                <label className="block text-[12px] text-white/60 mb-1.5">{t("amount_usdt_label")}</label>
                 <div className="relative">
                   <input
                     inputMode="decimal"
@@ -2240,9 +2239,9 @@ export default function MiniApp() {
                 {usdtError && (
                   <div className="mt-3 rounded-xl bg-red-500/10 border border-red-400/30 px-3 py-2 text-[12.5px] text-red-200">
                     {usdtError}{" "}
-                    {usdtError.toLowerCase().includes("ошибк") && (
+                    {usdtError === t("err_generic") && (
                       <a href={supportBotUrl} target="_blank" rel="noopener" className="underline text-red-100">
-                        Написать в поддержку
+                        {t("write_support")}
                       </a>
                     )}
                   </div>
@@ -2252,8 +2251,8 @@ export default function MiniApp() {
                   disabled={usdtSubmitting || !usdtAmount || Number(usdtAmount) <= 0}
                   onClick={async () => {
                     const amt = Number(usdtAmount);
-                    if (!Number.isFinite(amt) || amt <= 0) { setUsdtError("Введите сумму"); return; }
-                    if (amt < minWithdrawUsdt) { setUsdtError(`Минимум ${minWithdrawUsdt} USDT`); return; }
+                    if (!Number.isFinite(amt) || amt <= 0) { setUsdtError(t("err_enter_amount")); return; }
+                    if (amt < minWithdrawUsdt) { setUsdtError(t("err_min_usdt", { n: minWithdrawUsdt })); return; }
                     setUsdtSubmitting(true); setUsdtError(null);
                     try {
                       const r = await miniAppApi("create_withdrawal_usdt", { telegram_id: telegramId, amount_usdt: amt });
@@ -2262,21 +2261,21 @@ export default function MiniApp() {
                       setPendingWithdrawal({ id: r.id, amount_usdt: r.amount_usdt, amount_pt: r.amount_pt });
                     } catch (e: any) {
                       const msg = String(e?.message || "").toLowerCase();
-                      if (msg.includes("no_wallet")) setUsdtError("Подключите крипто кошелёк");
-                      else if (msg.includes("already_pending")) setUsdtError("У вас уже есть заявка на рассмотрении");
-                      else if (msg.includes("below_min")) setUsdtError(`Минимум ${minWithdrawUsdt} USDT`);
-                      else if (msg.includes("insufficient")) setUsdtError("Недостаточно средств");
-                      else if (msg.includes("math_mismatch")) setUsdtError("Ошибка проверки, повторите позже или напишите в поддержку");
-                      else if (msg.includes("frozen")) setUsdtError("Баланс заморожен");
-                      else if (msg.includes("banned")) setUsdtError("Аккаунт заблокирован");
-                      else setUsdtError("Ошибка, повторите позже или напишите в поддержку");
+                      if (msg.includes("no_wallet")) setUsdtError(t("err_no_wallet"));
+                      else if (msg.includes("already_pending")) setUsdtError(t("err_already_pending"));
+                      else if (msg.includes("below_min")) setUsdtError(t("err_min_usdt", { n: minWithdrawUsdt }));
+                      else if (msg.includes("insufficient")) setUsdtError(t("err_insufficient"));
+                      else if (msg.includes("math_mismatch")) setUsdtError(t("err_generic"));
+                      else if (msg.includes("frozen")) setUsdtError(t("err_frozen"));
+                      else if (msg.includes("banned")) setUsdtError(t("err_banned"));
+                      else setUsdtError(t("err_generic"));
                     } finally {
                       setUsdtSubmitting(false);
                     }
                   }}
                   className="press-cta mt-4 h-12 w-full rounded-2xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {usdtSubmitting ? "Отправляем…" : "Вывести"}
+                  {usdtSubmitting ? t("sending") : t("withdraw_do")}
                 </button>
               </>
             )}
