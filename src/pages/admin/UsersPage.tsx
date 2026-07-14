@@ -387,6 +387,15 @@ export default function UsersPage() {
               setOpenUser(null); setRoom(null);
               setSearchParams({ focus: userId }, { replace: true });
             }}
+            onResolveWithdrawal={async (wid: string, act: "pay" | "cancel") => {
+              try {
+                await adminApi("resolve_withdrawal", { withdrawal_id: wid, action: act });
+                toast.success(act === "pay" ? "Отмечено как оплачено" : "Заявка отменена, баланс возвращён");
+                if (openUser) loadRoom(openUser.id);
+                fetchData();
+              } catch (e: any) { toast.error(e.message); }
+            }}
+
           />
         </DialogContent>
       </Dialog>
@@ -394,7 +403,7 @@ export default function UsersPage() {
   );
 }
 
-function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser }: any) {
+function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser, onResolveWithdrawal }: any) {
   if (!user) return null;
   const display = user.username ? `@${user.username}` : `ID ${user.telegram_id}`;
   return (
@@ -564,6 +573,17 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                       {w.cancel_reason && !w.cancel_reason.startsWith("await:") && (
                         <div className="text-[11px] text-destructive pl-11 mt-1">Причина: {w.cancel_reason}</div>
                       )}
+                      {w.status === "pending" && onResolveWithdrawal && (
+                        <div className="flex gap-2 pl-11 mt-2">
+                          <Button size="sm" className="h-7 text-xs" onClick={() => onResolveWithdrawal(w.id, "pay")}>
+                            ✅ Готово
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onResolveWithdrawal(w.id, "cancel")}>
+                            ❌ Отменить
+                          </Button>
+                        </div>
+                      )}
+
                     </div>
                   );
                 })}
