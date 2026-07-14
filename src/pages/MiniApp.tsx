@@ -2239,9 +2239,9 @@ export default function MiniApp() {
                 {usdtError && (
                   <div className="mt-3 rounded-xl bg-red-500/10 border border-red-400/30 px-3 py-2 text-[12.5px] text-red-200">
                     {usdtError}{" "}
-                    {usdtError.toLowerCase().includes("ошибк") && (
+                    {usdtError === t("err_generic") && (
                       <a href={supportBotUrl} target="_blank" rel="noopener" className="underline text-red-100">
-                        Написать в поддержку
+                        {t("write_support")}
                       </a>
                     )}
                   </div>
@@ -2251,8 +2251,8 @@ export default function MiniApp() {
                   disabled={usdtSubmitting || !usdtAmount || Number(usdtAmount) <= 0}
                   onClick={async () => {
                     const amt = Number(usdtAmount);
-                    if (!Number.isFinite(amt) || amt <= 0) { setUsdtError("Введите сумму"); return; }
-                    if (amt < minWithdrawUsdt) { setUsdtError(`Минимум ${minWithdrawUsdt} USDT`); return; }
+                    if (!Number.isFinite(amt) || amt <= 0) { setUsdtError(t("err_enter_amount")); return; }
+                    if (amt < minWithdrawUsdt) { setUsdtError(t("err_min_usdt", { n: minWithdrawUsdt })); return; }
                     setUsdtSubmitting(true); setUsdtError(null);
                     try {
                       const r = await miniAppApi("create_withdrawal_usdt", { telegram_id: telegramId, amount_usdt: amt });
@@ -2261,21 +2261,21 @@ export default function MiniApp() {
                       setPendingWithdrawal({ id: r.id, amount_usdt: r.amount_usdt, amount_pt: r.amount_pt });
                     } catch (e: any) {
                       const msg = String(e?.message || "").toLowerCase();
-                      if (msg.includes("no_wallet")) setUsdtError("Подключите крипто кошелёк");
-                      else if (msg.includes("already_pending")) setUsdtError("У вас уже есть заявка на рассмотрении");
-                      else if (msg.includes("below_min")) setUsdtError(`Минимум ${minWithdrawUsdt} USDT`);
-                      else if (msg.includes("insufficient")) setUsdtError("Недостаточно средств");
-                      else if (msg.includes("math_mismatch")) setUsdtError("Ошибка проверки, повторите позже или напишите в поддержку");
-                      else if (msg.includes("frozen")) setUsdtError("Баланс заморожен");
-                      else if (msg.includes("banned")) setUsdtError("Аккаунт заблокирован");
-                      else setUsdtError("Ошибка, повторите позже или напишите в поддержку");
+                      if (msg.includes("no_wallet")) setUsdtError(t("err_no_wallet"));
+                      else if (msg.includes("already_pending")) setUsdtError(t("err_already_pending"));
+                      else if (msg.includes("below_min")) setUsdtError(t("err_min_usdt", { n: minWithdrawUsdt }));
+                      else if (msg.includes("insufficient")) setUsdtError(t("err_insufficient"));
+                      else if (msg.includes("math_mismatch")) setUsdtError(t("err_generic"));
+                      else if (msg.includes("frozen")) setUsdtError(t("err_frozen"));
+                      else if (msg.includes("banned")) setUsdtError(t("err_banned"));
+                      else setUsdtError(t("err_generic"));
                     } finally {
                       setUsdtSubmitting(false);
                     }
                   }}
                   className="press-cta mt-4 h-12 w-full rounded-2xl font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {usdtSubmitting ? "Отправляем…" : "Вывести"}
+                  {usdtSubmitting ? t("sending") : t("withdraw_do")}
                 </button>
               </>
             )}
