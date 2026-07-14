@@ -573,6 +573,17 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                       {w.cancel_reason && !w.cancel_reason.startsWith("await:") && (
                         <div className="text-[11px] text-destructive pl-11 mt-1">Причина: {w.cancel_reason}</div>
                       )}
+                      {w.status === "pending" && onResolveWithdrawal && (
+                        <div className="flex gap-2 pl-11 mt-2">
+                          <Button size="sm" className="h-7 text-xs" onClick={() => onResolveWithdrawal(w.id, "pay")}>
+                            ✅ Готово
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onResolveWithdrawal(w.id, "cancel")}>
+                            ❌ Отменить
+                          </Button>
+                        </div>
+                      )}
+
                     </div>
                   );
                 })}
