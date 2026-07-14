@@ -766,6 +766,94 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "resolve_withdrawal": {
+        const { withdrawal_id, action: act } = params; // act: 'pay' | 'cancel'
+        if (!withdrawal_id || !["pay", "cancel"].includes(act)) {
+          return new Response(JSON.stringify({ error: "bad params" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { data: w } = await supabase.from("withdrawals")
+          .select("id, user_id, amount_usdt, amount_pt, wallet_address, status, request_number, channel_message_id, cancel_reason, users(telegram_id, username, balance_pt)")
+          .eq("id", withdrawal_id).maybeSingle();
+        if (!w) { data = { ok: false, reason: "not_found" }; break; }
+        if (w.status !== "pending") { data = { ok: true, already: w.status }; break; }
+
+        const { data: chSetting } = await supabase.from("settings").select("value").eq("key", "withdraw_channel_id").maybeSingle();
+        const { data: supSetting } = await supabase.from("settings").select("value").eq("key", "support_bot_url").maybeSingle();
+        const channelId = chSetting?.value ? Number(chSetting.value) : null;
+        const supportUrl = supSetting?.value || "https://t.me/starmenthelp_bot";
+        const u: any = (w as any).users;
+        const amountUsdt = Number(w.amount_usdt || 0);
+        const amountPt = Number(w.amount_pt || 0);
+        const reqN = w.request_number;
+
+        if (act === "pay") {
+          await supabase.from("withdrawals").update({ status: "paid", processed_at: new Date().toISOString() }).eq("id", withdrawal_id);
+          await supabase.from("logs_activity").insert({
+            user_id: w.user_id,
+            action: "withdrawal_paid",
+            metadata: { amount_usdt: amountUsdt, amount_pt: amountPt, request_number: reqN, wallet: w.wallet_address, manual: true },
+          });
+          if (channelId && w.channel_message_id) {
+            await fetch(`${TELEGRAM_API}${BOT_TOKEN}/editMessageText`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: channelId, message_id: w.channel_message_id,
+                text: `✅ *Оплачено* — Заявка №${reqN}\n💵 ${amountUsdt.toFixed(2)} USDT\n👤 @${u?.username || u?.telegram_id}\n\`${w.wallet_address}\``,
+                parse_mode: "Markdown",
+              }),
+            }).catch(() => null);
+          }
+          if (u?.telegram_id) {
+            await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: u.telegram_id,
+                text: `✅ *${amountUsdt.toFixed(2)} USDT* успешно получено — спасибо, что пользуетесь Starment!`,
+                parse_mode: "Markdown",
+              }),
+            }).catch(() => null);
+          }
+        } else {
+          // Refund
+          const { data: fresh } = await supabase.from("users").select("balance_pt").eq("id", w.user_id).single();
+          const newBal = Number(fresh?.balance_pt || 0) + amountPt;
+          await supabase.from("users").update({ balance_pt: newBal }).eq("id", w.user_id);
+          const reason = (params.reason || null) as string | null;
+          await supabase.from("withdrawals").update({
+            status: "rejected",
+            processed_at: new Date().toISOString(),
+            cancel_reason: reason,
+          }).eq("id", withdrawal_id);
+          await supabase.from("logs_activity").insert({
+            user_id: w.user_id,
+            action: "withdrawal_rejected",
+            metadata: { amount_usdt: amountUsdt, amount_pt: amountPt, request_number: reqN, reason, wallet: w.wallet_address, manual: true },
+          });
+          if (channelId && w.channel_message_id) {
+            await fetch(`${TELEGRAM_API}${BOT_TOKEN}/editMessageText`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: channelId, message_id: w.channel_message_id,
+                text: `❌ *Отменено* — Заявка №${reqN}\n💵 ${amountUsdt.toFixed(2)} USDT\n👤 @${u?.username || u?.telegram_id}\n${reason ? `📝 Причина: ${reason}` : "📝 Без причины"}\n💎 Баланс возвращён`,
+                parse_mode: "Markdown",
+              }),
+            }).catch(() => null);
+          }
+          if (u?.telegram_id) {
+            const dm = reason
+              ? `❌ Ваш запрос на вывод *${amountUsdt.toFixed(2)} USDT* был отменён по причине «${reason}». Если вы не согласны с этим — пожалуйста, обратитесь в поддержку: ${supportUrl}`
+              : `❌ Ваш запрос на вывод *${amountUsdt.toFixed(2)} USDT* был отменён. Если вы не согласны с этим — пожалуйста, обратитесь в поддержку: ${supportUrl}`;
+            await fetch(`${TELEGRAM_API}${BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: u.telegram_id, text: dm, parse_mode: "Markdown" }),
+            }).catch(() => null);
+          }
+        }
+        data = { ok: true };
+        break;
+      }
+
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown action" }),
