@@ -389,12 +389,13 @@ export default function UsersPage() {
             }}
             onResolveWithdrawal={async (wid: string, act: "pay" | "cancel") => {
               try {
-                await adminApi("resolve_withdrawal", { withdrawal_id: wid, action: act });
+                await adminApi("resolve_withdrawal", { withdrawal_id: wid, resolution: act });
                 toast.success(act === "pay" ? "Отмечено как оплачено" : "Заявка отменена, баланс возвращён");
                 if (openUser) loadRoom(openUser.id);
                 fetchData();
               } catch (e: any) { toast.error(e.message); }
             }}
+
 
           />
         </DialogContent>

@@ -767,7 +767,7 @@ Deno.serve(async (req) => {
       }
 
       case "resolve_withdrawal": {
-        const { withdrawal_id, action: act } = params; // act: 'pay' | 'cancel'
+        const { withdrawal_id, resolution: act } = params; // resolution: 'pay' | 'cancel'
         if (!withdrawal_id || !["pay", "cancel"].includes(act)) {
           return new Response(JSON.stringify({ error: "bad params" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
