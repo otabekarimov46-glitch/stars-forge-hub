@@ -490,6 +490,15 @@ async function handleWithdrawAdminCallback(cbData: string, callback: any, botTok
       action: "withdrawal_paid",
       metadata: { amount_usdt: amountUsdt, amount_pt: Number(w.amount_pt || 0), request_number: reqN, wallet: w.wallet_address },
     });
+    await supabase.from("activity_logs").insert({
+      user_id: w.user_id,
+      user_username: user?.username || null,
+      user_telegram_id: user?.telegram_id ?? null,
+      action_type: "withdrawal_paid",
+      task_title: `№${reqN} · ${amountUsdt.toFixed(2)} USDT · ${w.wallet_address}`,
+      reward_pt: -Number(w.amount_pt || 0),
+      finished_at: new Date().toISOString(),
+    });
     await editChannelMessage(botToken, channelId, w.channel_message_id, `✅ *Оплачено* — Заявка №${reqN}\n💵 ${amountUsdt.toFixed(2)} USDT\n👤 @${user.username || user.telegram_id}\n\`${w.wallet_address}\``, null);
     // DM user
     await sendTg(botToken, {
