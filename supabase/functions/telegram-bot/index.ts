@@ -553,7 +553,7 @@ async function handleCancelReasonReply(message: any, botToken: string, supabase:
 async function finalizeCancel(supabase: any, botToken: string, wid: string, reason: string | null, channelId: number, supportUrl: string) {
   const { data: w } = await supabase.from("withdrawals")
     .select("id, user_id, amount_usdt, amount_pt, wallet_address, request_number, channel_message_id, users(telegram_id, username, balance_pt)")
-    .eq("id", wid).maybeSingle();
+    .eq("id", wid).eq("status", "pending").maybeSingle();
   if (!w) return;
   const user = (w as any).users;
   const amountUsdt = Number(w.amount_usdt || 0);
@@ -564,11 +564,12 @@ async function finalizeCancel(supabase: any, botToken: string, wid: string, reas
   const { data: fresh } = await supabase.from("users").select("balance_pt").eq("id", w.user_id).single();
   const newBal = Number(fresh?.balance_pt || 0) + amountPt;
   await supabase.from("users").update({ balance_pt: newBal }).eq("id", w.user_id);
-  await supabase.from("withdrawals").update({
+  const upd = await supabase.from("withdrawals").update({
     status: "rejected",
     processed_at: new Date().toISOString(),
     cancel_reason: reason,
-  }).eq("id", wid);
+  }).eq("id", wid).eq("status", "pending");
+  if (upd.error) throw upd.error;
   await supabase.from("logs_activity").insert({
     user_id: w.user_id,
     action: "withdrawal_rejected",
