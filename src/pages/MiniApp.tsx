@@ -221,8 +221,16 @@ export default function MiniApp() {
     const load = () => miniAppApi("get_pending_withdrawal", { telegram_id: telegramId })
       .then((d) => setPendingWithdrawal(d || null)).catch(() => {});
     load();
-    const id = setInterval(load, 8_000);
-    return () => clearInterval(id);
+    const id = setInterval(load, 2_000);
+    const onFocus = () => load();
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [telegramId, user?.balance_pt]);
 
   // Presence heartbeat — powers "online now" metric in admin

@@ -77,18 +77,26 @@ export default function UsersPage() {
     }
   }, [focusId, loading, users]);
 
-  const loadRoom = async (userId: string) => {
-    setRoomLoading(true);
-    setRoom(null);
+  const loadRoom = async (userId: string, silent = false) => {
+    if (!silent) {
+      setRoomLoading(true);
+      setRoom(null);
+    }
     try {
       const data = await adminApi("get_user_room", { user_id: userId });
       setRoom(data);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
-      setRoomLoading(false);
+      if (!silent) setRoomLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!openUser?.id) return;
+    const id = setInterval(() => loadRoom(openUser.id, true), 5_000);
+    return () => clearInterval(id);
+  }, [openUser?.id]);
 
   const openRoom = (u: any) => {
     setOpenUser(u);
@@ -536,7 +544,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
               <TabsContent value="withdrawals" className="mt-3 space-y-1.5">
                 {(room.withdrawals || []).length === 0 && <EmptyState text="Заявок на вывод не было" />}
                 {(room.withdrawals || []).map((w: any) => {
-                  const statusMeta = w.status === "paid"
+                  const statusMeta = w.status === "approved" || w.status === "paid"
                     ? { label: "Оплачено", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
                     : w.status === "rejected"
                     ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }
