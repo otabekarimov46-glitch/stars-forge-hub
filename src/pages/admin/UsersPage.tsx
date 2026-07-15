@@ -387,16 +387,6 @@ export default function UsersPage() {
               setOpenUser(null); setRoom(null);
               setSearchParams({ focus: userId }, { replace: true });
             }}
-            onResolveWithdrawal={async (wid: string, act: "pay" | "cancel") => {
-              try {
-                await adminApi("resolve_withdrawal", { withdrawal_id: wid, resolution: act });
-                toast.success(act === "pay" ? "Отмечено как оплачено" : "Заявка отменена, баланс возвращён");
-                if (openUser) loadRoom(openUser.id);
-                fetchData();
-              } catch (e: any) { toast.error(e.message); }
-            }}
-
-
           />
         </DialogContent>
       </Dialog>
