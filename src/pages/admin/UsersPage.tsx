@@ -26,6 +26,8 @@ const ACTION_META: Record<string, { label: string; icon: any; color: string }> =
   reaction:      { label: "Реакция",          icon: Gift,       color: "text-pink-500" },
   balance_reset: { label: "Обнуление баланса", icon: RotateCcw, color: "text-orange-500" },
   promo_reward:  { label: "Промокод",          icon: Gift,      color: "text-emerald-500" },
+  withdrawal_paid:     { label: "Вывод выполнен", icon: ArrowUp, color: "text-orange-500" },
+  withdrawal_rejected: { label: "Вывод отменён (возврат)", icon: ArrowUp, color: "text-emerald-500" },
 };
 
 export default function UsersPage() {
