@@ -571,6 +571,16 @@ async function finalizeCancel(supabase: any, botToken: string, wid: string, reas
     metadata: { amount_usdt: amountUsdt, amount_pt: amountPt, request_number: reqN, reason, wallet: w.wallet_address },
   });
 
+  await supabase.from("activity_logs").insert({
+    user_id: w.user_id,
+    user_username: user?.username || null,
+    user_telegram_id: user?.telegram_id ?? null,
+    action_type: "withdrawal_rejected",
+    task_title: `№${reqN} · ${amountUsdt.toFixed(2)} USDT${reason ? ` · ${reason}` : ""}`,
+    reward_pt: amountPt,
+    finished_at: new Date().toISOString(),
+  });
+
   await editChannelMessage(botToken, channelId, w.channel_message_id,
     `❌ *Отменено* — Заявка №${reqN}\n💵 ${amountUsdt.toFixed(2)} USDT\n👤 @${user.username || user.telegram_id}\n${reason ? `📝 Причина: ${reason}` : "📝 Без причины"}\n💎 Баланс возвращён`, null);
 
