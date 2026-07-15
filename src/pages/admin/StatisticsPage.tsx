@@ -23,6 +23,17 @@ export default function StatisticsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Keep withdrawal counters fresh after bot-channel actions.
+  useEffect(() => {
+    const id = setInterval(() => {
+      adminApi("get_stats").then((s: any) => {
+        setStats(s);
+        setOnlineNow(s?.onlineNow || 0);
+      }).catch(() => {});
+    }, 5_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Poll online-now every 20s for live number
   useEffect(() => {
     const id = setInterval(() => {

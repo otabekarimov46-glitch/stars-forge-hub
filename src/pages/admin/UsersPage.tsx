@@ -77,18 +77,26 @@ export default function UsersPage() {
     }
   }, [focusId, loading, users]);
 
-  const loadRoom = async (userId: string) => {
-    setRoomLoading(true);
-    setRoom(null);
+  const loadRoom = async (userId: string, silent = false) => {
+    if (!silent) {
+      setRoomLoading(true);
+      setRoom(null);
+    }
     try {
       const data = await adminApi("get_user_room", { user_id: userId });
       setRoom(data);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
-      setRoomLoading(false);
+      if (!silent) setRoomLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!openUser?.id) return;
+    const id = setInterval(() => loadRoom(openUser.id, true), 5_000);
+    return () => clearInterval(id);
+  }, [openUser?.id]);
 
   const openRoom = (u: any) => {
     setOpenUser(u);
