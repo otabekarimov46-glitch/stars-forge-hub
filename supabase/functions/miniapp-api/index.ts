@@ -1027,7 +1027,7 @@ Deno.serve(async (req) => {
            else if (r.action === "referral_reward") { kind = "referral"; sub = "referral"; label = "Реферальный бонус"; amount = Number(meta.bonus || 0); }
            else if (r.action === "balance_reset") { kind = "reset"; sub = "reset"; label = "Обнуление баланса"; amount = Number(meta.amount || 0); }
            else if (r.action === "withdrawal_request") { kind = "withdrawal"; sub = "withdrawal_request"; label = `Заявка на вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT`; amount = -Number(meta.amount_pt || 0); }
-           else if (r.action === "withdrawal_paid") { kind = "withdrawal"; sub = "withdrawal_paid"; label = `Вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT выполнен`; amount = 0; }
+           else if (r.action === "withdrawal_paid") { kind = "withdrawal"; sub = "withdrawal_paid"; label = `Вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT выполнен`; amount = -Number(meta.amount_pt || 0); }
            else if (r.action === "withdrawal_rejected") { kind = "withdrawal"; sub = "withdrawal_rejected"; label = `Вывод ${Number(meta.amount_usdt || 0).toFixed(2)} USDT отменён`; amount = Number(meta.amount_pt || 0); }
            else if (meta.type === "subscribe") { sub = "subscribe"; label = "Подписка на канал"; }
            else if (meta.type === "view_post") { sub = "view_post"; label = "Просмотр поста"; }
@@ -1041,8 +1041,9 @@ Deno.serve(async (req) => {
              reward_pt: amount,
              reason: meta.reason || null,
              at: r.created_at,
+             req: meta.request_number || null,
            };
-         }).filter((x: any) => x.sub === "withdrawal_paid" || x.reward_pt !== 0);
+         }).filter((x: any) => x.sub !== "withdrawal_request" && (x.sub?.startsWith("withdrawal_") || x.reward_pt !== 0));
 
         return jsonResponse({ data: { items } });
       }
