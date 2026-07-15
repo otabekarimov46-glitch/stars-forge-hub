@@ -536,7 +536,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
               <TabsContent value="withdrawals" className="mt-3 space-y-1.5">
                 {(room.withdrawals || []).length === 0 && <EmptyState text="Заявок на вывод не было" />}
                 {(room.withdrawals || []).map((w: any) => {
-                  const statusMeta = w.status === "paid"
+                  const statusMeta = w.status === "approved" || w.status === "paid"
                     ? { label: "Оплачено", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
                     : w.status === "rejected"
                     ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }

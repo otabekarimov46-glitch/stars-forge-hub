@@ -484,7 +484,11 @@ async function handleWithdrawAdminCallback(cbData: string, callback: any, botTok
   const reqN = w.request_number;
 
   if (action === "pay") {
-    await supabase.from("withdrawals").update({ status: "paid", processed_at: new Date().toISOString() }).eq("id", wid);
+    const upd = await supabase.from("withdrawals")
+      .update({ status: "approved", processed_at: new Date().toISOString() })
+      .eq("id", wid)
+      .eq("status", "pending");
+    if (upd.error) throw upd.error;
     await supabase.from("logs_activity").insert({
       user_id: w.user_id,
       action: "withdrawal_paid",

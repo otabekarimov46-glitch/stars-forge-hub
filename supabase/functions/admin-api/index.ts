@@ -787,7 +787,11 @@ Deno.serve(async (req) => {
         const reqN = w.request_number;
 
         if (act === "pay") {
-          await supabase.from("withdrawals").update({ status: "paid", processed_at: new Date().toISOString() }).eq("id", withdrawal_id);
+          const upd = await supabase.from("withdrawals")
+            .update({ status: "approved", processed_at: new Date().toISOString() })
+            .eq("id", withdrawal_id)
+            .eq("status", "pending");
+          if (upd.error) { error = upd.error; break; }
           await supabase.from("logs_activity").insert({
             user_id: w.user_id,
             action: "withdrawal_paid",
