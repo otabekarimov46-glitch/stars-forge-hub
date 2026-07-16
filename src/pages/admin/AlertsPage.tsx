@@ -53,7 +53,7 @@ const COUNT_OPTIONS = [
   { value: "10000", label: "Последние 10 000" },
 ];
 
-type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward";
+type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward" | "withdrawal_paid" | "withdrawal_rejected";
 
 const ACTION_META: Record<ActionType, { label: string; short: string; icon: any; bar: string; badge: string; row: string; }> = {
   video:         { label: "Видеореклама",   short: "Видео",     icon: Film,       bar: "bg-brand-purple",       badge: "bg-brand-purple/10 text-brand-purple border-brand-purple/20", row: "bg-brand-purple/[0.04] hover:bg-brand-purple/[0.08]" },
@@ -64,9 +64,11 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   survey:        { label: "Опрос",          short: "Опрос",     icon: Heart,      bar: "bg-teal-500",           badge: "bg-teal-500/10 text-teal-500 border-teal-500/20",             row: "bg-teal-500/[0.04] hover:bg-teal-500/[0.08]" },
   balance_reset: { label: "Обнуление баланса", short: "Обнуление", icon: RotateCcw, bar: "bg-orange-500",       badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",       row: "bg-orange-500/[0.05] hover:bg-orange-500/[0.10]" },
   promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]" },
+  withdrawal_paid:     { label: "Вывод выполнен",  short: "Вывод", icon: ArrowUp, bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.05] hover:bg-emerald-500/[0.10]" },
+  withdrawal_rejected: { label: "Вывод отменён",   short: "Вывод", icon: ArrowUp, bar: "bg-emerald-600",        badge: "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",    row: "bg-emerald-600/[0.05] hover:bg-emerald-600/[0.10]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset"];
+const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
 
 export default function AlertsPage() {
   const { t } = useTranslation();
