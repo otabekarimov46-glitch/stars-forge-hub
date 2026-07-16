@@ -116,6 +116,8 @@ export default function UsersPage() {
   }, [openUser?.id]);
 
   const openRoom = (u: any) => {
+    setRoomInitialTab("tx");
+    setRoomHighlightWd("");
     setOpenUser(u);
     setShowIps(false);
     loadRoom(u.id);
