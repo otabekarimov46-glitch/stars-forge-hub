@@ -418,8 +418,13 @@ export default function AlertsPage() {
                 const timeStr = isVideo && started
                   ? `${format(started, "HH:mm:ss")} — ${format(finished, "HH:mm:ss")} · ${format(finished, "dd.MM.yy")}`
                   : format(finished, "HH:mm:ss · dd.MM.yy");
+                const isWithdrawal = l.action_type === "withdrawal_paid" || l.action_type === "withdrawal_rejected";
                 return (
-                  <div key={l.id} className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden ${meta.row}`}>
+                  <div
+                    key={l.id}
+                    onClick={isWithdrawal ? () => openWithdrawalInUser(l) : undefined}
+                    className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden ${meta.row} ${isWithdrawal ? "cursor-pointer" : ""}`}
+                  >
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${meta.bar}`} />
                     <div className={`p-2 rounded-xl ${meta.badge} shrink-0 self-center ml-1`}>
                       <Icon className="h-4 w-4" />
