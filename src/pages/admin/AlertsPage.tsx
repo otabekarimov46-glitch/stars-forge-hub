@@ -230,6 +230,15 @@ export default function AlertsPage() {
     navigate(`/admin/content?focus=${encodeURIComponent(publicId)}`);
   };
 
+  const openWithdrawalInUser = (log: any) => {
+    if (!log?.user_id) return;
+    const m = String(log.task_title || "").match(/№\s*(\d+)/);
+    const wd = m ? m[1] : "";
+    const params = new URLSearchParams({ focus: log.user_id, tab: "withdrawals" });
+    if (wd) params.set("wd", wd);
+    navigate(`/admin/users?${params.toString()}`);
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
