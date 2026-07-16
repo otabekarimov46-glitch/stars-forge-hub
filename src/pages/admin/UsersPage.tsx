@@ -26,7 +26,7 @@ const ACTION_META: Record<string, { label: string; icon: any; color: string }> =
   reaction:      { label: "Реакция",          icon: Gift,       color: "text-pink-500" },
   balance_reset: { label: "Обнуление баланса", icon: RotateCcw, color: "text-orange-500" },
   promo_reward:  { label: "Промокод",          icon: Gift,      color: "text-emerald-500" },
-  withdrawal_paid:     { label: "Вывод выполнен", icon: ArrowUp, color: "text-orange-500" },
+  withdrawal_paid:     { label: "Вывод выполнен", icon: ArrowUp, color: "text-emerald-500" },
   withdrawal_rejected: { label: "Вывод отменён (возврат)", icon: ArrowUp, color: "text-emerald-500" },
 };
 
@@ -46,6 +46,10 @@ export default function UsersPage() {
   const [roomLoading, setRoomLoading] = useState(false);
   const [showIps, setShowIps] = useState(false);
   const focusId = searchParams.get("focus");
+  const initialTab = searchParams.get("tab") || "";
+  const focusWd = searchParams.get("wd") || "";
+  const [roomInitialTab, setRoomInitialTab] = useState<string>("tx");
+  const [roomHighlightWd, setRoomHighlightWd] = useState<string>("");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const fetchData = async () => {
@@ -62,9 +66,22 @@ export default function UsersPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Anchor highlight when ?focus=<id> is present
+  // Anchor highlight / auto-open when ?focus=<id> is present
   useEffect(() => {
     if (!focusId || loading) return;
+    const user = users.find((u) => u.id === focusId);
+    // If a tab is requested (e.g. from Все логи → Выводы) auto-open the User Room.
+    if (user && initialTab) {
+      setRoomInitialTab(initialTab);
+      setRoomHighlightWd(focusWd);
+      setOpenUser(user);
+      setShowIps(false);
+      loadRoom(user.id);
+      const p = new URLSearchParams(searchParams);
+      p.delete("focus"); p.delete("tab"); p.delete("wd");
+      setSearchParams(p, { replace: true });
+      return;
+    }
     const el = rowRefs.current[focusId];
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -99,6 +116,8 @@ export default function UsersPage() {
   }, [openUser?.id]);
 
   const openRoom = (u: any) => {
+    setRoomInitialTab("tx");
+    setRoomHighlightWd("");
     setOpenUser(u);
     setShowIps(false);
     loadRoom(u.id);
@@ -397,6 +416,8 @@ export default function UsersPage() {
               setOpenUser(null); setRoom(null);
               setSearchParams({ focus: userId }, { replace: true });
             }}
+            initialTab={roomInitialTab}
+            highlightWd={roomHighlightWd}
           />
         </DialogContent>
       </Dialog>
@@ -404,7 +425,20 @@ export default function UsersPage() {
   );
 }
 
-function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser }: any) {
+function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser, initialTab, highlightWd }: any) {
+  const wdRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  useEffect(() => {
+    if (!highlightWd || !room?.withdrawals) return;
+    const key = String(highlightWd);
+    const t = setTimeout(() => {
+      const el = wdRefs.current[key];
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary", "animate-pulse");
+      setTimeout(() => el.classList.remove("ring-2", "ring-primary", "animate-pulse"), 3500);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [highlightWd, room?.withdrawals]);
   if (!user) return null;
   const display = user.username ? `@${user.username}` : `ID ${user.telegram_id}`;
   return (
@@ -494,7 +528,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
               <StatBox icon={Ticket} label="Топ промокодеров" value={room.rank_promo ? `#${room.rank_promo}` : "—"} sub={`${room.promo_count} шт.`} />
             </div>
 
-            <Tabs defaultValue="tx">
+            <Tabs defaultValue={initialTab || "tx"}>
               <TabsList className="rounded-xl w-full flex-wrap h-auto">
                 <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> Транзакции ({room.activity.length})</TabsTrigger>
                 <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> Выводы ({(room.withdrawals || []).length})</TabsTrigger>
@@ -532,7 +566,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                           {format(parseISO(a.created_at), "dd.MM.yy HH:mm:ss")}
                         </div>
                       </div>
-                      <div className={`font-semibold whitespace-nowrap ${negative ? "text-orange-500" : "text-brand-gold"}`}>
+                      <div className={`font-semibold whitespace-nowrap ${a.action_type === "withdrawal_paid" || a.action_type === "withdrawal_rejected" ? "text-emerald-500" : negative ? "text-orange-500" : "text-brand-gold"}`}>
                         {negative ? "" : "+"}{reward.toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
                     </div>
@@ -550,7 +584,11 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                     ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }
                     : { label: "В ожидании", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" };
                   return (
-                    <div key={w.id} className="glass-card p-3">
+                    <div
+                      key={w.id}
+                      ref={(el) => { wdRefs.current[String(w.request_number)] = el; }}
+                      className="glass-card p-3 transition-shadow"
+                    >
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2">
                           <div className="p-2 rounded-xl bg-primary/10 text-primary">

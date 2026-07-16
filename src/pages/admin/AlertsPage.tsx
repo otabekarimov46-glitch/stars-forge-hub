@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare, Ticket, Search, Clock, Trash2,
-  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download, RotateCcw, Gift,
+  ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download, RotateCcw, Gift, ArrowUp,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import * as XLSX from "xlsx";
@@ -53,7 +53,7 @@ const COUNT_OPTIONS = [
   { value: "10000", label: "Последние 10 000" },
 ];
 
-type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward";
+type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward" | "withdrawal_paid" | "withdrawal_rejected";
 
 const ACTION_META: Record<ActionType, { label: string; short: string; icon: any; bar: string; badge: string; row: string; }> = {
   video:         { label: "Видеореклама",   short: "Видео",     icon: Film,       bar: "bg-brand-purple",       badge: "bg-brand-purple/10 text-brand-purple border-brand-purple/20", row: "bg-brand-purple/[0.04] hover:bg-brand-purple/[0.08]" },
@@ -64,9 +64,11 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   survey:        { label: "Опрос",          short: "Опрос",     icon: Heart,      bar: "bg-teal-500",           badge: "bg-teal-500/10 text-teal-500 border-teal-500/20",             row: "bg-teal-500/[0.04] hover:bg-teal-500/[0.08]" },
   balance_reset: { label: "Обнуление баланса", short: "Обнуление", icon: RotateCcw, bar: "bg-orange-500",       badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",       row: "bg-orange-500/[0.05] hover:bg-orange-500/[0.10]" },
   promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]" },
+  withdrawal_paid:     { label: "Вывод выполнен",  short: "Вывод", icon: ArrowUp, bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.05] hover:bg-emerald-500/[0.10]" },
+  withdrawal_rejected: { label: "Вывод отменён",   short: "Вывод", icon: ArrowUp, bar: "bg-emerald-600",        badge: "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",    row: "bg-emerald-600/[0.05] hover:bg-emerald-600/[0.10]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset"];
+const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
 
 export default function AlertsPage() {
   const { t } = useTranslation();
@@ -226,6 +228,15 @@ export default function AlertsPage() {
   const openInContent = (publicId: string) => {
     if (!publicId) return;
     navigate(`/admin/content?focus=${encodeURIComponent(publicId)}`);
+  };
+
+  const openWithdrawalInUser = (log: any) => {
+    if (!log?.user_id) return;
+    const m = String(log.task_title || "").match(/№\s*(\d+)/);
+    const wd = m ? m[1] : "";
+    const params = new URLSearchParams({ focus: log.user_id, tab: "withdrawals" });
+    if (wd) params.set("wd", wd);
+    navigate(`/admin/users?${params.toString()}`);
   };
 
   if (loading) return (
@@ -407,8 +418,13 @@ export default function AlertsPage() {
                 const timeStr = isVideo && started
                   ? `${format(started, "HH:mm:ss")} — ${format(finished, "HH:mm:ss")} · ${format(finished, "dd.MM.yy")}`
                   : format(finished, "HH:mm:ss · dd.MM.yy");
+                const isWithdrawal = l.action_type === "withdrawal_paid" || l.action_type === "withdrawal_rejected";
                 return (
-                  <div key={l.id} className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden ${meta.row}`}>
+                  <div
+                    key={l.id}
+                    onClick={isWithdrawal ? () => openWithdrawalInUser(l) : undefined}
+                    className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden ${meta.row} ${isWithdrawal ? "cursor-pointer" : ""}`}
+                  >
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${meta.bar}`} />
                     <div className={`p-2 rounded-xl ${meta.badge} shrink-0 self-center ml-1`}>
                       <Icon className="h-4 w-4" />
@@ -480,7 +496,7 @@ export default function AlertsPage() {
                       {/* time */}
                       <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">{timeStr}</div>
                       {/* reward */}
-                      <div className={`text-sm font-semibold whitespace-nowrap ${Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
+                      <div className={`text-sm font-semibold whitespace-nowrap ${isWithdrawal ? "text-emerald-500" : Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
                         {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
                     </div>
