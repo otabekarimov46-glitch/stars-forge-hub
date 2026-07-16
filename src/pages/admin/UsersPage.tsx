@@ -426,6 +426,19 @@ export default function UsersPage() {
 }
 
 function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser, initialTab, highlightWd }: any) {
+  const wdRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  useEffect(() => {
+    if (!highlightWd || !room?.withdrawals) return;
+    const key = String(highlightWd);
+    const t = setTimeout(() => {
+      const el = wdRefs.current[key];
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary", "animate-pulse");
+      setTimeout(() => el.classList.remove("ring-2", "ring-primary", "animate-pulse"), 3500);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [highlightWd, room?.withdrawals]);
   if (!user) return null;
   const display = user.username ? `@${user.username}` : `ID ${user.telegram_id}`;
   return (
