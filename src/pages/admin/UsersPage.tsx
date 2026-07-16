@@ -416,12 +416,9 @@ export default function UsersPage() {
               setOpenUser(null); setRoom(null);
               setSearchParams({ focus: userId }, { replace: true });
             }}
+            initialTab={roomInitialTab}
+            highlightWd={roomHighlightWd}
           />
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
 
 function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser }: any) {
   if (!user) return null;
