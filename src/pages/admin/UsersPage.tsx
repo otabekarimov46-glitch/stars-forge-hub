@@ -46,6 +46,10 @@ export default function UsersPage() {
   const [roomLoading, setRoomLoading] = useState(false);
   const [showIps, setShowIps] = useState(false);
   const focusId = searchParams.get("focus");
+  const initialTab = searchParams.get("tab") || "";
+  const focusWd = searchParams.get("wd") || "";
+  const [roomInitialTab, setRoomInitialTab] = useState<string>("tx");
+  const [roomHighlightWd, setRoomHighlightWd] = useState<string>("");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const fetchData = async () => {
@@ -62,9 +66,22 @@ export default function UsersPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Anchor highlight when ?focus=<id> is present
+  // Anchor highlight / auto-open when ?focus=<id> is present
   useEffect(() => {
     if (!focusId || loading) return;
+    const user = users.find((u) => u.id === focusId);
+    // If a tab is requested (e.g. from Все логи → Выводы) auto-open the User Room.
+    if (user && initialTab) {
+      setRoomInitialTab(initialTab);
+      setRoomHighlightWd(focusWd);
+      setOpenUser(user);
+      setShowIps(false);
+      loadRoom(user.id);
+      const p = new URLSearchParams(searchParams);
+      p.delete("focus"); p.delete("tab"); p.delete("wd");
+      setSearchParams(p, { replace: true });
+      return;
+    }
     const el = rowRefs.current[focusId];
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
