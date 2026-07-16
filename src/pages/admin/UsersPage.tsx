@@ -584,7 +584,11 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                     ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }
                     : { label: "В ожидании", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" };
                   return (
-                    <div key={w.id} className="glass-card p-3">
+                    <div
+                      key={w.id}
+                      ref={(el) => { wdRefs.current[String(w.request_number)] = el; }}
+                      className="glass-card p-3 transition-shadow"
+                    >
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2">
                           <div className="p-2 rounded-xl bg-primary/10 text-primary">
