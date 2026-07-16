@@ -496,7 +496,7 @@ export default function AlertsPage() {
                       {/* time */}
                       <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">{timeStr}</div>
                       {/* reward */}
-                      <div className={`text-sm font-semibold whitespace-nowrap ${Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
+                      <div className={`text-sm font-semibold whitespace-nowrap ${isWithdrawal ? "text-emerald-500" : Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
                         {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
                     </div>
