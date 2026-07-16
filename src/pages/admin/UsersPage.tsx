@@ -419,8 +419,13 @@ export default function UsersPage() {
             initialTab={roomInitialTab}
             highlightWd={roomHighlightWd}
           />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
-function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser }: any) {
+function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser, initialTab, highlightWd }: any) {
   if (!user) return null;
   const display = user.username ? `@${user.username}` : `ID ${user.telegram_id}`;
   return (
