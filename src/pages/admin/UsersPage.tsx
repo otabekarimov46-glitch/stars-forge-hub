@@ -515,7 +515,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
               <StatBox icon={Ticket} label="Топ промокодеров" value={room.rank_promo ? `#${room.rank_promo}` : "—"} sub={`${room.promo_count} шт.`} />
             </div>
 
-            <Tabs defaultValue="tx">
+            <Tabs defaultValue={initialTab || "tx"}>
               <TabsList className="rounded-xl w-full flex-wrap h-auto">
                 <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> Транзакции ({room.activity.length})</TabsTrigger>
                 <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> Выводы ({(room.withdrawals || []).length})</TabsTrigger>
