@@ -566,7 +566,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                           {format(parseISO(a.created_at), "dd.MM.yy HH:mm:ss")}
                         </div>
                       </div>
-                      <div className={`font-semibold whitespace-nowrap ${negative ? "text-orange-500" : "text-brand-gold"}`}>
+                      <div className={`font-semibold whitespace-nowrap ${a.action_type === "withdrawal_paid" || a.action_type === "withdrawal_rejected" ? "text-emerald-500" : negative ? "text-orange-500" : "text-brand-gold"}`}>
                         {negative ? "" : "+"}{reward.toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
                     </div>
