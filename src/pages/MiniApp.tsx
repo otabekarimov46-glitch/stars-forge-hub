@@ -74,6 +74,30 @@ function formatBalance(n: number, maxDecimals = 2): string {
   return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
 }
 
+// Rounds DOWN (never inflates) with adaptive precision for small amounts.
+function floorTo(n: number, decimals: number): number {
+  const f = Math.pow(10, decimals);
+  return Math.floor(n * f) / f;
+}
+
+function formatUsdtDown(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const decimals = n >= 1 ? 2 : n >= 0.01 ? 4 : 6;
+  const v = floorTo(n, decimals);
+  if (v === 0) return "<0.000001";
+  const s = v.toFixed(decimals);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+}
+
+// Exact spendable USDT amount (no beautifying) for the withdrawal input.
+function exactUsdt(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const v = floorTo(n, 6);
+  const s = v.toFixed(6);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+}
+
+
 export default function MiniApp() {
   const { t, lang, setLang } = useMiniAppI18n();
   const tgUser = useMemo(getTelegramUser, []);
