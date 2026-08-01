@@ -1,14 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 
 export const MINIAPP_LANGS = [
-  { code: "ru", label: "Русский", flag: "🇷🇺" },
-  { code: "be", label: "Беларуская", flag: "🇧🇾" },
-  { code: "kk", label: "Қазақша", flag: "🇰🇿" },
-  { code: "uz", label: "Oʻzbekcha", flag: "🇺🇿" },
-  { code: "az", label: "Azərbaycan", flag: "🇦🇿" },
-  { code: "hy", label: "Հայերեն", flag: "🇦🇲" },
-  { code: "ky", label: "Кыргызча", flag: "🇰🇬" },
+  { code: "ru", label: "Русский", flag: "🇷🇺", cc: "ru" },
+  { code: "be", label: "Беларуская", flag: "🇧🇾", cc: "by" },
+  { code: "kk", label: "Қазақша", flag: "🇰🇿", cc: "kz" },
+  { code: "uz", label: "Oʻzbekcha", flag: "🇺🇿", cc: "uz" },
+  { code: "az", label: "Azərbaycan", flag: "🇦🇿", cc: "az" },
+  { code: "hy", label: "Հայերեն", flag: "🇦🇲", cc: "am" },
+  { code: "ky", label: "Кыргызча", flag: "🇰🇬", cc: "kg" },
 ] as const;
+
 
 export type MiniAppLang = typeof MINIAPP_LANGS[number]["code"];
 

@@ -74,6 +74,30 @@ function formatBalance(n: number, maxDecimals = 2): string {
   return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
 }
 
+// Rounds DOWN (never inflates) with adaptive precision for small amounts.
+function floorTo(n: number, decimals: number): number {
+  const f = Math.pow(10, decimals);
+  return Math.floor(n * f) / f;
+}
+
+function formatUsdtDown(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const decimals = n >= 1 ? 2 : n >= 0.01 ? 4 : 6;
+  const v = floorTo(n, decimals);
+  if (v === 0) return "<0.000001";
+  const s = v.toFixed(decimals);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+}
+
+// Exact spendable USDT amount (no beautifying) for the withdrawal input.
+function exactUsdt(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const v = floorTo(n, 6);
+  const s = v.toFixed(6);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+}
+
+
 export default function MiniApp() {
   const { t, lang, setLang } = useMiniAppI18n();
   const tgUser = useMemo(getTelegramUser, []);
@@ -110,6 +134,9 @@ export default function MiniApp() {
   const [botUsername, setBotUsername] = useState<string>("");
   const tonAddress = useTonAddress();
   const [tonUI] = useTonConnectUI();
+  const [dbWallet, setDbWallet] = useState<string | null>(null);
+  const walletAddress = tonAddress || dbWallet;
+
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -244,11 +271,32 @@ export default function MiniApp() {
     return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [telegramId]);
 
-  // Persist TON wallet whenever it connects/disconnects
+  // Persist TON wallet when connected on this device (never wipe on other devices)
+  useEffect(() => {
+    if (!telegramId || !tonAddress) return;
+    setDbWallet(tonAddress);
+    miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: tonAddress }).catch(() => {});
+  }, [telegramId, tonAddress]);
+
+  // Load saved wallet from backend so it shows on every device
   useEffect(() => {
     if (!telegramId) return;
-    miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: tonAddress || null }).catch(() => {});
-  }, [telegramId, tonAddress]);
+    const load = () => miniAppApi("get_wallet", { telegram_id: telegramId })
+      .then((d) => setDbWallet(d?.wallet_address ?? null))
+      .catch(() => {});
+    load();
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", load);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("focus", load); };
+  }, [telegramId]);
+
+  const disconnectWallet = useCallback(async () => {
+    setDbWallet(null);
+    try { await tonUI?.disconnect(); } catch {}
+    if (telegramId) miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: null }).catch(() => {});
+  }, [tonUI, telegramId]);
+
 
   const openRefSheet = useCallback(() => {
     setRefSheetOpen(true);
@@ -1088,15 +1136,15 @@ export default function MiniApp() {
               <div className="relative">
                 {/* Connect Wallet — above the balance label */}
                 <div className="flex justify-center mb-3">
-                  {tonAddress ? (
+                  {walletAddress ? (
                     <button
                       onClick={() => setWalletMenuOpen(true)}
                       className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
-                      title={tonAddress}
+                      title={walletAddress}
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span className="tabular-nums">
-                        {tonAddress.slice(0, 4)}…{tonAddress.slice(-4)}
+                        {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
                       </span>
                       <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
@@ -1135,7 +1183,7 @@ export default function MiniApp() {
                   <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-emerald-500/10 border border-emerald-400/25">
                     <span className="text-[10px] font-bold text-emerald-300">$</span>
                     <span className="text-[13px] tabular-nums text-emerald-200">
-                      ≈ {user ? formatBalance(user.balance_pt * usdtRate, 2) : "…"}
+                      ≈ {user ? formatUsdtDown(user.balance_pt * usdtRate) : "…"}
                     </span>
                     <span className="text-[11px] text-emerald-300/70">USDT</span>
                   </span>
@@ -1899,7 +1947,14 @@ export default function MiniApp() {
                           onClick={() => setLang(l.code)}
                           className="w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
                         >
-                          <span className="text-[20px] leading-none">{l.flag}</span>
+                          <img
+                            src={`https://flagcdn.com/w40/${l.cc}.png`}
+                            srcSet={`https://flagcdn.com/w80/${l.cc}.png 2x`}
+                            alt={l.label}
+                            loading="lazy"
+                            className="w-6 h-[18px] rounded-[3px] object-cover shadow-sm ring-1 ring-white/15"
+                          />
+
                           <span className="flex-1 text-[14px] text-white/90">{l.label}</span>
                           {active && (
                             <span className="w-6 h-6 rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center">
@@ -2008,12 +2063,12 @@ export default function MiniApp() {
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
             <div className="text-center mb-3">
               <div className="text-[11px] uppercase tracking-widest text-white/50 mb-1">TON Wallet</div>
-              <div className="text-[13px] font-mono text-white/85 break-all px-2">{tonAddress}</div>
+              <div className="text-[13px] font-mono text-white/85 break-all px-2">{walletAddress}</div>
             </div>
             <div className="space-y-2">
               <button
                 onClick={async () => {
-                  try { await navigator.clipboard.writeText(tonAddress || ""); } catch {}
+                  try { await navigator.clipboard.writeText(walletAddress || ""); } catch {}
                   setWalletCopied(true);
                   setTimeout(() => { setWalletCopied(false); setWalletMenuOpen(false); }, 900);
                 }}
@@ -2024,7 +2079,7 @@ export default function MiniApp() {
                 {walletCopied ? t("copied") : t("copy_address")}
               </button>
               <button
-                onClick={() => { tonUI?.disconnect().catch(() => {}); setWalletMenuOpen(false); }}
+                onClick={() => { disconnectWallet(); setWalletMenuOpen(false); }}
                 className="press w-full h-12 rounded-2xl flex items-center justify-center gap-2 text-[14px] font-semibold text-red-300
                            bg-red-500/10 border border-red-400/25"
               >
@@ -2148,9 +2203,9 @@ export default function MiniApp() {
 
               {/* USDT */}
               <button
-                disabled={!tonAddress}
+                disabled={!walletAddress}
                 onClick={() => {
-                  if (!tonAddress) return;
+                  if (!walletAddress) return;
                   setWithdrawOpen(false);
                   setUsdtError(null);
                   setUsdtAmount("");
@@ -2158,18 +2213,18 @@ export default function MiniApp() {
                   setUsdtSheetOpen(true);
                 }}
                 className={`press w-full text-left rounded-2xl p-3 flex items-center gap-3 transition-colors
-                  ${tonAddress
+                  ${walletAddress
                     ? "bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/20 hover:border-emerald-300/40"
                     : "bg-white/[0.03] border border-white/10 opacity-60 cursor-not-allowed"}`}
               >
                 <span className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md
-                  ${tonAddress ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-900/30" : "bg-white/10"}`}>
+                  ${walletAddress ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-900/30" : "bg-white/10"}`}>
                   <Wallet className="w-5 h-5 text-white" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-semibold text-white">USDT</span>
                   <span className="block text-[11.5px] text-white/55">
-                    {tonAddress ? t("withdraw_via_crypto") : t("connect_crypto_wallet")}
+                    {walletAddress ? t("withdraw_via_crypto") : t("connect_crypto_wallet")}
                   </span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-white/30" />
@@ -2227,7 +2282,7 @@ export default function MiniApp() {
 
                 <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-3 mb-3">
                   <div className="text-[11px] text-white/50 uppercase tracking-wide mb-1">{t("wallet_label")}</div>
-                  <div className="text-[12px] font-mono text-white/80 break-all">{tonAddress}</div>
+                  <div className="text-[12px] font-mono text-white/80 break-all">{walletAddress}</div>
                 </div>
 
                 <label className="block text-[12px] text-white/60 mb-1.5">{t("amount_usdt_label")}</label>
@@ -2245,10 +2300,11 @@ export default function MiniApp() {
                   <span>≈ {(Number(usdtAmount || 0) / (usdtRate || 0.02)).toFixed(2)} PT</span>
                   <button
                     className="press-soft text-emerald-300"
-                    onClick={() => setUsdtAmount(((user?.balance_pt || 0) * usdtRate).toFixed(2))}
+                    onClick={() => setUsdtAmount(exactUsdt((user?.balance_pt || 0) * usdtRate))}
                   >
-                    Max: {((user?.balance_pt || 0) * usdtRate).toFixed(2)} USDT
+                    Max: {exactUsdt((user?.balance_pt || 0) * usdtRate)} USDT
                   </button>
+
                 </div>
 
                 {usdtError && (
