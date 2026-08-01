@@ -1159,7 +1159,7 @@ export default function MiniApp() {
                   <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-emerald-500/10 border border-emerald-400/25">
                     <span className="text-[10px] font-bold text-emerald-300">$</span>
                     <span className="text-[13px] tabular-nums text-emerald-200">
-                      ≈ {user ? formatBalance(user.balance_pt * usdtRate, 2) : "…"}
+                      ≈ {user ? formatUsdtDown(user.balance_pt * usdtRate) : "…"}
                     </span>
                     <span className="text-[11px] text-emerald-300/70">USDT</span>
                   </span>
