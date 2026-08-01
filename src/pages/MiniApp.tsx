@@ -1136,15 +1136,15 @@ export default function MiniApp() {
               <div className="relative">
                 {/* Connect Wallet — above the balance label */}
                 <div className="flex justify-center mb-3">
-                  {tonAddress ? (
+                  {walletAddress ? (
                     <button
                       onClick={() => setWalletMenuOpen(true)}
                       className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
-                      title={tonAddress}
+                      title={walletAddress}
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span className="tabular-nums">
-                        {tonAddress.slice(0, 4)}…{tonAddress.slice(-4)}
+                        {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
                       </span>
                       <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
@@ -2063,12 +2063,12 @@ export default function MiniApp() {
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
             <div className="text-center mb-3">
               <div className="text-[11px] uppercase tracking-widest text-white/50 mb-1">TON Wallet</div>
-              <div className="text-[13px] font-mono text-white/85 break-all px-2">{tonAddress}</div>
+              <div className="text-[13px] font-mono text-white/85 break-all px-2">{walletAddress}</div>
             </div>
             <div className="space-y-2">
               <button
                 onClick={async () => {
-                  try { await navigator.clipboard.writeText(tonAddress || ""); } catch {}
+                  try { await navigator.clipboard.writeText(walletAddress || ""); } catch {}
                   setWalletCopied(true);
                   setTimeout(() => { setWalletCopied(false); setWalletMenuOpen(false); }, 900);
                 }}
@@ -2203,9 +2203,9 @@ export default function MiniApp() {
 
               {/* USDT */}
               <button
-                disabled={!tonAddress}
+                disabled={!walletAddress}
                 onClick={() => {
-                  if (!tonAddress) return;
+                  if (!walletAddress) return;
                   setWithdrawOpen(false);
                   setUsdtError(null);
                   setUsdtAmount("");
@@ -2213,18 +2213,18 @@ export default function MiniApp() {
                   setUsdtSheetOpen(true);
                 }}
                 className={`press w-full text-left rounded-2xl p-3 flex items-center gap-3 transition-colors
-                  ${tonAddress
+                  ${walletAddress
                     ? "bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/20 hover:border-emerald-300/40"
                     : "bg-white/[0.03] border border-white/10 opacity-60 cursor-not-allowed"}`}
               >
                 <span className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md
-                  ${tonAddress ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-900/30" : "bg-white/10"}`}>
+                  ${walletAddress ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-emerald-900/30" : "bg-white/10"}`}>
                   <Wallet className="w-5 h-5 text-white" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-semibold text-white">USDT</span>
                   <span className="block text-[11.5px] text-white/55">
-                    {tonAddress ? t("withdraw_via_crypto") : t("connect_crypto_wallet")}
+                    {walletAddress ? t("withdraw_via_crypto") : t("connect_crypto_wallet")}
                   </span>
                 </span>
                 <ChevronRight className="w-4 h-4 text-white/30" />
@@ -2282,7 +2282,7 @@ export default function MiniApp() {
 
                 <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-3 mb-3">
                   <div className="text-[11px] text-white/50 uppercase tracking-wide mb-1">{t("wallet_label")}</div>
-                  <div className="text-[12px] font-mono text-white/80 break-all">{tonAddress}</div>
+                  <div className="text-[12px] font-mono text-white/80 break-all">{walletAddress}</div>
                 </div>
 
                 <label className="block text-[12px] text-white/60 mb-1.5">{t("amount_usdt_label")}</label>
