@@ -268,11 +268,32 @@ export default function MiniApp() {
     return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, [telegramId]);
 
-  // Persist TON wallet whenever it connects/disconnects
+  // Persist TON wallet when connected on this device (never wipe on other devices)
+  useEffect(() => {
+    if (!telegramId || !tonAddress) return;
+    setDbWallet(tonAddress);
+    miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: tonAddress }).catch(() => {});
+  }, [telegramId, tonAddress]);
+
+  // Load saved wallet from backend so it shows on every device
   useEffect(() => {
     if (!telegramId) return;
-    miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: tonAddress || null }).catch(() => {});
-  }, [telegramId, tonAddress]);
+    const load = () => miniAppApi("get_wallet", { telegram_id: telegramId })
+      .then((d) => setDbWallet(d?.wallet_address ?? null))
+      .catch(() => {});
+    load();
+    const onVis = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", load);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("focus", load); };
+  }, [telegramId]);
+
+  const disconnectWallet = useCallback(async () => {
+    setDbWallet(null);
+    try { await tonUI?.disconnect(); } catch {}
+    if (telegramId) miniAppApi("set_wallet", { telegram_id: telegramId, wallet_address: null }).catch(() => {});
+  }, [tonUI, telegramId]);
+
 
   const openRefSheet = useCallback(() => {
     setRefSheetOpen(true);
