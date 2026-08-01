@@ -2079,7 +2079,7 @@ export default function MiniApp() {
                 {walletCopied ? t("copied") : t("copy_address")}
               </button>
               <button
-                onClick={() => { tonUI?.disconnect().catch(() => {}); setWalletMenuOpen(false); }}
+                onClick={() => { disconnectWallet(); setWalletMenuOpen(false); }}
                 className="press w-full h-12 rounded-2xl flex items-center justify-center gap-2 text-[14px] font-semibold text-red-300
                            bg-red-500/10 border border-red-400/25"
               >
