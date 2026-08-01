@@ -1899,7 +1899,14 @@ export default function MiniApp() {
                           onClick={() => setLang(l.code)}
                           className="w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
                         >
-                          <span className="text-[20px] leading-none">{l.flag}</span>
+                          <img
+                            src={`https://flagcdn.com/w40/${l.cc}.png`}
+                            srcSet={`https://flagcdn.com/w80/${l.cc}.png 2x`}
+                            alt={l.label}
+                            loading="lazy"
+                            className="w-6 h-[18px] rounded-[3px] object-cover shadow-sm ring-1 ring-white/15"
+                          />
+
                           <span className="flex-1 text-[14px] text-white/90">{l.label}</span>
                           {active && (
                             <span className="w-6 h-6 rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center">
