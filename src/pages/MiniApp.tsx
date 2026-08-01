@@ -2276,10 +2276,11 @@ export default function MiniApp() {
                   <span>≈ {(Number(usdtAmount || 0) / (usdtRate || 0.02)).toFixed(2)} PT</span>
                   <button
                     className="press-soft text-emerald-300"
-                    onClick={() => setUsdtAmount(((user?.balance_pt || 0) * usdtRate).toFixed(2))}
+                    onClick={() => setUsdtAmount(exactUsdt((user?.balance_pt || 0) * usdtRate))}
                   >
-                    Max: {((user?.balance_pt || 0) * usdtRate).toFixed(2)} USDT
+                    Max: {exactUsdt((user?.balance_pt || 0) * usdtRate)} USDT
                   </button>
+
                 </div>
 
                 {usdtError && (
