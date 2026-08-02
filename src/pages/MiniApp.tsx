@@ -868,7 +868,7 @@ export default function MiniApp() {
     return t("task_default");
   };
 
-  const categoryTile = (kind: "subscribe" | "view_post" | "view_story") => {
+  const categoryTile = (kind: "subscribe" | "view_post" | "view_story", wide = false) => {
     const cfg = SHEET_CONFIG[kind];
     const Icon = cfg.icon;
     const list = (tasksByType[kind] || []).filter((t) => taskState[t.id] !== "done");
@@ -879,30 +879,31 @@ export default function MiniApp() {
         disabled={disabled}
         onClick={() => !disabled && setActiveSheet(kind)}
         className={
-          "press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 " +
-          (disabled
-            ? "opacity-45 cursor-not-allowed"
-            : "hover:bg-white/[0.09] active:scale-[0.985]")
+          "press ma-tile p-4 flex flex-col items-start gap-3 text-left transition-all duration-200 " +
+          (wide ? "col-span-2 " : "") +
+          (disabled ? "opacity-40 cursor-not-allowed" : "active:scale-[0.985]")
         }
-        style={{
-          background: "rgba(245,239,230,0.045)",
-          border: "1px solid rgba(120,96,66,0.40)",
-          backdropFilter: "blur(14px)",
-        }}
       >
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/12 border border-white/10 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-amber-300" />
+        <div className="flex items-center gap-3 w-full">
+          <div className="ma-icon w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0">
+            <Icon className="w-[18px] h-[18px]" />
+          </div>
+          {!disabled && (
+            <span className="ma-pill ma-num ml-auto px-2.5 h-6 inline-flex items-center text-[11px] text-amber-300">
+              {list.length}
+            </span>
+          )}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[14.5px] font-medium text-white/95 leading-tight">{cfg.title}</div>
-          <div className="text-[11.5px] text-white/50 mt-0.5">
+        <div className="w-full">
+          <div className="text-[14px] font-semibold leading-tight">{cfg.title}</div>
+          <div className="text-[11.5px] mt-1" style={{ color: "var(--ma-ink-3)" }}>
             {disabled ? t("no_tasks_short") : t("tasks_count", { n: list.length })}
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
       </button>
     );
   };
+
 
   return (
     <div className="min-h-screen text-white flex flex-col fade-in"
