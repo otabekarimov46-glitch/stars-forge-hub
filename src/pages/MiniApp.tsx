@@ -1467,16 +1467,11 @@ export default function MiniApp() {
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         aria-label={t("scroll_top")}
-        className={"fixed right-4 bottom-24 z-40 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 press-soft " +
+        className={"ma-bar fixed right-4 bottom-24 z-40 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 press-soft " +
           (showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none")}
-        style={{
-          background: "rgba(15,8,40,0.72)",
-          border: "1px solid rgba(120,96,66,0.46)",
-          backdropFilter: "blur(22px)",
-          WebkitBackdropFilter: "blur(22px)",
-        }}
       >
-        <ArrowUp className="w-4 h-4 text-white/85" />
+        <ArrowUp className="w-4 h-4" style={{ color: "var(--ma-ink-2)" }} />
+
       </button>
 
       {/* ===== Floating tab bar ===== */}
