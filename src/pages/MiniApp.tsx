@@ -773,10 +773,9 @@ export default function MiniApp() {
   // ===== Daily limit reached =====
   if (status === "limit" && limitInfo) {
     return (
-      <div className="min-h-screen text-white flex items-center justify-center p-6 fade-in"
-           style={{ background: "radial-gradient(120% 70% at 50% -10%, #241C15 0%, #17130F 45%, #100E0C 100%)" }}>
-        <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-3 screen-enter"
-             style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
+      <div className="miniapp min-h-screen flex items-center justify-center p-6 fade-in">
+        <div className="ma-tile max-w-sm w-full p-8 text-center space-y-3 screen-enter">
+
           <div className="w-14 h-14 mx-auto rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
             <CheckCircle className="w-7 h-7 text-emerald-300" />
           </div>
