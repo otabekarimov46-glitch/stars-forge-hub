@@ -734,10 +734,9 @@ export default function MiniApp() {
   // ===== No Telegram: dev login by telegram_id =====
   if (status === "no_telegram") {
     return (
-      <div className="min-h-screen text-white flex items-center justify-center p-6 fade-in"
-           style={{ background: "radial-gradient(120% 70% at 50% -10%, #241C15 0%, #17130F 45%, #100E0C 100%)" }}>
-        <div className="w-full max-w-sm rounded-3xl p-8 space-y-4 text-center screen-enter"
-          style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
+      <div className="miniapp min-h-screen flex items-center justify-center p-6 fade-in">
+        <div className="miniapp ma-tile w-full max-w-sm p-8 space-y-4 text-center screen-enter">
+
           <img src={logoImg} alt="" className="w-14 h-14 rounded-2xl mx-auto shadow-lg" />
           <h2 className="text-lg font-semibold">{t("open_via_telegram")}</h2>
           <p className="text-[13px] text-white/70">
