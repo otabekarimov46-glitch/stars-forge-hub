@@ -735,9 +735,9 @@ export default function MiniApp() {
   if (status === "no_telegram") {
     return (
       <div className="min-h-screen text-white flex items-center justify-center p-6 fade-in"
-           style={{ background: "radial-gradient(120% 80% at 50% 0%, #1a0a3a 0%, #0b0820 55%, #050314 100%)" }}>
+           style={{ background: "radial-gradient(120% 70% at 50% -10%, #241C15 0%, #17130F 45%, #100E0C 100%)" }}>
         <div className="w-full max-w-sm rounded-3xl p-8 space-y-4 text-center screen-enter"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+          style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
           <img src={logoImg} alt="" className="w-14 h-14 rounded-2xl mx-auto shadow-lg" />
           <h2 className="text-lg font-semibold">{t("open_via_telegram")}</h2>
           <p className="text-[13px] text-white/70">
@@ -751,10 +751,10 @@ export default function MiniApp() {
 
   if (status === "locked") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-[#1a0533] via-[#0d1b3e] to-[#0a2a1f] text-white flex items-center justify-center p-6 z-50 fade-in">
+      <div className="fixed inset-0 miniapp text-white flex items-center justify-center p-6 z-50 fade-in">
         <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-4 screen-enter"
-             style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}>
-          <ShieldAlert className="w-14 h-14 mx-auto text-yellow-400" />
+             style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(120,96,66,0.46)", backdropFilter: "blur(20px)" }}>
+          <ShieldAlert className="w-14 h-14 mx-auto text-amber-400" />
           <h2 className="text-xl font-bold">{t("unusual_activity")}</h2>
           <p className="text-sm text-white/85">
             {turnstileState === "running" && t("checking_device")}
@@ -775,14 +775,14 @@ export default function MiniApp() {
   if (status === "limit" && limitInfo) {
     return (
       <div className="min-h-screen text-white flex items-center justify-center p-6 fade-in"
-           style={{ background: "radial-gradient(120% 80% at 50% 0%, #1a0a3a 0%, #0b0820 55%, #050314 100%)" }}>
+           style={{ background: "radial-gradient(120% 70% at 50% -10%, #241C15 0%, #17130F 45%, #100E0C 100%)" }}>
         <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-3 screen-enter"
-             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+             style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
           <div className="w-14 h-14 mx-auto rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center">
             <CheckCircle className="w-7 h-7 text-emerald-300" />
           </div>
           <h2 className="text-xl font-bold">{t("daily_limit_reached")}</h2>
-          <p className="text-2xl font-bold tabular-nums text-yellow-300">
+          <p className="text-2xl font-bold tabular-nums text-amber-300">
             {limitInfo.watched}/{limitInfo.limit}
           </p>
           <p className="text-sm text-white/80">
@@ -834,7 +834,7 @@ export default function MiniApp() {
         <div className="p-4 bg-black/80 backdrop-blur space-y-2">
           <div className="flex justify-between text-xs text-white">
             <span className="tabular-nums">{Math.min(playbackDuration || video.duration_seconds, elapsed).toFixed(1)}с / {(playbackDuration || video.duration_seconds).toFixed(1)}с</span>
-            <span className="text-yellow-300">+{video.reward_pt} PT</span>
+            <span className="text-amber-300">+{video.reward_pt} PT</span>
           </div>
           <Progress value={progressPercent} className="h-1.5" />
           <p className="text-center text-[11px] text-white/70">{isBuffering ? t("loading_video") : t("dont_close")}</p>
@@ -887,13 +887,13 @@ export default function MiniApp() {
             : "hover:bg-white/[0.09] active:scale-[0.985]")
         }
         style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.09)",
+          background: "rgba(245,239,230,0.045)",
+          border: "1px solid rgba(120,96,66,0.40)",
           backdropFilter: "blur(14px)",
         }}
       >
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
-          <Icon className="w-5 h-5 text-sky-200" />
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/12 border border-white/10 flex items-center justify-center shrink-0">
+          <Icon className="w-5 h-5 text-amber-300" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[14.5px] font-medium text-white/95 leading-tight">{cfg.title}</div>
@@ -908,7 +908,7 @@ export default function MiniApp() {
 
   return (
     <div className="min-h-screen text-white flex flex-col fade-in"
-         style={{ background: "radial-gradient(120% 80% at 50% 0%, #1a0a3a 0%, #0b0820 55%, #050314 100%)" }}>
+         style={{ background: "radial-gradient(120% 70% at 50% -10%, #241C15 0%, #17130F 45%, #100E0C 100%)" }}>
 
       {/* ===== Header ===== */}
       <header className="px-4 pt-5 pb-3 flex items-center justify-between gap-3">
@@ -917,7 +917,7 @@ export default function MiniApp() {
           <span className="font-semibold text-[17px] tracking-tight truncate">Starment</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold">
+          <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-sm font-semibold">
             {tgUser.photo ? (
               <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
             ) : (initial)}
@@ -927,13 +927,13 @@ export default function MiniApp() {
               onClick={() => setSettingsOpen(true)}
               aria-label={t("settings")}
               className="press-soft w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/10 active:scale-90"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}
+              style={{ background: "rgba(245,239,230,0.06)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(14px)" }}
             >
               <SettingsIcon className="w-4 h-4 text-white/85" />
             </button>
           ) : (
             <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
-                 style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}>
+                 style={{ background: "rgba(245,239,230,0.06)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(14px)" }}>
               <Wallet className="w-3.5 h-3.5 text-white/75" />
               <span className="font-semibold tabular-nums text-[14px]">
                 {user ? formatBalance(user.balance_pt) : "…"}
@@ -951,9 +951,9 @@ export default function MiniApp() {
         <button
           onClick={() => { if (!bonusClaimed) claimDailyBonus(); else setBonusToast({ kind: "wait", hours: Math.ceil(bonusCountdownMs / 3600000) }); }}
           className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(14px)" }}
+          style={{ background: "rgba(245,239,230,0.05)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(14px)" }}
         >
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
             <Gift className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -966,7 +966,7 @@ export default function MiniApp() {
           <span className={"px-3 h-7 inline-flex items-center rounded-full text-[11px] font-semibold tracking-wide " +
             (bonusClaimed
               ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
-              : "bg-gradient-to-r from-yellow-400 to-orange-500 text-black")}>
+              : "bg-gradient-to-r from-amber-300 to-orange-500 text-black")}>
             {bonusClaimed ? t("received") : t("receive")}
           </span>
         </button>
@@ -974,7 +974,7 @@ export default function MiniApp() {
         {bonusToast && (
           <div className="mt-2 text-center text-[12px] text-white/75 fade-in">
             {bonusToast.kind === "got"
-              ? <>🎁 +<span className="text-yellow-300 font-semibold">{bonusToast.bonus} PT</span> {t("bonus_credited")}</>
+              ? <>🎁 +<span className="text-amber-300 font-semibold">{bonusToast.bonus} PT</span> {t("bonus_credited")}</>
               : <>{t("bonus_next", { h: bonusToast.hours ?? 0 })}</>}
           </div>
         )}
@@ -985,7 +985,7 @@ export default function MiniApp() {
         <div className="max-w-md mx-auto">
           {status === "loading" && (
             <div className="rounded-3xl overflow-hidden"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)" }}>
               <div className="relative aspect-video skeleton-shimmer" />
               <div className="p-4 space-y-3.5">
                 <div className="h-4 rounded-md skeleton-shimmer w-3/4 mx-auto" />
@@ -996,7 +996,7 @@ export default function MiniApp() {
 
           {status === "error" && (
             <div className="rounded-3xl flex flex-col items-center gap-3 py-10 text-center"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)" }}>
               <AlertTriangle className="w-10 h-10 text-red-400" />
               <p className="text-red-200 text-sm px-4">{error}</p>
               <button onClick={loadVideo}
@@ -1012,13 +1012,13 @@ export default function MiniApp() {
               onClick={() => { /* no-op — press feedback only */ }}
               className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left opacity-50 transition-all duration-200"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.09)",
+                background: "rgba(245,239,230,0.045)",
+                border: "1px solid rgba(120,96,66,0.40)",
                 backdropFilter: "blur(14px)",
               }}
               aria-disabled="true"
             >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/15 border border-white/10 flex items-center justify-center shrink-0">
                 <Play className="w-5 h-5 text-white/60" />
               </div>
               <div className="flex-1 min-w-0">
@@ -1032,14 +1032,14 @@ export default function MiniApp() {
           {status === "ready" && video && (
             <div key={video.id} className="screen-enter">
               <div className="rounded-3xl overflow-hidden"
-                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                   style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)" }}>
                 <div className="relative aspect-video bg-black/40 overflow-hidden">
                   {posterUrl || video.media_type === "image" ? (
                     <img src={posterUrl || video.video_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-900/40 to-blue-900/40" />
+                    <div className="w-full h-full bg-gradient-to-br from-[#241B12] to-[#15120F]" />
                   )}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 shadow-2xl shadow-purple-900/40 font-bold text-lg tabular-nums">
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 shadow-2xl shadow-orange-950/50 font-bold text-lg tabular-nums">
                     +{video.reward_pt} PT
                   </div>
                   <div className="absolute right-2 bottom-2 px-2.5 py-1 rounded-full text-[11px] bg-black/60 backdrop-blur tabular-nums flex items-center gap-1">
@@ -1051,8 +1051,8 @@ export default function MiniApp() {
                   <button
                     onClick={startWatching}
                     className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
+                      bg-gradient-to-r from-amber-400 to-orange-600
+                      shadow-lg shadow-orange-950/40 flex items-center justify-center gap-2
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
                     <Play className="w-4 h-4" /> {t("watch")}
@@ -1065,7 +1065,7 @@ export default function MiniApp() {
           {status === "completed" && lastFinished && (
             <div className="screen-enter">
               <div className="rounded-3xl overflow-hidden text-center"
-                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                   style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)" }}>
                 <div className="px-6 pt-6 pb-2 flex flex-col items-center gap-2">
                   {lastFinished.rewarded ? (
                     <>
@@ -1074,7 +1074,7 @@ export default function MiniApp() {
                       </div>
                       <div className="text-[15px] text-white/90">{t("video_watched")}</div>
                       <div className="text-2xl font-bold tabular-nums">
-                        +<span className="text-yellow-300">{lastFinished.reward} PT</span>
+                        +<span className="text-amber-300">{lastFinished.reward} PT</span>
                       </div>
                     </>
                   ) : (
@@ -1094,8 +1094,8 @@ export default function MiniApp() {
                   <button
                     onClick={watchNext}
                     className="press-cta w-full h-12 rounded-2xl font-semibold tracking-wide text-[15px] text-white
-                      bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500
-                      shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2
+                      bg-gradient-to-r from-amber-400 to-orange-600
+                      shadow-lg shadow-orange-950/40 flex items-center justify-center gap-2
                       transition-transform duration-150 active:scale-[0.97] hover:brightness-110"
                   >
                     <Play className="w-4 h-4" />
@@ -1130,7 +1130,7 @@ export default function MiniApp() {
         <section className="px-4 mt-4 space-y-3">
           <div className="max-w-md mx-auto space-y-3">
             <div className="rounded-3xl p-6 text-center relative overflow-hidden"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
               <div className="absolute inset-0 pointer-events-none opacity-20"
                    style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
               <div className="relative">
@@ -1152,7 +1152,7 @@ export default function MiniApp() {
                     <button
                       onClick={() => tonUI?.openModal().catch(() => {})}
                       className="press inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px] font-semibold text-white
-                                 bg-gradient-to-r from-sky-500 to-blue-600 shadow-md shadow-blue-900/30 border border-white/10"
+                                 bg-gradient-to-r from-amber-500 to-blue-600 shadow-md shadow-blue-900/30 border border-white/10"
                     >
                       <Link2 className="w-3.5 h-3.5" />
                       {t("connect_wallet")}
@@ -1174,7 +1174,7 @@ export default function MiniApp() {
                 )}
                 <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
-                    <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+                    <Star className="w-3.5 h-3.5 text-amber-300 fill-yellow-300" />
                     <span className="text-[13px] tabular-nums">
                       ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
                     </span>
@@ -1203,7 +1203,7 @@ export default function MiniApp() {
                 shadow-lg flex items-center justify-center gap-2
                 ${pendingWithdrawal
                   ? "bg-white/10 text-white/50 shadow-none cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-purple-900/30"}`}
+                  : "bg-gradient-to-r from-amber-400 to-orange-600 shadow-orange-950/40"}`}
             >
               <ArrowUp className="w-4 h-4" /> {pendingWithdrawal ? t("pending_review") : t("withdraw")}
             </button>
@@ -1232,7 +1232,7 @@ export default function MiniApp() {
                 </div>
               ) : txs.length === 0 ? (
                 <div className="text-center text-[12px] text-white/45 py-6 rounded-2xl"
-                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,239,230,0.05)" }}>
                   {t("no_transactions")}
                 </div>
               ) : (
@@ -1266,7 +1266,7 @@ export default function MiniApp() {
                       return (
                         <li key={tx.id}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(245,239,230,0.05)" }}>
                           <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${
                             isWithdrawal ? "bg-emerald-500/15 border-emerald-500/30"
                             : negative ? "bg-orange-500/15 border-orange-500/30"
@@ -1310,8 +1310,8 @@ export default function MiniApp() {
         <section className="px-4 mt-4 space-y-3">
           <div className="max-w-md mx-auto space-y-3">
             <div className="rounded-3xl p-6 text-center"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
-              <div className="w-20 h-20 rounded-full mx-auto overflow-hidden ring-2 ring-white/15 shadow-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-2xl font-semibold">
+                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
+              <div className="w-20 h-20 rounded-full mx-auto overflow-hidden ring-2 ring-white/15 shadow-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-2xl font-semibold">
                 {tgUser.photo ? (
                   <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
                 ) : (initial)}
@@ -1323,8 +1323,8 @@ export default function MiniApp() {
             </div>
 
             <div className="rounded-2xl p-4 flex items-center gap-3"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/90 to-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
+                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)", backdropFilter: "blur(14px)" }}>
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
@@ -1344,7 +1344,7 @@ export default function MiniApp() {
 
             {/* ===== Top by balance (above invite) ===== */}
             <div className="rounded-2xl p-4"
-                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}>
+                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)", backdropFilter: "blur(14px)" }}>
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center shrink-0">
                   <Trophy className="w-4 h-4 text-white/80" />
@@ -1412,9 +1412,9 @@ export default function MiniApp() {
               <button
                 onClick={openRefSheet}
                 className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+                style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)", backdropFilter: "blur(14px)" }}
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-sky-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400/25 to-amber-500/25 border border-white/10 flex items-center justify-center shrink-0">
                   <Send className="w-5 h-5 text-emerald-200" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1430,10 +1430,10 @@ export default function MiniApp() {
               <button
                 onClick={() => { setPromoInput(""); setPromoError(null); setPromoSuccess(null); setPromoSheetOpen(true); }}
                 className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", backdropFilter: "blur(14px)" }}
+                style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)", backdropFilter: "blur(14px)" }}
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-fuchsia-400/25 to-purple-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                  <Gift className="w-5 h-5 text-fuchsia-200" />
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400/25 to-orange-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  <Gift className="w-5 h-5 text-orange-200" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("promo_code")}</div>
@@ -1456,7 +1456,7 @@ export default function MiniApp() {
           (showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none")}
         style={{
           background: "rgba(15,8,40,0.72)",
-          border: "1px solid rgba(255,255,255,0.12)",
+          border: "1px solid rgba(120,96,66,0.46)",
           backdropFilter: "blur(22px)",
           WebkitBackdropFilter: "blur(22px)",
         }}
@@ -1470,7 +1470,7 @@ export default function MiniApp() {
           className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full shadow-2xl shadow-black/40 max-w-full"
           style={{
             background: "rgba(15,8,40,0.72)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            border: "1px solid rgba(120,96,66,0.46)",
             backdropFilter: "blur(22px)",
             WebkitBackdropFilter: "blur(22px)",
           }}
@@ -1489,7 +1489,7 @@ export default function MiniApp() {
                 className={
                   "press-soft h-11 rounded-full flex items-center justify-center gap-2 text-[13px] font-medium transition-all duration-300 overflow-hidden shrink-0 " +
                   (active
-                    ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-purple-900/40 px-4 max-w-[55vw]"
+                    ? "bg-gradient-to-r from-amber-400 to-orange-600 text-white shadow-lg shadow-orange-950/50 px-4 max-w-[55vw]"
                     : "text-white/70 hover:text-white hover:bg-white/5 px-3.5")
                 }
               >
@@ -1518,7 +1518,7 @@ export default function MiniApp() {
             className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
             style={{
               background: "rgba(15,8,40,0.96)",
-              borderTop: "1px solid rgba(255,255,255,0.10)",
+              borderTop: "1px solid rgba(120,96,66,0.42)",
               backdropFilter: "blur(28px)",
               maxHeight: "97vh",
               height: "97vh",
@@ -1599,7 +1599,7 @@ export default function MiniApp() {
                     );
                   } else {
                     cta = (
-                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md shadow-indigo-900/30">
+                      <span className="px-3 h-8 inline-flex items-center gap-1 rounded-full text-[12px] font-medium bg-gradient-to-r from-orange-500 to-blue-500 text-white shadow-md shadow-orange-900/30">
                         {cfg.ctaLabel} <ExternalLink className="w-3 h-3" />
                       </span>
                     );
@@ -1614,10 +1614,10 @@ export default function MiniApp() {
                         (disabled ? "opacity-60" : "hover:bg-white/[0.09] active:scale-[0.985]")
                       }
                       style={{
-                        background: redo ? "rgba(239,68,68,0.09)" : "rgba(255,255,255,0.05)",
+                        background: redo ? "rgba(239,68,68,0.09)" : "rgba(245,239,230,0.045)",
                         border: redo
                           ? "1px solid rgba(248,113,113,0.55)"
-                          : "1px solid rgba(255,255,255,0.09)",
+                          : "1px solid rgba(120,96,66,0.40)",
                         boxShadow: redo ? "0 0 0 1px rgba(248,113,113,0.15) inset" : undefined,
                       }}
                     >
@@ -1625,9 +1625,9 @@ export default function MiniApp() {
                         "w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 " +
                         (redo
                           ? "bg-gradient-to-br from-red-500/25 to-rose-500/25 border-red-400/30"
-                          : "bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-white/10")
+                          : "bg-gradient-to-br from-amber-400/20 to-orange-500/12 border-white/10")
                       }>
-                        <Icon className={"w-5 h-5 " + (redo ? "text-red-200" : "text-sky-200")} />
+                        <Icon className={"w-5 h-5 " + (redo ? "text-red-200" : "text-amber-300")} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[14.5px] font-medium text-white/95 truncate flex items-center gap-1.5">
@@ -1640,7 +1640,7 @@ export default function MiniApp() {
                         </div>
                         <div className={
                           "text-[12px] mt-0.5 tabular-nums transition-colors duration-300 " +
-                          (state === "done" ? "text-emerald-400 line-through" : (redo ? "text-red-300/90" : "text-yellow-300/90"))
+                          (state === "done" ? "text-emerald-400 line-through" : (redo ? "text-red-300/90" : "text-amber-300/90"))
                         }>
                           +{t.reward_pt} PT
                         </div>
@@ -1683,7 +1683,7 @@ export default function MiniApp() {
             className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
             style={{
               background: "rgba(15,8,40,0.96)",
-              borderTop: "1px solid rgba(255,255,255,0.10)",
+              borderTop: "1px solid rgba(120,96,66,0.42)",
               backdropFilter: "blur(28px)",
               maxHeight: "88vh",
             }}
@@ -1708,11 +1708,11 @@ export default function MiniApp() {
               <div className="max-w-md mx-auto space-y-3">
                 {/* Hero */}
                 <div className="rounded-3xl p-5 text-center relative overflow-hidden"
-                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                     style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)" }}>
                   <div className="absolute inset-0 pointer-events-none opacity-40"
                        style={{ background: "radial-gradient(60% 60% at 50% 0%, rgba(16,185,129,0.35) 0%, transparent 70%)" }} />
                   <div className="relative">
-                    <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center shadow-lg shadow-emerald-900/30">
+                    <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-900/30">
                       <Send className="w-6 h-6 text-white" />
                     </div>
                     <div className="mt-3 text-[15px] text-white/85 leading-snug">
@@ -1725,7 +1725,7 @@ export default function MiniApp() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="rounded-2xl p-3.5"
-                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                       style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)" }}>
                     <div className="text-[11px] uppercase tracking-widest text-white/50">{t("invited")}</div>
                     <div className="mt-1 text-2xl font-bold tabular-nums text-white">
                       {refData?.count ?? (refLoading ? "…" : 0)}
@@ -1733,7 +1733,7 @@ export default function MiniApp() {
 
                   </div>
                   <div className="rounded-2xl p-3.5"
-                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                       style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)" }}>
                     <div className="text-[11px] uppercase tracking-widest text-white/50">{t("earned")}</div>
                     <div className="mt-1 text-2xl font-bold tabular-nums">
                       <span className="bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">
@@ -1749,7 +1749,7 @@ export default function MiniApp() {
 
                 {/* Referral link */}
                 <div className="rounded-2xl p-4 space-y-3"
-                     style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                     style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)" }}>
                   <div className="text-[12px] uppercase tracking-widest text-white/50">{t("your_link")}</div>
                   {refLink ? (
                     <button
@@ -1776,8 +1776,8 @@ export default function MiniApp() {
                       onClick={shareRefLink}
                       disabled={!refLink}
                       className="press-cta h-11 rounded-xl font-semibold text-[13.5px] text-white
-                        bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-500
-                        shadow-lg shadow-sky-900/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                        bg-gradient-to-r from-emerald-500 via-amber-500 to-orange-500
+                        shadow-lg shadow-amber-900/30 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" />
                       {t("share")}
@@ -1788,14 +1788,14 @@ export default function MiniApp() {
                 {/* Referrals list */}
                 {refData && refData.count > 0 && (
                   <div className="rounded-2xl overflow-hidden"
-                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                       style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)" }}>
                     <div className="px-4 pt-3 pb-2 text-[13px] font-semibold text-white/85">
                       {t("your_invited")}
                     </div>
                     <div className="divide-y divide-white/5 max-h-56 overflow-y-auto">
                       {refData.referrals.map((r) => (
                         <div key={r.id} className="px-4 py-2.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-[13px] font-semibold shrink-0">
                             {(r.username || String(r.telegram_id)).slice(0, 1).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -1827,7 +1827,7 @@ export default function MiniApp() {
             className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
             style={{
               background: "rgba(15,8,40,0.96)",
-              borderTop: "1px solid rgba(255,255,255,0.10)",
+              borderTop: "1px solid rgba(120,96,66,0.42)",
               backdropFilter: "blur(28px)",
             }}
           >
@@ -1836,7 +1836,7 @@ export default function MiniApp() {
             </div>
             <div className="px-5 pb-3 flex items-center justify-between gap-3 border-b border-white/5">
               <Vaul.Title className="text-[17px] font-semibold tracking-tight text-white flex items-center gap-2">
-                <Gift className="w-4 h-4 text-fuchsia-200" />
+                <Gift className="w-4 h-4 text-orange-200" />
                 {t("promo_code")}
               </Vaul.Title>
               <button
@@ -1887,7 +1887,7 @@ export default function MiniApp() {
                   className={
                     "press-cta w-full h-12 rounded-2xl text-[15px] font-semibold text-white transition-all " +
                     (promoInput.trim()
-                      ? "bg-gradient-to-r from-fuchsia-500 to-purple-500 shadow-lg shadow-purple-900/30"
+                      ? "bg-gradient-to-r from-orange-500 to-orange-500 shadow-lg shadow-orange-950/40"
                       : "bg-white/[0.08] text-white/60 border border-white/10")
                   }
                 >
@@ -1910,7 +1910,7 @@ export default function MiniApp() {
             className="fixed bottom-0 inset-x-0 z-50 rounded-t-[28px] outline-none flex flex-col"
             style={{
               background: "rgba(15,8,40,0.96)",
-              borderTop: "1px solid rgba(255,255,255,0.10)",
+              borderTop: "1px solid rgba(120,96,66,0.42)",
               backdropFilter: "blur(28px)",
               maxHeight: "88vh",
             }}
@@ -1938,7 +1938,7 @@ export default function MiniApp() {
                 <div>
                   <div className="px-1 pb-2 text-[11px] uppercase tracking-[0.14em] text-white/50">{t("language")}</div>
                   <div className="rounded-2xl overflow-hidden divide-y divide-white/5"
-                       style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                       style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)" }}>
                     {MINIAPP_LANGS.map((l) => {
                       const active = l.code === lang;
                       return (
@@ -1984,10 +1984,10 @@ export default function MiniApp() {
                       } catch {}
                     }}
                     className="press w-full rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                    style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.40)" }}
                   >
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-400/25 to-indigo-500/25 border border-white/10 flex items-center justify-center shrink-0">
-                      <LifeBuoy className="w-5 h-5 text-sky-200" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400/25 to-orange-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                      <LifeBuoy className="w-5 h-5 text-amber-300" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[14.5px] font-medium text-white/95 leading-tight">{t("contact_support")}</div>
@@ -2016,7 +2016,7 @@ export default function MiniApp() {
             style={{
               background: "linear-gradient(180deg, rgba(30,10,40,0.98), rgba(15,8,40,0.98))",
               border: "1px solid rgba(248,113,113,0.35)",
-              boxShadow: "0 30px 60px -20px rgba(220,38,38,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+              boxShadow: "0 30px 60px -20px rgba(220,38,38,0.35), inset 0 1px 0 rgba(245,239,230,0.05)",
             }}
           >
             <div className="flex flex-col items-center text-center">
@@ -2058,7 +2058,7 @@ export default function MiniApp() {
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md mx-2 mb-2 rounded-3xl p-4 screen-enter"
-            style={{ background: "rgba(20,20,28,0.95)", border: "1px solid rgba(255,255,255,0.10)" }}
+            style={{ background: "rgba(20,20,28,0.95)", border: "1px solid rgba(120,96,66,0.42)" }}
           >
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
             <div className="text-center mb-3">
@@ -2073,7 +2073,7 @@ export default function MiniApp() {
                   setTimeout(() => { setWalletCopied(false); setWalletMenuOpen(false); }, 900);
                 }}
                 className="press w-full h-12 rounded-2xl flex items-center justify-center gap-2 text-[14px] font-semibold text-white
-                           bg-gradient-to-r from-sky-500 to-blue-600 border border-white/10 shadow-md shadow-blue-900/30"
+                           bg-gradient-to-r from-amber-500 to-blue-600 border border-white/10 shadow-md shadow-blue-900/30"
               >
                 {walletCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {walletCopied ? t("copied") : t("copy_address")}
@@ -2152,7 +2152,7 @@ export default function MiniApp() {
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-3xl p-5 screen-enter relative"
-            style={{ background: "rgba(20,20,28,0.96)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 30px 80px rgba(0,0,0,0.5)" }}
+            style={{ background: "rgba(20,20,28,0.96)", border: "1px solid rgba(120,96,66,0.42)", boxShadow: "0 30px 80px rgba(0,0,0,0.5)" }}
           >
             <button
               onClick={() => setWithdrawOpen(false)}
@@ -2163,7 +2163,7 @@ export default function MiniApp() {
             </button>
 
             <div className="text-center mb-4">
-              <div className="mx-auto mb-2 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 shadow-lg shadow-purple-900/40">
+              <div className="mx-auto mb-2 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-600 shadow-lg shadow-orange-950/50">
                 <ArrowUp className="w-5 h-5 text-white" />
               </div>
               <h3 className="text-[17px] font-semibold text-white">{t("withdraw_title")}</h3>
@@ -2189,9 +2189,9 @@ export default function MiniApp() {
               {/* Gifts */}
               <button
                 className="press w-full text-left rounded-2xl p-3 flex items-center gap-3
-                           bg-gradient-to-r from-pink-500/10 to-fuchsia-500/10 border border-pink-300/20 hover:border-pink-300/40 transition-colors"
+                           bg-gradient-to-r from-pink-500/10 to-orange-500/10 border border-pink-300/20 hover:border-pink-300/40 transition-colors"
               >
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-400 to-fuchsia-500 shadow-md shadow-fuchsia-900/30">
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-400 to-orange-500 shadow-md shadow-orange-900/30">
                   <Gift className="w-5 h-5 text-white" />
                 </span>
                 <span className="flex-1 min-w-0">
@@ -2244,7 +2244,7 @@ export default function MiniApp() {
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 screen-enter relative"
-            style={{ background: "rgba(20,20,28,0.98)", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 -30px 80px rgba(0,0,0,0.5)" }}
+            style={{ background: "rgba(20,20,28,0.98)", border: "1px solid rgba(120,96,66,0.42)", boxShadow: "0 -30px 80px rgba(0,0,0,0.5)" }}
           >
             <button
               onClick={() => { if (!usdtSubmitting) setUsdtSheetOpen(false); }}
