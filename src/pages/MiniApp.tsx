@@ -1133,14 +1133,15 @@ export default function MiniApp() {
         </div>
       </section>
 
-      {/* ===== Category tiles (scrollable list under watch card) ===== */}
-      <section className="px-4 mt-3 pb-8 space-y-2.5">
-        <div className="max-w-md mx-auto space-y-2.5">
-          {categoryTile("subscribe")}
+      {/* ===== Category tiles (bento grid) ===== */}
+      <section className="px-4 mt-3 pb-8">
+        <div className="max-w-md mx-auto grid grid-cols-2 gap-2.5">
+          {categoryTile("subscribe", true)}
           {categoryTile("view_story")}
           {categoryTile("view_post")}
         </div>
       </section>
+
       </>)}
 
       {tab === "wallet" && (
