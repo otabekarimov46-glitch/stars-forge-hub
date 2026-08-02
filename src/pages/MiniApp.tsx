@@ -751,8 +751,8 @@ export default function MiniApp() {
   if (status === "locked") {
     return (
       <div className="fixed inset-0 miniapp text-white flex items-center justify-center p-6 z-50 fade-in">
-        <div className="max-w-sm w-full rounded-3xl p-8 text-center space-y-4 screen-enter"
-             style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(120,96,66,0.46)", backdropFilter: "blur(20px)" }}>
+        <div className="ma-tile max-w-sm w-full p-8 text-center space-y-4 screen-enter">
+
           <ShieldAlert className="w-14 h-14 mx-auto text-amber-400" />
           <h2 className="text-xl font-bold">{t("unusual_activity")}</h2>
           <p className="text-sm text-white/85">
