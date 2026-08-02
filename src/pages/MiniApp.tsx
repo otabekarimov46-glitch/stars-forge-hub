@@ -1476,15 +1476,7 @@ export default function MiniApp() {
 
       {/* ===== Floating tab bar ===== */}
       <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center pointer-events-none px-3">
-        <div
-          className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full shadow-2xl shadow-black/40 max-w-full"
-          style={{
-            background: "rgba(15,8,40,0.72)",
-            border: "1px solid rgba(120,96,66,0.46)",
-            backdropFilter: "blur(22px)",
-            WebkitBackdropFilter: "blur(22px)",
-          }}
-        >
+        <div className="ma-bar pointer-events-auto flex items-center gap-1 p-1.5 rounded-full max-w-full">
           {[
             { id: "tasks",   label: t("tab_tasks"),   icon: ListChecks },
             { id: "wallet",  label: t("tab_wallet"),  icon: Wallet },
@@ -1497,12 +1489,12 @@ export default function MiniApp() {
                 onClick={() => setTab(id as any)}
                 aria-label={label}
                 className={
-                  "press-soft h-11 rounded-full flex items-center justify-center gap-2 text-[13px] font-medium transition-all duration-300 overflow-hidden shrink-0 " +
-                  (active
-                    ? "bg-gradient-to-r from-amber-400 to-orange-600 text-white shadow-lg shadow-orange-950/50 px-4 max-w-[55vw]"
-                    : "text-white/70 hover:text-white hover:bg-white/5 px-3.5")
+                  "press-soft h-11 rounded-full flex items-center justify-center gap-2 text-[13px] font-semibold transition-all duration-300 overflow-hidden shrink-0 " +
+                  (active ? "ma-accent-btn px-4 max-w-[55vw] !rounded-full" : "px-3.5")
                 }
+                style={active ? undefined : { color: "var(--ma-ink-2)" }}
               >
+
                 <Icon className="w-4 h-4 shrink-0" />
                 {active && (
                   <span className="truncate">{label}</span>
