@@ -950,39 +950,52 @@ export default function MiniApp() {
 
       <div className="pb-28">
       {tab === "tasks" && (<>
-      {/* ===== Daily bonus ===== */}
+      {/* ===== Daily bonus (bento row) ===== */}
       <section className="px-4 mt-2">
-        <button
-          onClick={() => { if (!bonusClaimed) claimDailyBonus(); else setBonusToast({ kind: "wait", hours: Math.ceil(bonusCountdownMs / 3600000) }); }}
-          className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 hover:bg-white/[0.09] active:scale-[0.985]"
-          style={{ background: "rgba(245,239,230,0.05)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(14px)" }}
-        >
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
-            <Gift className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold tracking-wide text-white/90">{t("daily_bonus")}</div>
-            <div className="text-[12px] text-white/60 flex items-center gap-1.5 tabular-nums">
-              <Clock className="w-3 h-3" />
-              {bonusClaimed ? formatCountdown(bonusCountdownMs) : t("available")}
+        <div className="max-w-md mx-auto grid grid-cols-3 gap-2.5">
+          <button
+            onClick={() => { if (!bonusClaimed) claimDailyBonus(); else setBonusToast({ kind: "wait", hours: Math.ceil(bonusCountdownMs / 3600000) }); }}
+            className="press ma-tile col-span-2 p-4 flex items-center gap-3 text-left transition-all duration-200 active:scale-[0.985]"
+          >
+            <div className="ma-icon w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0">
+              <Gift className="w-[18px] h-[18px]" />
             </div>
-          </div>
-          <span className={"px-3 h-7 inline-flex items-center rounded-full text-[11px] font-semibold tracking-wide " +
-            (bonusClaimed
-              ? "bg-emerald-400/15 text-emerald-300 border border-emerald-400/30"
-              : "bg-gradient-to-r from-amber-300 to-orange-500 text-black")}>
-            {bonusClaimed ? t("received") : t("receive")}
-          </span>
-        </button>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13.5px] font-semibold">{t("daily_bonus")}</div>
+              <div className="ma-num text-[12px] flex items-center gap-1.5 mt-0.5" style={{ color: "var(--ma-ink-3)" }}>
+                <Clock className="w-3 h-3" />
+                {bonusClaimed ? formatCountdown(bonusCountdownMs) : t("available")}
+              </div>
+            </div>
+            <span className={"px-3 h-7 inline-flex items-center rounded-full text-[11px] font-semibold shrink-0 " +
+              (bonusClaimed ? "ma-pill text-emerald-400" : "ma-accent-btn")}>
+              {bonusClaimed ? t("received") : t("receive")}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setTab("wallet")}
+            className="press ma-tile p-4 flex flex-col justify-between text-left transition-all duration-200 active:scale-[0.985]"
+          >
+            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+            <div>
+              <div className="ma-num text-[17px] font-bold leading-none">
+                {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
+              </div>
+              <div className="text-[10px] uppercase tracking-[0.16em] mt-1.5" style={{ color: "var(--ma-ink-3)" }}>Stars</div>
+            </div>
+          </button>
+        </div>
 
         {bonusToast && (
-          <div className="mt-2 text-center text-[12px] text-white/75 fade-in">
+          <div className="mt-2 text-center text-[12px] fade-in" style={{ color: "var(--ma-ink-2)" }}>
             {bonusToast.kind === "got"
-              ? <>🎁 +<span className="text-amber-300 font-semibold">{bonusToast.bonus} PT</span> {t("bonus_credited")}</>
+              ? <>🎁 +<span className="text-amber-400 font-semibold ma-num">{bonusToast.bonus} PT</span> {t("bonus_credited")}</>
               : <>{t("bonus_next", { h: bonusToast.hours ?? 0 })}</>}
           </div>
         )}
       </section>
+
 
       {/* ===== Watch ad card (always visible, no grabber) ===== */}
       <section className="px-4 mt-4">
