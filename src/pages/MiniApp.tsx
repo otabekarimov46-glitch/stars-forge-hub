@@ -906,42 +906,47 @@ export default function MiniApp() {
 
 
   return (
-    <div className="min-h-screen text-white flex flex-col fade-in"
-         style={{ background: "radial-gradient(120% 70% at 50% -10%, #241C15 0%, #17130F 45%, #100E0C 100%)" }}>
+    <div className="miniapp min-h-screen flex flex-col fade-in">
 
       {/* ===== Header ===== */}
       <header className="px-4 pt-5 pb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <img src={logoImg} alt="" className="w-9 h-9 rounded-xl shadow-lg shrink-0" />
-          <span className="font-semibold text-[17px] tracking-tight truncate">Starment</span>
+          <img src={logoImg} alt="" className="w-9 h-9 rounded-[13px] shrink-0" />
+          <div className="min-w-0">
+            <div className="font-semibold text-[16px] leading-none truncate">Starment</div>
+            <div className="text-[10.5px] uppercase tracking-[0.18em] mt-1" style={{ color: "var(--ma-ink-3)" }}>
+              {tgUser.name || "Telegram"}
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-sm font-semibold">
+          {tab !== "profile" && (
+            <div className="ma-pill flex items-center gap-1.5 px-3 h-9">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="ma-num font-bold text-[14px]">
+                {user ? formatBalance(user.balance_pt) : "…"}
+              </span>
+              <span className="text-[10.5px] tracking-wider" style={{ color: "var(--ma-ink-3)" }}>PT</span>
+            </div>
+          )}
+          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-sm font-semibold shrink-0"
+               style={{ background: "linear-gradient(160deg,#F2A64B,#B4682A)", color: "#1A1206" }}>
             {tgUser.photo ? (
               <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
             ) : (initial)}
           </div>
-          {tab === "profile" ? (
+          {tab === "profile" && (
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label={t("settings")}
-              className="press-soft w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/10 active:scale-90"
-              style={{ background: "rgba(245,239,230,0.06)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(14px)" }}
+              className="press-soft ma-pill w-9 h-9 flex items-center justify-center"
             >
-              <SettingsIcon className="w-4 h-4 text-white/85" />
+              <SettingsIcon className="w-4 h-4" style={{ color: "var(--ma-ink-2)" }} />
             </button>
-          ) : (
-            <div className="flex items-center gap-1.5 px-3 h-9 rounded-full"
-                 style={{ background: "rgba(245,239,230,0.06)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(14px)" }}>
-              <Wallet className="w-3.5 h-3.5 text-white/75" />
-              <span className="font-semibold tabular-nums text-[14px]">
-                {user ? formatBalance(user.balance_pt) : "…"}
-              </span>
-              <span className="text-[11px] text-white/60">PT</span>
-            </div>
           )}
         </div>
       </header>
+
 
       <div className="pb-28">
       {tab === "tasks" && (<>
