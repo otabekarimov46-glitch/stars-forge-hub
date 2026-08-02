@@ -1147,21 +1147,18 @@ export default function MiniApp() {
       {tab === "wallet" && (
         <section className="px-4 mt-4 space-y-3">
           <div className="max-w-md mx-auto space-y-3">
-            <div className="rounded-3xl p-6 text-center relative overflow-hidden"
-                 style={{ background: "rgba(245,239,230,0.045)", border: "1px solid rgba(120,96,66,0.42)", backdropFilter: "blur(16px)" }}>
-              <div className="absolute inset-0 pointer-events-none opacity-20"
-                   style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)" }} />
+            <div className="ma-hero p-6 text-center">
               <div className="relative">
                 {/* Connect Wallet — above the balance label */}
-                <div className="flex justify-center mb-3">
+                <div className="flex justify-center mb-4">
                   {walletAddress ? (
                     <button
                       onClick={() => setWalletMenuOpen(true)}
-                      className="press-soft inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[12px] font-medium"
+                      className="press-soft ma-pill inline-flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium text-emerald-400"
                       title={walletAddress}
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span className="tabular-nums">
+                      <span className="ma-num">
                         {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
                       </span>
                       <ChevronDown className="w-3 h-3 opacity-70" />
@@ -1169,8 +1166,7 @@ export default function MiniApp() {
                   ) : (
                     <button
                       onClick={() => tonUI?.openModal().catch(() => {})}
-                      className="press inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px] font-semibold text-white
-                                 bg-gradient-to-r from-amber-500 to-blue-600 shadow-md shadow-blue-900/30 border border-white/10"
+                      className="press ma-accent-btn inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px]"
                     >
                       <Link2 className="w-3.5 h-3.5" />
                       {t("connect_wallet")}
@@ -1178,36 +1174,37 @@ export default function MiniApp() {
                   )}
                 </div>
 
-                <div className="text-[12px] uppercase tracking-widest text-white/60 mb-2">{t("your_balance")}</div>
+                <div className="text-[10.5px] uppercase tracking-[0.22em] mb-2.5" style={{ color: "var(--ma-ink-3)" }}>{t("your_balance")}</div>
                 <div className="flex items-baseline justify-center gap-2">
-                  <span className={`text-5xl font-bold tabular-nums ${pendingWithdrawal ? "text-white/40" : "bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent"}`}>
+                  <span className="ma-num text-5xl font-bold" style={{ color: pendingWithdrawal ? "var(--ma-ink-3)" : "hsl(var(--ma-amber))" }}>
                     {user ? formatBalance(user.balance_pt) : "…"}
                   </span>
-                  <span className={`font-medium ${pendingWithdrawal ? "text-white/30" : "text-white/70"}`}>PT</span>
+                  <span className="text-[15px] font-medium" style={{ color: "var(--ma-ink-2)" }}>PT</span>
                 </div>
                 {pendingWithdrawal && (
-                  <div className="mt-2 text-center text-[11.5px] text-amber-300/90">
+                  <div className="mt-2 text-center text-[11.5px] text-amber-400/90">
                     {t("pending_withdraw_notice", { amount: Number(pendingWithdrawal.amount_usdt).toFixed(2) })}
                   </div>
                 )}
-                <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
-                    <Star className="w-3.5 h-3.5 text-amber-300 fill-yellow-300" />
-                    <span className="text-[13px] tabular-nums">
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                  <span className="ma-pill inline-flex items-center gap-1.5 px-3 h-8">
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <span className="ma-num text-[13px]">
                       ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
                     </span>
-                    <span className="text-[11px] text-white/60">Stars</span>
+                    <span className="text-[10.5px]" style={{ color: "var(--ma-ink-3)" }}>Stars</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-emerald-500/10 border border-emerald-400/25">
-                    <span className="text-[10px] font-bold text-emerald-300">$</span>
-                    <span className="text-[13px] tabular-nums text-emerald-200">
+                  <span className="ma-pill inline-flex items-center gap-1.5 px-3 h-8">
+                    <span className="text-[10px] font-bold text-emerald-400">$</span>
+                    <span className="ma-num text-[13px] text-emerald-300">
                       ≈ {user ? formatUsdtDown(user.balance_pt * usdtRate) : "…"}
                     </span>
-                    <span className="text-[11px] text-emerald-300/70">USDT</span>
+                    <span className="text-[10.5px]" style={{ color: "var(--ma-ink-3)" }}>USDT</span>
                   </span>
                 </div>
               </div>
             </div>
+
 
 
             <button
