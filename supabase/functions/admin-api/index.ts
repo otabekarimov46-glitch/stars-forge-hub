@@ -484,12 +484,8 @@ Deno.serve(async (req) => {
         }
         const codeFilter = String(params.code_search || "").trim();
         const userFilter = String(params.user_search || "").trim().replace(/^@/, "");
-        let promoIds: string[] | null = null;
-        if (codeFilter) {
-          const { data: pc } = await supabase.from("promo_codes").select("id").ilike("code", `%${codeFilter}%`);
-          promoIds = (pc || []).map((p: any) => p.id);
-          if (promoIds.length === 0) { data = { logs: [], retention_days: days }; break; }
-        }
+        
+
         let userIds: string[] | null = null;
         if (userFilter) {
           const { data: us } = await supabase.from("users").select("id").ilike("username", `%${userFilter}%`);
@@ -498,14 +494,22 @@ Deno.serve(async (req) => {
         }
         let q = supabase
           .from("promo_redemptions")
-          .select("id, redeemed_at, reward_pt, promo_id, user_id, promo_codes(code), users(username, telegram_id)")
+          .select("id, redeemed_at, reward_pt, promo_id, promo_code, user_id, promo_codes(code), users(username, telegram_id)")
           .order("redeemed_at", { ascending: false })
           .limit(500);
-        if (promoIds) q = q.in("promo_id", promoIds);
         if (userIds) q = q.in("user_id", userIds);
         const res = await q;
         if (res.error) { error = res.error; break; }
-        data = { logs: res.data || [], retention_days: days };
+        let rowsP = (res.data || []).map((r: any) => ({
+          ...r,
+          code: r.promo_codes?.code || r.promo_code || null,
+          promo_deleted: !r.promo_id || !r.promo_codes,
+        }));
+        if (codeFilter) {
+          const needle = codeFilter.toLowerCase();
+          rowsP = rowsP.filter((r: any) => (r.code || "").toLowerCase().includes(needle));
+        }
+        data = { logs: rowsP, retention_days: days };
         break;
       }
       case "set_promo_retention": {
@@ -679,7 +683,7 @@ Deno.serve(async (req) => {
           supabase.from("users").select("*").eq("id", uid).single(),
           supabase.from("user_ips").select("ip_address, first_seen_at, last_seen_at").eq("user_id", uid).order("last_seen_at", { ascending: false }),
           supabase.from("activity_logs").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(500),
-          supabase.from("promo_redemptions").select("id, redeemed_at, reward_pt, promo_codes(code)").eq("user_id", uid).order("redeemed_at", { ascending: false }),
+          supabase.from("promo_redemptions").select("id, redeemed_at, reward_pt, promo_id, promo_code, promo_codes(code)").eq("user_id", uid).order("redeemed_at", { ascending: false }),
           supabase.from("admin_alerts").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(200),
           supabase.from("users").select("id, telegram_id, username, created_at, balance_pt, is_banned").eq("referrer_id", uid).order("created_at", { ascending: false }),
           supabase.from("users").select("id, balance_pt, referral_earnings_pt"),

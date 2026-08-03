@@ -1056,7 +1056,7 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, is_banned, captcha_pending, balance_pt")
+          .select("id, is_banned, captcha_pending, balance_pt, username, telegram_id")
           .eq("telegram_id", telegram_id)
           .maybeSingle();
         if (!user) return jsonResponse({ data: { ok: false, reason: "invalid" } });
@@ -1095,6 +1095,7 @@ Deno.serve(async (req) => {
         // Insert redemption first (unique constraint prevents double).
         const { error: redErr } = await supabase.from("promo_redemptions").insert({
           promo_id: promo.id,
+          promo_code: promo.code,
           user_id: user.id,
           reward_pt: promo.reward_pt,
         });
@@ -1121,6 +1122,19 @@ Deno.serve(async (req) => {
           action: "promo_reward",
           metadata: { promo_id: promo.id, code: promo.code, reward_pt: Number(promo.reward_pt) },
         });
+
+        // Extended activity log — appears in admin "Все логи", user room transactions and export
+        await supabase.from("activity_logs").insert({
+          user_id: user.id,
+          user_username: user.username || null,
+          user_telegram_id: user.telegram_id || null,
+          action_type: "promo_reward",
+          reward_pt: Number(promo.reward_pt),
+          task_title: `Промокод ${promo.code}`,
+          task_public_id: promo.code,
+        });
+
+
 
         return jsonResponse({ data: { ok: true, amount: Number(promo.reward_pt), new_balance: newBalance } });
       }

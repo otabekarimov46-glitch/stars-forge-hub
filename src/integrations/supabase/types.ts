@@ -245,21 +245,24 @@ export type Database = {
       promo_redemptions: {
         Row: {
           id: string
-          promo_id: string
+          promo_code: string | null
+          promo_id: string | null
           redeemed_at: string
           reward_pt: number
           user_id: string
         }
         Insert: {
           id?: string
-          promo_id: string
+          promo_code?: string | null
+          promo_id?: string | null
           redeemed_at?: string
           reward_pt: number
           user_id: string
         }
         Update: {
           id?: string
-          promo_id?: string
+          promo_code?: string | null
+          promo_id?: string | null
           redeemed_at?: string
           reward_pt?: number
           user_id?: string

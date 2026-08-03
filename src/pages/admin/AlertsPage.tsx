@@ -563,15 +563,26 @@ export default function AlertsPage() {
             <div className="space-y-2">
               {logs.map((l) => {
                 const name = l.users?.username ? `@${l.users.username}` : `ID ${l.users?.telegram_id ?? "?"}`;
-                const code = l.promo_codes?.code || "—";
+                const code = l.code || l.promo_codes?.code || l.promo_code || "—";
+                const deleted = !!l.promo_deleted || (!l.promo_id || !l.promo_codes);
                 return (
-                  <div key={l.id} className="glass-card p-3 flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-brand-gold/10 text-brand-gold shrink-0">
+                  <div key={l.id} className={"glass-card p-3 flex items-center gap-3 " + (deleted ? "ring-1 ring-destructive/25" : "")}>
+                    <div className={"p-2 rounded-xl shrink-0 " + (deleted ? "bg-destructive/10 text-destructive" : "bg-brand-gold/10 text-brand-gold")}>
                       <Ticket className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
                       <span className="text-sm font-medium truncate">{name}</span>
-                      <Badge variant="outline" className="rounded-lg font-mono text-xs w-fit">{code}</Badge>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge
+                          variant="outline"
+                          className={"rounded-lg font-mono text-xs w-fit " + (deleted ? "border-destructive/60 text-destructive bg-destructive/5" : "")}
+                        >
+                          {code}
+                        </Badge>
+                        {deleted && (
+                          <span className="text-[10px] uppercase tracking-wider text-destructive/80">промокод удалён</span>
+                        )}
+                      </div>
                       <span className="text-sm font-semibold text-brand-gold">
                         +{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
                       </span>
