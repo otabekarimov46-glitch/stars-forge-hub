@@ -498,7 +498,7 @@ Deno.serve(async (req) => {
         }
         let q = supabase
           .from("promo_redemptions")
-          .select("id, redeemed_at, reward_pt, promo_id, user_id, promo_codes(code), users(username, telegram_id)")
+          .select("id, redeemed_at, reward_pt, promo_id, promo_code, user_id, promo_codes(code), users(username, telegram_id)")
           .order("redeemed_at", { ascending: false })
           .limit(500);
         if (promoIds) q = q.in("promo_id", promoIds);
