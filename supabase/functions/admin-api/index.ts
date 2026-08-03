@@ -683,7 +683,7 @@ Deno.serve(async (req) => {
           supabase.from("users").select("*").eq("id", uid).single(),
           supabase.from("user_ips").select("ip_address, first_seen_at, last_seen_at").eq("user_id", uid).order("last_seen_at", { ascending: false }),
           supabase.from("activity_logs").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(500),
-          supabase.from("promo_redemptions").select("id, redeemed_at, reward_pt, promo_codes(code)").eq("user_id", uid).order("redeemed_at", { ascending: false }),
+          supabase.from("promo_redemptions").select("id, redeemed_at, reward_pt, promo_id, promo_code, promo_codes(code)").eq("user_id", uid).order("redeemed_at", { ascending: false }),
           supabase.from("admin_alerts").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(200),
           supabase.from("users").select("id, telegram_id, username, created_at, balance_pt, is_banned").eq("referrer_id", uid).order("created_at", { ascending: false }),
           supabase.from("users").select("id, balance_pt, referral_earnings_pt"),
