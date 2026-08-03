@@ -648,8 +648,22 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                       <Gift className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm">{p.promo_codes?.code || "—"}</div>
-                      <div className="text-[11px] text-muted-foreground">{format(parseISO(p.redeemed_at), "dd.MM.yyyy HH:mm")}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={
+                            "font-mono text-sm px-2 py-0.5 rounded-lg border " +
+                            (!p.promo_id || !p.promo_codes
+                              ? "border-destructive/60 text-destructive bg-destructive/5"
+                              : "border-border/60")
+                          }
+                        >
+                          {p.promo_codes?.code || p.promo_code || "—"}
+                        </span>
+                        {(!p.promo_id || !p.promo_codes) && (
+                          <span className="text-[10px] uppercase tracking-wider text-destructive/80">удалён</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-1">{format(parseISO(p.redeemed_at), "dd.MM.yyyy HH:mm")}</div>
                     </div>
                     <div className="font-semibold text-brand-gold whitespace-nowrap">+{Number(p.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT</div>
                   </div>
