@@ -1123,6 +1123,19 @@ Deno.serve(async (req) => {
           metadata: { promo_id: promo.id, code: promo.code, reward_pt: Number(promo.reward_pt) },
         });
 
+        // Extended activity log — appears in admin "Все логи", user room transactions and export
+        await supabase.from("activity_logs").insert({
+          user_id: user.id,
+          user_username: user.username || null,
+          user_telegram_id: user.telegram_id || null,
+          action_type: "promo_reward",
+          reward_pt: Number(promo.reward_pt),
+          task_title: `Промокод ${promo.code}`,
+          task_public_id: promo.code,
+        });
+
+
+
         return jsonResponse({ data: { ok: true, amount: Number(promo.reward_pt), new_balance: newBalance } });
       }
 
