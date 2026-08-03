@@ -484,7 +484,7 @@ Deno.serve(async (req) => {
         }
         const codeFilter = String(params.code_search || "").trim();
         const userFilter = String(params.user_search || "").trim().replace(/^@/, "");
-        let userIds2: string[] | null = null;
+        
 
         let userIds: string[] | null = null;
         if (userFilter) {
