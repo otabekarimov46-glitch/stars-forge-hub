@@ -484,12 +484,8 @@ Deno.serve(async (req) => {
         }
         const codeFilter = String(params.code_search || "").trim();
         const userFilter = String(params.user_search || "").trim().replace(/^@/, "");
-        let promoIds: string[] | null = null;
-        if (codeFilter) {
-          const { data: pc } = await supabase.from("promo_codes").select("id").ilike("code", `%${codeFilter}%`);
-          promoIds = (pc || []).map((p: any) => p.id);
-          if (promoIds.length === 0) { data = { logs: [], retention_days: days }; break; }
-        }
+        let userIds2: string[] | null = null;
+
         let userIds: string[] | null = null;
         if (userFilter) {
           const { data: us } = await supabase.from("users").select("id").ilike("username", `%${userFilter}%`);
