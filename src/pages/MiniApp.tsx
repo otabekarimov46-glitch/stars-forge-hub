@@ -917,11 +917,15 @@ export default function MiniApp() {
           <span className="font-semibold text-[17px] tracking-tight truncate">Starment</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold">
+          <button
+            onClick={() => setTab("profile")}
+            aria-label={t("profile")}
+            className="press-soft w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold transition-transform active:scale-90"
+          >
             {tgUser.photo ? (
               <img src={tgUser.photo} alt="" className="w-full h-full object-cover" />
             ) : (initial)}
-          </div>
+          </button>
           {tab === "profile" ? (
             <button
               onClick={() => setSettingsOpen(true)}
