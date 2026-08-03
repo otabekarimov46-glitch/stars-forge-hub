@@ -89,6 +89,15 @@ function formatUsdtDown(n: number): string {
   return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
 }
 
+// Stars: never inflate, keep precision, trim only when the number gets long.
+function formatStarsDown(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const decimals = n >= 1_000_000 ? 0 : n >= 10_000 ? 2 : 4;
+  const v = floorTo(n, decimals);
+  const s = v.toFixed(decimals);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+}
+
 // Exact spendable USDT amount (no beautifying) for the withdrawal input.
 function exactUsdt(n: number): string {
   if (!Number.isFinite(n) || n <= 0) return "0";
@@ -919,7 +928,7 @@ export default function MiniApp() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setTab("profile")}
-            aria-label={t("profile")}
+            aria-label={t("tab_profile")}
             className="press-soft w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 shadow-md bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-sm font-semibold transition-transform active:scale-90"
           >
             {tgUser.photo ? (
@@ -1180,7 +1189,7 @@ export default function MiniApp() {
                   <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/5 border border-white/10">
                     <Star className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
                     <span className="text-[13px] tabular-nums">
-                      ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"}
+                      ≈ {user ? formatStarsDown(user.balance_pt * exchangeRate) : "…"}
                     </span>
                     <span className="text-[11px] text-white/60">Stars</span>
                   </span>
@@ -1335,7 +1344,7 @@ export default function MiniApp() {
                 <div className="text-[12px] text-white/60">{t("balance")}</div>
                 <div className="text-[15px] font-semibold tabular-nums">
                   {user ? formatBalance(user.balance_pt) : "…"} PT
-                  <span className="text-white/50 font-normal"> · ≈ {user ? formatBalance(user.balance_pt * exchangeRate) : "…"} ⭐</span>
+                  <span className="text-white/50 font-normal"> · ≈ {user ? formatStarsDown(user.balance_pt * exchangeRate) : "…"} ⭐</span>
                 </div>
               </div>
               <button
