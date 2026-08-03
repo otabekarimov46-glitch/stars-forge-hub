@@ -1056,7 +1056,7 @@ Deno.serve(async (req) => {
 
         const { data: user } = await supabase
           .from("users")
-          .select("id, is_banned, captcha_pending, balance_pt")
+          .select("id, is_banned, captcha_pending, balance_pt, username, telegram_id")
           .eq("telegram_id", telegram_id)
           .maybeSingle();
         if (!user) return jsonResponse({ data: { ok: false, reason: "invalid" } });
