@@ -1095,6 +1095,7 @@ Deno.serve(async (req) => {
         // Insert redemption first (unique constraint prevents double).
         const { error: redErr } = await supabase.from("promo_redemptions").insert({
           promo_id: promo.id,
+          promo_code: promo.code,
           user_id: user.id,
           reward_pt: promo.reward_pt,
         });
