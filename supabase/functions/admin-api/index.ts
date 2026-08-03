@@ -501,11 +501,19 @@ Deno.serve(async (req) => {
           .select("id, redeemed_at, reward_pt, promo_id, promo_code, user_id, promo_codes(code), users(username, telegram_id)")
           .order("redeemed_at", { ascending: false })
           .limit(500);
-        if (promoIds) q = q.in("promo_id", promoIds);
         if (userIds) q = q.in("user_id", userIds);
         const res = await q;
         if (res.error) { error = res.error; break; }
-        data = { logs: res.data || [], retention_days: days };
+        let rowsP = (res.data || []).map((r: any) => ({
+          ...r,
+          code: r.promo_codes?.code || r.promo_code || null,
+          promo_deleted: !r.promo_id || !r.promo_codes,
+        }));
+        if (codeFilter) {
+          const needle = codeFilter.toLowerCase();
+          rowsP = rowsP.filter((r: any) => (r.code || "").toLowerCase().includes(needle));
+        }
+        data = { logs: rowsP, retention_days: days };
         break;
       }
       case "set_promo_retention": {
