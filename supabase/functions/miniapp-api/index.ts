@@ -757,12 +757,15 @@ Deno.serve(async (req) => {
         if (!user) return jsonResponse({ data: { tasks: [] } });
         const { data: unsubs } = await supabase
           .from("subscription_checks")
-          .select("task_id, reward_pt, channel_username")
+          .select("task_id, reward_pt, channel_username, warn_count")
           .eq("user_id", user.id).eq("status", "unsub");
         const ids = (unsubs || []).map((u: any) => u.task_id);
         if (ids.length === 0) return jsonResponse({ data: { tasks: [] } });
+        const warnCounts = new Map<string, number>(
+          (unsubs || []).map((u: any) => [u.task_id, Number(u.warn_count) || 0]),
+        );
         const { data: tasks } = await supabase.from("tasks")
-          .select("id, title, channel_username, reward_pt, is_active, max_completions, current_completions")
+          .select("id, title, channel_username, reward_pt, is_active, max_completions, current_completions, unsub_warn_limit")
           .in("id", ids);
         // Skip ones the admin already deactivated / exhausted — clean up silently.
         const stale: string[] = [];
@@ -776,7 +779,32 @@ Deno.serve(async (req) => {
             .update({ status: "skipped", processed_at: new Date().toISOString() })
             .eq("user_id", user.id).in("task_id", stale).eq("status", "unsub");
         }
-        return jsonResponse({ data: { tasks: active } });
+        // Respect the per-task warning limit (0 = show every time).
+        const visible = active.filter((t: any) => {
+          const limit = t.unsub_warn_limit == null ? 1 : Number(t.unsub_warn_limit);
+          if (limit === 0) return true;
+          return (warnCounts.get(t.id) || 0) < limit;
+        });
+        return jsonResponse({ data: { tasks: visible } });
+      }
+
+      case "ack_unsub_warning": {
+        const { telegram_id, task_ids } = params;
+        if (!telegram_id || !Array.isArray(task_ids) || task_ids.length === 0) {
+          return jsonResponse({ data: { ok: false } });
+        }
+        const { data: user } = await supabase.from("users")
+          .select("id").eq("telegram_id", telegram_id).maybeSingle();
+        if (!user) return jsonResponse({ data: { ok: false } });
+        const { data: rows } = await supabase.from("subscription_checks")
+          .select("id, warn_count")
+          .eq("user_id", user.id).in("task_id", task_ids).eq("status", "unsub");
+        for (const r of rows || []) {
+          await supabase.from("subscription_checks")
+            .update({ warn_count: (Number(r.warn_count) || 0) + 1 })
+            .eq("id", r.id);
+        }
+        return jsonResponse({ data: { ok: true } });
       }
 
 

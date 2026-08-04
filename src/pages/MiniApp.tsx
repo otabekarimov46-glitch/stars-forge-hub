@@ -442,8 +442,15 @@ export default function MiniApp() {
     if (!telegramId || resubDismissed) return;
     miniAppApi("get_pending_unsubs", { telegram_id: telegramId })
       .then((d) => {
-        const n = Array.isArray(d?.tasks) ? d.tasks.length : 0;
-        if (n > 0) setResubPopup({ count: n });
+        const list = Array.isArray(d?.tasks) ? d.tasks : [];
+        if (list.length > 0) {
+          setResubPopup({ count: list.length });
+          // Count this warning towards each task's per-task warning limit.
+          miniAppApi("ack_unsub_warning", {
+            telegram_id: telegramId,
+            task_ids: list.map((t: any) => t.id),
+          }).catch(() => {});
+        }
       })
       .catch(() => {});
   }, [telegramId, resubDismissed]);
