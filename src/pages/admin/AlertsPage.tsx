@@ -142,6 +142,7 @@ export default function AlertsPage() {
       const meta = ACTION_META[(l.action_type as ActionType)] || ACTION_META.subscribe;
       const isVideo = l.action_type === "video";
       const isReset = l.action_type === "balance_reset";
+      const isPromoRow = l.action_type === "promo_reward";
       const started = l.started_at ? parseISO(l.started_at) : null;
       const finished = l.finished_at ? parseISO(l.finished_at) : (l.created_at ? parseISO(l.created_at) : null);
       const reward = Number(l.reward_pt || 0);
@@ -152,6 +153,8 @@ export default function AlertsPage() {
         "ID задания": l.task_public_id ?? "",
         "Название / Причина": l.task_title ?? "",
         "Задание удалено": (l.task_deleted || l.video_deleted) ? "да" : "нет",
+        "Промокод": isPromoRow ? (l.task_public_id ?? "") : "",
+        "Промо удалено": isPromoRow ? (l.promo_deleted ? "да" : "нет") : "",
         "Рекламодатель": l.advertiser_deleted ? "Удалён" : (l.advertiser_name ?? "—"),
         "ID рекламодателя": l.advertiser_public_id ?? "",
         "Начало просмотра": isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
@@ -163,6 +166,7 @@ export default function AlertsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 34 }, { wch: 14 },
+      { wch: 16 }, { wch: 14 },
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
