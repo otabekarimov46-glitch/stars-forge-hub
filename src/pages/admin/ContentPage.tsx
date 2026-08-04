@@ -28,7 +28,7 @@ const TASK_TYPE_CONFIG: Record<string, { icon: any; color: string }> = {
 type ContentKind = "video" | "subscribe" | "view_post" | "view_story" | "survey";
 
 export default function ContentPage() {
-  const { t } = useTranslation();
+  const { t, tr } = useTranslation();
   const [tasks, setTasks] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [advertisers, setAdvertisers] = useState<any[]>([]);
@@ -156,8 +156,8 @@ export default function ContentPage() {
 
 
   const submitTask = async () => {
-    if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
-    if (!taskForm.title.trim()) { toast.error("Введите название задания"); return; }
+    if (!activeAdvertiser) { toast.error(tr("Сначала выберите рекламодателя")); return; }
+    if (!taskForm.title.trim()) { toast.error(tr("Введите название задания")); return; }
     try {
       const recheck_minutes = contentKind === "subscribe"
         ? Math.max(0, Math.floor(Number(taskForm.recheck_value) || 0)) * (taskForm.recheck_unit === "h" ? 60 : 1)
@@ -176,7 +176,7 @@ export default function ContentPage() {
       };
       if (editingTaskId) {
         await adminApi("update_task", { task_id: editingTaskId, ...payload, channel_id: payload.channel_id });
-        toast.success("Задание обновлено");
+        toast.success(tr("Задание обновлено"));
       } else {
         await adminApi("create_task", {
           ...payload,
@@ -194,14 +194,14 @@ export default function ContentPage() {
 
 
   const submitAdvertiser = async () => {
-    if (!advForm.name.trim()) { toast.error("Введите название"); return; }
+    if (!advForm.name.trim()) { toast.error(tr("Введите название")); return; }
     try {
       if (editingAdvId) {
         await adminApi("update_advertiser", { advertiser_id: editingAdvId, name: advForm.name.trim() });
-        toast.success("Рекламодатель обновлён");
+        toast.success(tr("Рекламодатель обновлён"));
       } else {
         await adminApi("create_advertiser", { name: advForm.name.trim() });
-        toast.success("Рекламодатель добавлен");
+        toast.success(tr("Рекламодатель добавлен"));
       }
       setAdvDialogOpen(false);
       setAdvForm({ name: "" });
@@ -213,7 +213,7 @@ export default function ContentPage() {
   const deleteAdvertiser = async (id: string) => {
     try {
       await adminApi("delete_advertiser", { advertiser_id: id });
-      toast.success("Рекламодатель удалён");
+      toast.success(tr("Рекламодатель удалён"));
       if (activeAdvertiser?.id === id) setActiveAdvertiser(null);
       fetchData();
     } catch (e: any) { toast.error(e.message); }
@@ -222,7 +222,7 @@ export default function ContentPage() {
   const bulkToggle = async (advertiser_id: string, is_active: boolean) => {
     try {
       await adminApi("bulk_toggle_advertiser_tasks", { advertiser_id, is_active });
-      toast.success(is_active ? "Все задания включены" : "Все задания отключены");
+      toast.success(is_active ? tr("Все задания включены") : tr("Все задания отключены"));
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -230,7 +230,7 @@ export default function ContentPage() {
   const bulkDelete = async (advertiser_id: string) => {
     try {
       await adminApi("bulk_delete_advertiser_tasks", { advertiser_id });
-      toast.success("Все задания удалены");
+      toast.success(tr("Все задания удалены"));
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -315,16 +315,16 @@ export default function ContentPage() {
       toast.success(t("content.videoUploaded"));
     } catch (e: any) {
       console.error("upload error", e);
-      toast.error(e?.message || "Не удалось загрузить файл");
+      toast.error(e?.message || tr("Не удалось загрузить файл"));
     } finally {
       setUploading(false);
     }
   };
 
   const createVideo = async () => {
-    if (!activeAdvertiser) { toast.error("Сначала выберите рекламодателя"); return; }
-    if (!videoForm.title.trim()) { toast.error("Введите название"); return; }
-    if (!videoForm.video_url) { toast.error("Загрузите медиафайл"); return; }
+    if (!activeAdvertiser) { toast.error(tr("Сначала выберите рекламодателя")); return; }
+    if (!videoForm.title.trim()) { toast.error(tr("Введите название")); return; }
+    if (!videoForm.video_url) { toast.error(tr("Загрузите медиафайл")); return; }
     try {
       await adminApi("create_video_ad", {
         title: videoForm.title.trim(),
@@ -368,10 +368,10 @@ export default function ContentPage() {
   const taskTypeLabel = (type: string) => {
     const map: Record<string, string> = {
       subscribe: t("task.subscribe"),
-      view_post: "Посмотреть пост",
-      view_story: "Посмотреть историю",
+      view_post: tr("Посмотреть пост"),
+      view_story: tr("Посмотреть историю"),
       survey: t("task.survey"),
-      video: "Видеореклама",
+      video: tr("Видеореклама"),
     };
     return map[type] || type;
   };
@@ -399,12 +399,12 @@ export default function ContentPage() {
     const matches: Array<{ kind: "advertiser" | "task" | "video"; item: any; advertiser: any | null; label: string; typeLabel: string }> = [];
     for (const a of advertisers) {
       if ((a.public_id || "").toLowerCase().includes(q) || (a.name || "").toLowerCase().includes(q)) {
-        matches.push({ kind: "advertiser", item: a, advertiser: a, label: a.name, typeLabel: "Рекламодатель" });
+        matches.push({ kind: "advertiser", item: a, advertiser: a, label: a.name, typeLabel: tr("Рекламодатель") });
       }
     }
     for (const v of videos) {
       if ((v.public_id || "").toLowerCase().includes(q) || (v.title || "").toLowerCase().includes(q)) {
-        matches.push({ kind: "video", item: v, advertiser: advById.get(v.advertiser_id) || null, label: v.title, typeLabel: "Видеореклама" });
+        matches.push({ kind: "video", item: v, advertiser: advById.get(v.advertiser_id) || null, label: v.title, typeLabel: tr("Видеореклама") });
       }
     }
     for (const ta of tasks) {
@@ -423,7 +423,7 @@ export default function ContentPage() {
           <Input
             value={searchId}
             onChange={(e) => setSearchId(e.target.value)}
-            placeholder="Поиск по ID (например, v100000000) или названию…"
+            placeholder={tr("Поиск по ID (например, v100000000) или названию…")}
             className="rounded-xl pl-9 pr-9"
           />
           {searchId && (
@@ -438,7 +438,7 @@ export default function ContentPage() {
         {q && (
           <div className="mt-3 space-y-2">
             {searchResults.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Ничего не найдено</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{tr("Ничего не найдено")}</p>
             ) : (
               searchResults.map((r, i) => (
                 <div key={`${r.kind}-${r.item.id}-${i}`} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
@@ -449,7 +449,7 @@ export default function ContentPage() {
                       {r.item.public_id && (
                         <button
                           className="p-1 rounded hover:bg-muted"
-                          onClick={() => { navigator.clipboard.writeText(r.item.public_id); toast.success("ID скопирован"); }}
+                          onClick={() => { navigator.clipboard.writeText(r.item.public_id); toast.success(tr("ID скопирован")); }}
                         >
                           <Copy className="h-3 w-3" />
                         </button>
@@ -458,7 +458,7 @@ export default function ContentPage() {
                     <p className="font-medium text-sm truncate mt-1">{r.label}</p>
                     {r.advertiser && r.kind !== "advertiser" && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Рекламодатель: <span className="font-medium">{r.advertiser.name}</span> · <span className="font-mono">{r.advertiser.public_id}</span>
+                        {tr("Рекламодатель")}: <span className="font-medium">{r.advertiser.name}</span> · <span className="font-mono">{r.advertiser.public_id}</span>
                       </p>
                     )}
                   </div>
@@ -469,7 +469,7 @@ export default function ContentPage() {
                       className="rounded-xl gap-1.5 shrink-0"
                       onClick={() => { setActiveAdvertiser(r.advertiser); setSearchId(""); if (r.kind !== "advertiser" && r.item.public_id) setFocusId(r.item.public_id); else if (r.kind === "advertiser" && r.item.public_id) setFocusId(r.item.public_id); }}
                     >
-                      Открыть <ArrowRight className="h-3.5 w-3.5" />
+                      {tr("Открыть")} <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
@@ -484,24 +484,24 @@ export default function ContentPage() {
           <>
             <div className="flex items-center justify-between p-6 pb-4">
               <div>
-                <h2 className="text-lg font-semibold">Рекламодатели</h2>
-                <p className="text-xs text-muted-foreground mt-1">Все задания и видеореклама группируются по рекламодателям.</p>
+                <h2 className="text-lg font-semibold">{tr("Рекламодатели")}</h2>
+                <p className="text-xs text-muted-foreground mt-1">{tr("Все задания и видеореклама группируются по рекламодателям.")}</p>
               </div>
               <Dialog open={advDialogOpen} onOpenChange={(o) => { setAdvDialogOpen(o); if (!o) { setEditingAdvId(null); setAdvForm({ name: "" }); } }}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0" onClick={() => { setEditingAdvId(null); setAdvForm({ name: "" }); }}>
-                    <Plus className="h-4 w-4" /> Добавить рекламодателя
+                    <Plus className="h-4 w-4" /> {tr("Добавить рекламодателя")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="glass-card border-0">
-                  <DialogHeader><DialogTitle>{editingAdvId ? "Переименовать рекламодателя" : "Новый рекламодатель"}</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingAdvId ? tr("Переименовать рекламодателя") : tr("Новый рекламодатель")}</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label>Название</Label>
-                      <Input className="rounded-xl" value={advForm.name} onChange={(e) => setAdvForm({ name: e.target.value })} placeholder="Например, Coca-Cola" autoFocus />
+                      <Label>{tr("Название")}</Label>
+                      <Input className="rounded-xl" value={advForm.name} onChange={(e) => setAdvForm({ name: e.target.value })} placeholder={tr("Например, Coca-Cola")} autoFocus />
                     </div>
                     <Button onClick={submitAdvertiser} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
-                      {editingAdvId ? "Сохранить" : "Создать"}
+                      {editingAdvId ? tr("Сохранить") : t("common.create")}
                     </Button>
                   </div>
                 </DialogContent>
@@ -509,7 +509,7 @@ export default function ContentPage() {
             </div>
             <div className="px-6 pb-6">
               {advertisers.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Нет рекламодателей. Создайте первого, чтобы начать.</p>
+                <p className="text-center text-muted-foreground py-8">{tr("Нет рекламодателей. Создайте первого, чтобы начать.")}</p>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3">
                   {advertisers.map((a) => (
@@ -526,7 +526,7 @@ export default function ContentPage() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate">{a.name}</p>
                           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} всего</Badge>
+                            <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} {tr("всего")}</Badge>
                             {a.video_count > 0 && (
                               <Badge variant="outline" className="rounded-lg text-xs gap-1">
                                 <Film className="h-3 w-3" /> {a.video_count}
@@ -534,7 +534,7 @@ export default function ContentPage() {
                             )}
                             {a.active_count > 0 && (
                               <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
-                                {a.active_count} активных
+                                {a.active_count} {tr("активных")}
                               </Badge>
                             )}
                           </div>
@@ -552,7 +552,7 @@ export default function ContentPage() {
                               {a.public_id && (
                                 <button
                                   className="ml-auto p-1 rounded hover:bg-muted"
-                                  onClick={() => { navigator.clipboard.writeText(a.public_id); toast.success("ID скопирован"); }}
+                                  onClick={() => { navigator.clipboard.writeText(a.public_id); toast.success(tr("ID скопирован")); }}
                                 >
                                   <Copy className="h-3 w-3" />
                                 </button>
@@ -560,15 +560,15 @@ export default function ContentPage() {
                             </div>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
-                              <Pencil className="h-4 w-4 mr-2" /> Переименовать
+                              <Pencil className="h-4 w-4 mr-2" /> {tr("Переименовать")}
                             </DropdownMenuItem>
                             {a.tasks_count > 0 && (
                               <>
                                 <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
-                                  <Power className="h-4 w-4 mr-2" /> Включить все
+                                  <Power className="h-4 w-4 mr-2" /> {tr("Включить все")}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
-                                  <PowerOff className="h-4 w-4 mr-2" /> Отключить все
+                                  <PowerOff className="h-4 w-4 mr-2" /> {tr("Отключить все")}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -576,20 +576,20 @@ export default function ContentPage() {
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" /> Удалить рекламодателя
+                                  <Trash2 className="h-4 w-4 mr-2" /> {tr("Удалить рекламодателя")}
                                 </DropdownMenuItem>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="glass-card border-0">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Удалить «{a.name}»?</AlertDialogTitle>
+                                  <AlertDialogTitle>{tr("Удалить")} «{a.name}»?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Все {a.tasks_count} единиц контента рекламодателя будут удалены безвозвратно.
+                                    {tr("Все")} {a.tasks_count} {tr("единиц контента рекламодателя будут удалены безвозвратно.")}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
+                                  <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
                                   <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
-                                    Удалить
+                                    {t("common.delete")}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
