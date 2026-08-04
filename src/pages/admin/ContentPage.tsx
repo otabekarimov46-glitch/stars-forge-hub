@@ -614,7 +614,7 @@ export default function ContentPage() {
                 <div className="min-w-0">
                   <h2 className="text-lg font-semibold truncate">{activeAdvertiser.name}</h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {totalAdvItems} единиц контента
+                    {totalAdvItems} {tr("единиц контента")}
                   </p>
                 </div>
               </div>
@@ -622,26 +622,26 @@ export default function ContentPage() {
                 {totalAdvItems > 0 && (
                   <>
                     <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => bulkToggle(activeAdvertiser.id, true)}>
-                      <Power className="h-3.5 w-3.5" /> Вкл. все
+                      <Power className="h-3.5 w-3.5" /> {tr("Вкл. все")}
                     </Button>
                     <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={() => bulkToggle(activeAdvertiser.id, false)}>
-                      <PowerOff className="h-3.5 w-3.5" /> Откл. все
+                      <PowerOff className="h-3.5 w-3.5" /> {tr("Откл. все")}
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="outline" className="rounded-xl gap-1.5 text-destructive hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" /> Удалить все
+                          <Trash2 className="h-3.5 w-3.5" /> {tr("Удалить все")}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="glass-card border-0">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Удалить весь контент?</AlertDialogTitle>
-                          <AlertDialogDescription>Удалит все задания и видеорекламу рекламодателя «{activeAdvertiser.name}».</AlertDialogDescription>
+                          <AlertDialogTitle>{tr("Удалить весь контент?")}</AlertDialogTitle>
+                          <AlertDialogDescription>{tr("Удалит все задания и видеорекламу рекламодателя")} «{activeAdvertiser.name}».</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
+                          <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
                           <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => bulkDelete(activeAdvertiser.id)}>
-                            Удалить
+                            {t("common.delete")}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -651,21 +651,21 @@ export default function ContentPage() {
                 <Dialog open={contentDialogOpen} onOpenChange={(o) => { setContentDialogOpen(o); if (!o) { setEditingTaskId(null); setTaskForm(emptyTaskForm); setVideoForm(emptyVideoForm); } }}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0" onClick={openCreateContent}>
-                      <Plus className="h-4 w-4" /> Добавить контент
+                      <Plus className="h-4 w-4" /> {tr("Добавить контент")}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="glass-card border-0 max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>{editingTaskId ? "Редактировать задание" : "Новый контент"}</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingTaskId ? tr("Редактировать задание") : tr("Новый контент")}</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div>
-                        <Label>Тип контента</Label>
+                        <Label>{tr("Тип контента")}</Label>
                         <Select value={contentKind} onValueChange={(v) => setContentKind(v as ContentKind)} disabled={!!editingTaskId}>
                           <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="video">🎬 Видеореклама (Mini App)</SelectItem>
+                            <SelectItem value="video">🎬 {tr("Видеореклама (Mini App)")}</SelectItem>
                             <SelectItem value="subscribe">{t("task.subscribe")}</SelectItem>
-                            <SelectItem value="view_post">📰 Посмотреть пост</SelectItem>
-                            <SelectItem value="view_story">📸 Посмотреть историю</SelectItem>
+                            <SelectItem value="view_post">📰 {tr("Посмотреть пост")}</SelectItem>
+                            <SelectItem value="view_story">📸 {tr("Посмотреть историю")}</SelectItem>
                             <SelectItem value="survey">{t("task.survey")}</SelectItem>
                           </SelectContent>
                         </Select>
@@ -689,7 +689,7 @@ export default function ContentPage() {
                             </div>
                             {videoForm.video_url && (
                               <p className="text-xs text-muted-foreground mt-1">
-                                {videoForm.media_type === "image" ? "📷 Фото" : "🎬 Видео"} · {videoForm.duration_seconds}с
+                                {videoForm.media_type === "image" ? `📷 ${tr("Фото")}` : `🎬 ${tr("Видео")}`} · {videoForm.duration_seconds}{tr("с")}
                               </p>
                             )}
                           </div>
@@ -709,15 +709,15 @@ export default function ContentPage() {
                           </div>
                           <div>
                             <Label>{t("content.linkLabel")}</Label>
-                            <Input className="rounded-xl" value={videoForm.external_link_label} onChange={e => setVideoForm((f: any) => ({ ...f, external_link_label: e.target.value }))} placeholder="Перейти" />
+                            <Input className="rounded-xl" value={videoForm.external_link_label} onChange={e => setVideoForm((f: any) => ({ ...f, external_link_label: e.target.value }))} placeholder={tr("Перейти")} />
                           </div>
                           <Button onClick={createVideo} className="w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-green text-white">{t("common.add")}</Button>
                         </>
                       ) : (
                         <>
                           <div>
-                            <Label>Название (видно пользователям)</Label>
-                            <Input className="rounded-xl" value={taskForm.title} onChange={e => setTaskForm((f: any) => ({ ...f, title: e.target.value }))} placeholder="Например, Подпишись на наш канал" />
+                            <Label>{tr("Название (видно пользователям)")}</Label>
+                            <Input className="rounded-xl" value={taskForm.title} onChange={e => setTaskForm((f: any) => ({ ...f, title: e.target.value }))} placeholder={tr("Например, Подпишись на наш канал")} />
                           </div>
                           {showChannelFields && (
                             <>
@@ -749,7 +749,7 @@ export default function ContentPage() {
                           </div>
                           {contentKind === "subscribe" && (
                             <div>
-                              <Label>Проверка отписки</Label>
+                              <Label>{tr("Проверка отписки")}</Label>
                               <div className="flex gap-2 mt-1">
                                 <Input
                                   className="rounded-xl flex-1"
@@ -763,20 +763,20 @@ export default function ContentPage() {
                                     type="button"
                                     onClick={() => setTaskForm((f: any) => ({ ...f, recheck_unit: "m" }))}
                                     className={"px-3 text-sm " + (taskForm.recheck_unit === "m" ? "bg-primary text-primary-foreground" : "bg-transparent")}
-                                  >мин</button>
+                                  >{tr("мин")}</button>
                                   <button
                                     type="button"
                                     onClick={() => setTaskForm((f: any) => ({ ...f, recheck_unit: "h" }))}
                                     className={"px-3 text-sm " + (taskForm.recheck_unit === "h" ? "bg-primary text-primary-foreground" : "bg-transparent")}
-                                  >ч</button>
+                                  >{tr("ч")}</button>
                                 </div>
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">
-                                Через сколько бот проверит, что пользователь всё ещё подписан. <b>0 = не проверять.</b>
-                                Если отписался — PT списываются, задание возвращается с красной рамкой.
+                                {tr("Через сколько бот проверит, что пользователь всё ещё подписан.")} <b>{tr("0 = не проверять.")}</b>
+                                {tr("Если отписался — PT списываются, задание возвращается с красной рамкой.")}
                               </p>
                               <div className="mt-3">
-                                <Label>Сколько раз показать предупреждение об отписке</Label>
+                                <Label>{tr("Сколько раз показать предупреждение об отписке")}</Label>
                                 <Input
                                   className="rounded-xl mt-1"
                                   type="number"
@@ -785,22 +785,22 @@ export default function ContentPage() {
                                   onChange={e => setTaskForm((f: any) => ({ ...f, unsub_warn_limit: e.target.value }))}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  Сколько раз пользователь увидит поп-ап о том, что он отписался. <b>1 = один раз, 0 = показывать всегда.</b>
+                                  {tr("Сколько раз пользователь увидит поп-ап о том, что он отписался.")} <b>{tr("1 = один раз, 0 = показывать всегда.")}</b>
                                 </p>
                               </div>
                             </div>
                           )}
                           {showMinSeconds && (
                             <div>
-                              <Label>Сколько секунд пользователь должен пробыть вне Mini App</Label>
+                              <Label>{tr("Сколько секунд пользователь должен пробыть вне Mini App")}</Label>
                               <Input className="rounded-xl" type="number" min={1} max={600} value={taskForm.min_seconds_away} onChange={e => setTaskForm((f: any) => ({ ...f, min_seconds_away: e.target.value }))} />
-                              <p className="text-xs text-muted-foreground mt-1">Если вернулся раньше — задание не засчитывается, кнопка вернётся. Если вернулся во время или позже — задание выполнено.</p>
+                              <p className="text-xs text-muted-foreground mt-1">{tr("Если вернулся раньше — задание не засчитывается, кнопка вернётся. Если вернулся во время или позже — задание выполнено.")}</p>
                             </div>
                           )}
 
 
                           <Button onClick={submitTask} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
-                            {editingTaskId ? "Сохранить" : t("common.create")}
+                            {editingTaskId ? tr("Сохранить") : t("common.create")}
                           </Button>
                         </>
                       )}
@@ -811,7 +811,7 @@ export default function ContentPage() {
             </div>
             <div className="px-6 pb-6">
               {totalAdvItems === 0 ? (
-                <p className="text-center text-muted-foreground py-8">У этого рекламодателя пока нет контента.</p>
+                <p className="text-center text-muted-foreground py-8">{tr("У этого рекламодателя пока нет контента.")}</p>
               ) : (
                 <div className="space-y-3">
                   {advVideos.map(v => (
@@ -822,7 +822,7 @@ export default function ContentPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-sm truncate">{v.title}</p>
-                          <Badge variant="outline" className="rounded-lg text-xs">Видеореклама</Badge>
+                          <Badge variant="outline" className="rounded-lg text-xs">{tr("Видеореклама")}</Badge>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                           <span>{v.duration_seconds}s • {v.reward_pt} PT</span>
@@ -847,7 +847,7 @@ export default function ContentPage() {
                             {v.public_id && (
                               <button
                                 className="ml-auto p-1 rounded hover:bg-muted"
-                                onClick={() => { navigator.clipboard.writeText(v.public_id); toast.success("ID скопирован"); }}
+                                onClick={() => { navigator.clipboard.writeText(v.public_id); toast.success(tr("ID скопирован")); }}
                               >
                                 <Copy className="h-3 w-3" />
                               </button>
@@ -855,7 +855,7 @@ export default function ContentPage() {
                           </div>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive" onClick={() => deleteVideo(v.id)}>
-                            <Trash2 className="h-4 w-4 mr-2" /> Удалить
+                            <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -881,7 +881,7 @@ export default function ContentPage() {
                             )}
                             {ta.type === "subscribe" && ta.recheck_minutes != null && ta.recheck_minutes > 0 && (
                               <Badge variant="outline" className="rounded-lg text-xs">
-                                Проверка через {ta.recheck_minutes % 60 === 0 ? `${ta.recheck_minutes / 60}ч` : `${ta.recheck_minutes}м`}
+                                {tr("Проверка через")} {ta.recheck_minutes % 60 === 0 ? `${ta.recheck_minutes / 60}${tr("ч")}` : `${ta.recheck_minutes}${tr("м")}`}
                               </Badge>
                             )}
                           </div>
@@ -900,7 +900,7 @@ export default function ContentPage() {
                               {ta.public_id && (
                                 <button
                                   className="ml-auto p-1 rounded hover:bg-muted"
-                                  onClick={() => { navigator.clipboard.writeText(ta.public_id); toast.success("ID скопирован"); }}
+                                  onClick={() => { navigator.clipboard.writeText(ta.public_id); toast.success(tr("ID скопирован")); }}
                                 >
                                   <Copy className="h-3 w-3" />
                                 </button>
@@ -908,10 +908,10 @@ export default function ContentPage() {
                             </div>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => openEditTask(ta)}>
-                              <Pencil className="h-4 w-4 mr-2" /> Редактировать
+                              <Pencil className="h-4 w-4 mr-2" /> {tr("Редактировать")}
                             </DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive" onClick={() => deleteTask(ta.id)}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Удалить
+                              <Trash2 className="h-4 w-4 mr-2" /> {t("common.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
