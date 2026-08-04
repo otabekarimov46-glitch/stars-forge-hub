@@ -437,11 +437,22 @@ export default function AlertsPage() {
                           <div className="text-[11px] text-muted-foreground font-mono">ID: {l.user_telegram_id}</div>
                         )}
                       </div>
-                      {/* task */}
+                      {/* task / promo */}
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="outline" className={`rounded-lg text-[10px] px-1.5 py-0 ${meta.badge}`}>{meta.short}</Badge>
-                          {l.task_public_id ? (
+                          {isPromo ? (
+                            <span
+                              className={
+                                "font-mono text-xs px-1.5 py-0.5 rounded-lg border " +
+                                (l.promo_deleted
+                                  ? "border-destructive/60 text-destructive bg-destructive/5"
+                                  : "border-emerald-500/40 text-emerald-500 bg-emerald-500/5")
+                              }
+                            >
+                              {l.task_public_id || "—"}
+                            </span>
+                          ) : l.task_public_id ? (
                             (l.video_deleted || l.task_deleted) ? (
                               <span
                                 className="font-mono text-xs text-muted-foreground underline decoration-destructive decoration-2 underline-offset-2 cursor-help"
@@ -461,6 +472,9 @@ export default function AlertsPage() {
                             <span className="font-mono text-xs text-muted-foreground">—</span>
                           )}
                         </div>
+                        {isPromo && l.promo_deleted && (
+                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">Промо удалено</div>
+                        )}
                         {l.task_title && (
                           <div className="text-xs text-muted-foreground truncate">{l.task_title}</div>
                         )}
