@@ -419,6 +419,7 @@ export default function AlertsPage() {
                   ? `${format(started, "HH:mm:ss")} — ${format(finished, "HH:mm:ss")} · ${format(finished, "dd.MM.yy")}`
                   : format(finished, "HH:mm:ss · dd.MM.yy");
                 const isWithdrawal = l.action_type === "withdrawal_paid" || l.action_type === "withdrawal_rejected";
+                const isPromo = l.action_type === "promo_reward";
                 return (
                   <div
                     key={l.id}
