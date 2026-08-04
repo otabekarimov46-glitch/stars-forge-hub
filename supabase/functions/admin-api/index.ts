@@ -280,6 +280,9 @@ Deno.serve(async (req) => {
           recheck_minutes: params.type === "subscribe"
             ? (Number.isFinite(Number(params.recheck_minutes)) ? Math.max(0, Math.floor(Number(params.recheck_minutes))) : null)
             : null,
+          unsub_warn_limit: params.unsub_warn_limit !== undefined && Number.isFinite(Number(params.unsub_warn_limit))
+            ? Math.max(0, Math.floor(Number(params.unsub_warn_limit)))
+            : 1,
         }).select();
         data = res.data;
         error = res.error;
@@ -287,7 +290,7 @@ Deno.serve(async (req) => {
       }
       case "update_task": {
         const patch: Record<string, any> = {};
-        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "type", "min_seconds_away", "recheck_minutes"].forEach((k) => {
+        ["title", "channel_username", "post_url", "reward_pt", "max_completions", "type", "min_seconds_away", "recheck_minutes", "unsub_warn_limit"].forEach((k) => {
           if (params[k] !== undefined) patch[k] = params[k];
         });
         if (params.channel_id !== undefined) patch.channel_id = params.channel_id ? Number(params.channel_id) : null;

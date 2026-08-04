@@ -342,6 +342,7 @@ export type Database = {
           telegram_id: number
           updated_at: string
           user_id: string
+          warn_count: number
         }
         Insert: {
           attempts?: number
@@ -358,6 +359,7 @@ export type Database = {
           telegram_id: number
           updated_at?: string
           user_id: string
+          warn_count?: number
         }
         Update: {
           attempts?: number
@@ -374,6 +376,7 @@ export type Database = {
           telegram_id?: number
           updated_at?: string
           user_id?: string
+          warn_count?: number
         }
         Relationships: []
       }
@@ -434,6 +437,7 @@ export type Database = {
           sub_recheck_minutes: number
           title: string | null
           type: Database["public"]["Enums"]["task_type"]
+          unsub_warn_limit: number
         }
         Insert: {
           advertiser_id?: string | null
@@ -455,6 +459,7 @@ export type Database = {
           sub_recheck_minutes?: number
           title?: string | null
           type: Database["public"]["Enums"]["task_type"]
+          unsub_warn_limit?: number
         }
         Update: {
           advertiser_id?: string | null
@@ -476,6 +481,7 @@ export type Database = {
           sub_recheck_minutes?: number
           title?: string | null
           type?: Database["public"]["Enums"]["task_type"]
+          unsub_warn_limit?: number
         }
         Relationships: [
           {

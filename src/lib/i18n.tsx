@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { adminRuEn } from "./admin-dict";
 
 export type Lang = "ru" | "en";
 
@@ -145,12 +146,15 @@ interface I18nContextType {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: (key: TranslationKey) => string;
+  /** Translate a raw Russian UI string (admin panel). Falls back to the source string. */
+  tr: (ru: string) => string;
 }
 
 const I18nContext = createContext<I18nContextType>({
   lang: "ru",
   setLang: () => {},
   t: (key) => key,
+  tr: (ru) => ru,
 });
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -168,8 +172,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return translations[key]?.[lang] || key;
   };
 
+  const tr = (ru: string): string => (lang === "en" ? adminRuEn[ru] ?? ru : ru);
+
   return (
-    <I18nContext.Provider value={{ lang, setLang: changeLang, t }}>
+    <I18nContext.Provider value={{ lang, setLang: changeLang, t, tr }}>
       {children}
     </I18nContext.Provider>
   );

@@ -8,7 +8,7 @@ import { format, subDays, parseISO, formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 
 export default function StatisticsPage() {
-  const { t } = useTranslation();
+  const { t, tr } = useTranslation();
   const [stats, setStats] = useState<any>(null);
   const [topPromo, setTopPromo] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ export default function StatisticsPage() {
   ];
 
   const kpis = [
-    { label: "Онлайн сейчас", value: onlineNow, icon: Activity, color: "from-emerald-500 to-teal-500" },
+    { label: tr("Онлайн сейчас"), value: onlineNow, icon: Activity, color: "from-emerald-500 to-teal-500" },
     { label: t("stats.totalUsers"), value: totalUsers, icon: Users, color: "from-brand-purple to-brand-blue" },
     { label: t("stats.suspicious"), value: suspiciousUsers, icon: AlertTriangle, color: "from-destructive to-orange-500" },
     { label: t("stats.totalBalance"), value: `${totalBalance.toFixed(0)} PT`, icon: DollarSign, color: "from-brand-gold to-yellow-500" },
@@ -171,9 +171,9 @@ export default function StatisticsPage() {
           .sort((a: any, b: any) => b.count - a.count)
           .slice(0, 5);
         const refKpis = [
-          { label: "Приглашено всего", value: invited, icon: UserPlus, color: "from-brand-purple to-brand-blue" },
-          { label: "Активных рефералов", value: activeRefsTotal, icon: Share2, color: "from-brand-blue to-brand-green" },
-          { label: "Выплачено рефералам", value: fmtPt(totalRefEarn), icon: DollarSign, color: "from-brand-gold to-yellow-500" },
+          { label: tr("Приглашено всего"), value: invited, icon: UserPlus, color: "from-brand-purple to-brand-blue" },
+          { label: tr("Активных рефералов"), value: activeRefsTotal, icon: Share2, color: "from-brand-blue to-brand-green" },
+          { label: tr("Выплачено рефералам"), value: fmtPt(totalRefEarn), icon: DollarSign, color: "from-brand-gold to-yellow-500" },
         ];
         return (
           <div className="space-y-4">
@@ -181,7 +181,7 @@ export default function StatisticsPage() {
               <div className="p-2 rounded-xl bg-gradient-to-br from-brand-purple to-brand-blue">
                 <Share2 className="h-4 w-4 text-white" />
               </div>
-              <h3 className="text-base font-semibold">Реферальная программа</h3>
+              <h3 className="text-base font-semibold">{tr("Реферальная программа")}</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {refKpis.map((k) => (
@@ -201,7 +201,7 @@ export default function StatisticsPage() {
               <div className="glass-card p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Trophy className="h-4 w-4 text-brand-gold" />
-                  <h4 className="text-sm font-semibold">Топ рефереров</h4>
+                  <h4 className="text-sm font-semibold">{tr("Топ рефереров")}</h4>
                 </div>
                 <div className="space-y-2">
                   {top.map((u: any, i: number) => (
@@ -236,18 +236,18 @@ export default function StatisticsPage() {
           <div className="p-2 rounded-xl bg-gradient-to-br from-brand-gold to-yellow-500">
             <Ticket className="h-4 w-4 text-white" />
           </div>
-          <h3 className="text-base font-semibold">Топ 10 промокодеров</h3>
+          <h3 className="text-base font-semibold">{tr("Топ 10 промокодеров")}</h3>
         </div>
         <div className="glass-card p-6">
           {topPromo.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Никто ещё не активировал промокоды</p>
+            <p className="text-sm text-muted-foreground text-center py-6">{tr("Никто ещё не активировал промокоды")}</p>
           ) : (
             <div className="space-y-2">
               {topPromo.map((u: any, i: number) => {
                 const name = u.username ? `@${u.username}` : `ID ${u.telegram_id}`;
                 const lastSeen = u.last_seen_at
                   ? formatDistanceToNow(parseISO(u.last_seen_at), { addSuffix: true, locale: ru })
-                  : "нет данных";
+                  : tr("нет данных");
                 return (
                   <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white bg-gradient-to-br ${
@@ -260,7 +260,7 @@ export default function StatisticsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{name}</p>
-                      <p className="text-xs text-muted-foreground truncate">Заходил {lastSeen}</p>
+                      <p className="text-xs text-muted-foreground truncate">{tr("Заходил")} {lastSeen}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{u.promo_count} 🎟️</p>

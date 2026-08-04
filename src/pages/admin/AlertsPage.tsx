@@ -63,7 +63,7 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   reaction:      { label: "Реакция",        short: "Реакция",   icon: Heart,      bar: "bg-pink-500",           badge: "bg-pink-500/10 text-pink-500 border-pink-500/20",             row: "bg-pink-500/[0.04] hover:bg-pink-500/[0.08]" },
   survey:        { label: "Опрос",          short: "Опрос",     icon: Heart,      bar: "bg-teal-500",           badge: "bg-teal-500/10 text-teal-500 border-teal-500/20",             row: "bg-teal-500/[0.04] hover:bg-teal-500/[0.08]" },
   balance_reset: { label: "Обнуление баланса", short: "Обнуление", icon: RotateCcw, bar: "bg-orange-500",       badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",       row: "bg-orange-500/[0.05] hover:bg-orange-500/[0.10]" },
-  promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]" },
+  promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-yellow-400",         badge: "bg-yellow-400/15 text-yellow-500 border-yellow-400/30",       row: "bg-yellow-400/[0.06] hover:bg-yellow-400/[0.12]" },
   withdrawal_paid:     { label: "Вывод выполнен",  short: "Вывод", icon: ArrowUp, bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.05] hover:bg-emerald-500/[0.10]" },
   withdrawal_rejected: { label: "Вывод отменён",   short: "Вывод", icon: ArrowUp, bar: "bg-emerald-600",        badge: "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",    row: "bg-emerald-600/[0.05] hover:bg-emerald-600/[0.10]" },
 };
@@ -71,7 +71,7 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
 const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
 
 export default function AlertsPage() {
-  const { t } = useTranslation();
+  const { t, tr } = useTranslation();
   const navigate = useNavigate();
   const [tab, setTab] = useState("alerts");
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -147,20 +147,20 @@ export default function AlertsPage() {
       const finished = l.finished_at ? parseISO(l.finished_at) : (l.created_at ? parseISO(l.created_at) : null);
       const reward = Number(l.reward_pt || 0);
       return {
-        "Пользователь": l.user_username ? `@${l.user_username}` : (l.user_telegram_id ? `ID ${l.user_telegram_id}` : "—"),
+        [tr("Пользователь")]: l.user_username ? `@${l.user_username}` : (l.user_telegram_id ? `ID ${l.user_telegram_id}` : "—"),
         "Telegram ID": l.user_telegram_id ?? "",
-        "Тип": meta.label,
-        "ID задания": l.task_public_id ?? "",
-        "Название / Причина": l.task_title ?? "",
-        "Задание удалено": (l.task_deleted || l.video_deleted) ? "да" : "нет",
-        "Промокод": isPromoRow ? (l.task_public_id ?? "") : "",
-        "Промо удалено": isPromoRow ? (l.promo_deleted ? "да" : "нет") : "",
-        "Рекламодатель": l.advertiser_deleted ? "Удалён" : (l.advertiser_name ?? "—"),
-        "ID рекламодателя": l.advertiser_public_id ?? "",
-        "Начало просмотра": isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
-        "Окончание просмотра": isVideo && finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
-        "Время": finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
-        [isReset ? "Списание (PT)" : "Награда (PT)"]: reward,
+        [tr("Тип")]: tr(meta.label),
+        [tr("ID задания")]: l.task_public_id ?? "",
+        [tr("Название / Причина")]: l.task_title ?? "",
+        [tr("Задание удалено")]: (l.task_deleted || l.video_deleted) ? tr("да") : tr("нет"),
+        [tr("Промокод")]: isPromoRow ? (l.task_public_id ?? "") : "",
+        [tr("Промо удалено")]: isPromoRow ? (l.promo_deleted ? tr("да") : tr("нет")) : "",
+        [tr("Рекламодатель")]: l.advertiser_deleted ? tr("Удалён") : (l.advertiser_name ?? "—"),
+        [tr("ID рекламодателя")]: l.advertiser_public_id ?? "",
+        [tr("Начало просмотра")]: isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
+        [tr("Окончание просмотра")]: isVideo && finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
+        [tr("Время")]: finished ? format(finished, "yyyy-MM-dd HH:mm:ss") : "",
+        [isReset ? tr("Списание (PT)") : tr("Награда (PT)")]: reward,
       };
     });
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -170,7 +170,7 @@ export default function AlertsPage() {
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Все логи");
+    XLSX.utils.book_append_sheet(wb, ws, tr("Все логи"));
     XLSX.writeFile(wb, `activity-logs-${format(new Date(), "yyyy-MM-dd-HHmm")}.xlsx`);
   };
 
@@ -199,7 +199,7 @@ export default function AlertsPage() {
     setRetention(v);
     try {
       await adminApi("set_promo_retention", { days: Number(v) });
-      toast.success(v === "0" ? "Автоочистка отключена" : `Хранить последние ${v} дн.`);
+      toast.success(v === "0" ? tr("Автоочистка отключена") : `${tr("Хранить последние")} ${v} ${tr("дн.")}`);
       fetchLogs();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -208,7 +208,7 @@ export default function AlertsPage() {
     setARetDays(v);
     try {
       await adminApi("set_activity_retention", { days: Number(v), count: Number(aRetCount) });
-      toast.success(v === "0" ? "Автоочистка по дням отключена" : `Хранить последние ${v} дн.`);
+      toast.success(v === "0" ? tr("Автоочистка по дням отключена") : `${tr("Хранить последние")} ${v} ${tr("дн.")}`);
       fetchActivityLogs();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -216,7 +216,7 @@ export default function AlertsPage() {
     setARetCount(v);
     try {
       await adminApi("set_activity_retention", { days: Number(aRetDays), count: Number(v) });
-      toast.success(v === "0" ? "Лимит по количеству снят" : `Хранить последние ${v} записей`);
+      toast.success(v === "0" ? tr("Лимит по количеству снят") : `${tr("Хранить последние")} ${v} ${tr("записей")}`);
       fetchActivityLogs();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -266,11 +266,11 @@ export default function AlertsPage() {
           </TabsTrigger>
           <TabsTrigger value="activity" className="rounded-lg gap-2">
             <ScrollText className="h-4 w-4" />
-            Все логи
+            {tr("Все логи")}
           </TabsTrigger>
           <TabsTrigger value="promo_logs" className="rounded-lg gap-2">
             <Ticket className="h-4 w-4" />
-            Логи промокодов
+            {tr("Логи промокодов")}
           </TabsTrigger>
         </TabsList>
 
@@ -313,7 +313,7 @@ export default function AlertsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Поиск по ID (v100000000, r100000000…)"
+                  placeholder={tr("Поиск по ID (v100000000, r100000000…)")}
                   value={aIdSearch}
                   onChange={(e) => setAIdSearch(e.target.value)}
                   className="pl-9 rounded-xl"
@@ -322,7 +322,7 @@ export default function AlertsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Поиск по @username или telegram_id"
+                  placeholder={tr("Поиск по @username или telegram_id")}
                   value={aUserSearch}
                   onChange={(e) => setAUserSearch(e.target.value)}
                   className="pl-9 rounded-xl"
@@ -335,7 +335,7 @@ export default function AlertsPage() {
                 onClick={() => setATypes(new Set())}
                 className={`px-3 py-1.5 rounded-xl text-xs border transition-all press-soft ${aTypes.size === 0 ? "bg-primary/15 text-primary border-primary/30" : "bg-muted/40 border-transparent text-muted-foreground hover:bg-muted"}`}
               >
-                Все
+                {tr("Все")}
               </button>
               {FILTERABLE.map((k) => {
                 const meta = ACTION_META[k];
@@ -347,7 +347,7 @@ export default function AlertsPage() {
                     onClick={() => toggleType(k)}
                     className={`px-3 py-1.5 rounded-xl text-xs border flex items-center gap-1.5 transition-all press-soft ${active ? meta.badge : "bg-muted/40 border-transparent text-muted-foreground hover:bg-muted"}`}
                   >
-                    <Icon className="h-3.5 w-3.5" /> {meta.label}
+                    <Icon className="h-3.5 w-3.5" /> {tr(meta.label)}
                   </button>
                 );
               })}
@@ -360,7 +360,7 @@ export default function AlertsPage() {
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {RETENTION_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>По дням: {o.label}</SelectItem>
+                      <SelectItem key={o.value} value={o.value}>{tr("По дням")}: {tr(o.label)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -371,7 +371,7 @@ export default function AlertsPage() {
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COUNT_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>По кол-ву: {o.label}</SelectItem>
+                      <SelectItem key={o.value} value={o.value}>{tr("По кол-ву")}: {tr(o.label)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -381,11 +381,11 @@ export default function AlertsPage() {
               <p className="text-sm text-foreground/80 flex items-center gap-2">
                 <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
                 {aRetDays === "0" && aRetCount === "0"
-                  ? <span><span className="font-semibold">Автоочистка отключена.</span> Логи хранятся без ограничений — ничего не удаляется автоматически.</span>
-                  : <span><span className="font-semibold">Автоочистка включена:</span>{" "}
-                      {aRetDays !== "0" && <>удаляются записи старше <span className="font-semibold text-foreground">{aRetDays} дн.</span></>}
+                  ? <span><span className="font-semibold">{tr("Автоочистка отключена.")}</span> {tr("Логи хранятся без ограничений — ничего не удаляется автоматически.")}</span>
+                  : <span><span className="font-semibold">{tr("Автоочистка включена:")}</span>{" "}
+                      {aRetDays !== "0" && <>{tr("удаляются записи старше")} <span className="font-semibold text-foreground">{aRetDays} {tr("дн.")}</span></>}
                       {aRetDays !== "0" && aRetCount !== "0" && " · "}
-                      {aRetCount !== "0" && <>хранятся только последние <span className="font-semibold text-foreground">{aRetCount}</span> записей</>}
+                      {aRetCount !== "0" && <>{tr("хранятся только последние")} <span className="font-semibold text-foreground">{aRetCount}</span> {tr("записей")}</>}
                     </span>}
               </p>
               <Button
@@ -396,7 +396,7 @@ export default function AlertsPage() {
                 className="rounded-xl gap-2 shrink-0"
               >
                 <Download className="h-4 w-4" />
-                Экспорт в CSV ({aLogs.length})
+                {tr("Экспорт в CSV")} ({aLogs.length})
               </Button>
             </div>
           </div>
@@ -408,7 +408,7 @@ export default function AlertsPage() {
           ) : aLogs.length === 0 ? (
             <div className="glass-card p-12 text-center text-muted-foreground">
               <ScrollText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Пока нет записей</p>
+              <p>{tr("Пока нет записей")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -445,14 +445,14 @@ export default function AlertsPage() {
                       {/* task / promo */}
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge variant="outline" className={`rounded-lg text-[10px] px-1.5 py-0 ${meta.badge}`}>{meta.short}</Badge>
+                          <Badge variant="outline" className={`rounded-lg text-[10px] px-1.5 py-0 ${meta.badge}`}>{tr(meta.short)}</Badge>
                           {isPromo ? (
                             <span
                               className={
                                 "font-mono text-xs px-1.5 py-0.5 rounded-lg border " +
                                 (l.promo_deleted
                                   ? "border-destructive/60 text-destructive bg-destructive/5"
-                                  : "border-emerald-500/40 text-emerald-500 bg-emerald-500/5")
+                                  : "border-yellow-400/50 text-yellow-500 bg-yellow-400/10")
                               }
                             >
                               {l.task_public_id || "—"}
@@ -461,7 +461,7 @@ export default function AlertsPage() {
                             (l.video_deleted || l.task_deleted) ? (
                               <span
                                 className="font-mono text-xs text-muted-foreground underline decoration-destructive decoration-2 underline-offset-2 cursor-help"
-                                title="Задание удалено"
+                                title={tr("Задание удалено")}
                               >
                                 {l.task_public_id}
                               </span>
@@ -478,7 +478,7 @@ export default function AlertsPage() {
                           )}
                         </div>
                         {isPromo && l.promo_deleted && (
-                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">Промо удалено</div>
+                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">{tr("Промо удалено")}</div>
                         )}
                         {l.task_title && (
                           <div className="text-xs text-muted-foreground truncate">{l.task_title}</div>
@@ -488,7 +488,7 @@ export default function AlertsPage() {
                       <div className="min-w-0 flex flex-col gap-0.5">
                         {l.advertiser_deleted ? (
                           <>
-                            <div className="text-xs text-muted-foreground">Рекламодатель удалён</div>
+                            <div className="text-xs text-muted-foreground">{tr("Рекламодатель удалён")}</div>
                             {l.advertiser_public_id && (
                               <span className="font-mono text-xs text-muted-foreground underline decoration-destructive decoration-2 underline-offset-2">
                                 {l.advertiser_public_id}
@@ -532,7 +532,7 @@ export default function AlertsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Поиск по промокоду..."
+                  placeholder={tr("Поиск по промокоду...")}
                   value={codeSearch}
                   onChange={(e) => setCodeSearch(e.target.value)}
                   className="pl-9 rounded-xl"
@@ -541,7 +541,7 @@ export default function AlertsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Поиск по @username..."
+                  placeholder={tr("Поиск по @username...")}
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="pl-9 rounded-xl"
@@ -555,7 +555,7 @@ export default function AlertsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {RETENTION_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>Хранить: {o.label}</SelectItem>
+                      <SelectItem key={o.value} value={o.value}>{tr("Хранить")}: {tr(o.label)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -564,8 +564,8 @@ export default function AlertsPage() {
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               <Trash2 className="h-3 w-3" />
               {retention === "0"
-                ? "Логи не удаляются автоматически"
-                : `Логи старше ${retention} дн. удаляются автоматически`}
+                ? tr("Логи не удаляются автоматически")
+                : `${tr("Логи старше")} ${retention} ${tr("дн. удаляются автоматически")}`}
             </p>
           </div>
 
@@ -576,7 +576,7 @@ export default function AlertsPage() {
           ) : logs.length === 0 ? (
             <div className="glass-card p-12 text-center text-muted-foreground">
               <Ticket className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Активаций промокодов не найдено</p>
+              <p>{tr("Активаций промокодов не найдено")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -599,7 +599,7 @@ export default function AlertsPage() {
                           {code}
                         </Badge>
                         {deleted && (
-                          <span className="text-[10px] uppercase tracking-wider text-destructive/80">промокод удалён</span>
+                          <span className="text-[10px] uppercase tracking-wider text-destructive/80">{tr("промокод удалён")}</span>
                         )}
                       </div>
                       <span className="text-sm font-semibold text-brand-gold">
