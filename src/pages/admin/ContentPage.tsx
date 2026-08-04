@@ -38,7 +38,7 @@ export default function ContentPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", min_seconds_away: "2", recheck_value: "1", recheck_unit: "h" as "m" | "h" };
+  const emptyTaskForm = { type: "subscribe" as ContentKind, title: "", channel_username: "", channel_id: "", reward_pt: "10", post_url: "", max_completions: "0", min_seconds_away: "2", recheck_value: "1", recheck_unit: "h" as "m" | "h", unsub_warn_limit: "1" };
   const emptyVideoForm = { title: "", video_url: "", duration_seconds: "30", reward_pt: "5", external_link_url: "", external_link_label: "Перейти", media_type: "video" as "video" | "image" };
 
   const [contentDialogOpen, setContentDialogOpen] = useState(false);
@@ -148,6 +148,7 @@ export default function ContentPage() {
       min_seconds_away: String(ta.min_seconds_away ?? "2"),
       recheck_value: rm == null ? "0" : useHours ? String(rm / 60) : String(rm),
       recheck_unit: useHours ? "h" : "m",
+      unsub_warn_limit: String(ta.unsub_warn_limit ?? 1),
     });
     setContentDialogOpen(true);
   };
@@ -171,6 +172,7 @@ export default function ContentPage() {
         max_completions: Number(taskForm.max_completions) || 0,
         min_seconds_away: Math.max(1, Number(taskForm.min_seconds_away) || 2),
         recheck_minutes,
+        unsub_warn_limit: Math.max(0, Math.floor(Number(taskForm.unsub_warn_limit) || 0)),
       };
       if (editingTaskId) {
         await adminApi("update_task", { task_id: editingTaskId, ...payload, channel_id: payload.channel_id });
@@ -773,6 +775,19 @@ export default function ContentPage() {
                                 Через сколько бот проверит, что пользователь всё ещё подписан. <b>0 = не проверять.</b>
                                 Если отписался — PT списываются, задание возвращается с красной рамкой.
                               </p>
+                              <div className="mt-3">
+                                <Label>Сколько раз показать предупреждение об отписке</Label>
+                                <Input
+                                  className="rounded-xl mt-1"
+                                  type="number"
+                                  min={0}
+                                  value={taskForm.unsub_warn_limit}
+                                  onChange={e => setTaskForm((f: any) => ({ ...f, unsub_warn_limit: e.target.value }))}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Сколько раз пользователь увидит поп-ап о том, что он отписался. <b>1 = один раз, 0 = показывать всегда.</b>
+                                </p>
+                              </div>
                             </div>
                           )}
                           {showMinSeconds && (
