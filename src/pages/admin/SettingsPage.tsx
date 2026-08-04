@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Save, Sun, Moon } from "lucide-react";
 
 export default function SettingsPage() {
-  const { t, lang, setLang } = useTranslation();
+  const { t, tr, lang, setLang } = useTranslation();
   const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -86,7 +86,7 @@ export default function SettingsPage() {
 
       {/* Exchange rates */}
       <div className="glass-card p-6 space-y-4">
-        <h3 className="font-semibold">Курс обмена</h3>
+        <h3 className="font-semibold">{tr("Курс обмена")}</h3>
 
         <div>
           <Label>1 PT = X ⭐ Stars</Label>
@@ -125,17 +125,17 @@ export default function SettingsPage() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Отображается в мини-аппе рядом с балансом (≈ X USDT).
+            {tr("Отображается в мини-аппе рядом с балансом (≈ X USDT).")}
           </p>
         </div>
       </div>
 
       {/* Withdrawal minimums */}
       <div className="glass-card p-6 space-y-4">
-        <h3 className="font-semibold">Минимальный вывод</h3>
+        <h3 className="font-semibold">{tr("Минимальный вывод")}</h3>
 
         <div>
-          <Label>Минимум USDT</Label>
+          <Label>{tr("Минимум USDT")}</Label>
           <div className="flex gap-2 mt-2">
             <Input
               className="rounded-xl"
@@ -154,7 +154,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <Label>Минимум Stars</Label>
+          <Label>{tr("Минимум Stars")}</Label>
           <div className="flex gap-2 mt-2">
             <Input
               className="rounded-xl"
@@ -171,7 +171,7 @@ export default function SettingsPage() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Пользователи не смогут отправить заявку на вывод ниже этих сумм.
+            {tr("Пользователи не смогут отправить заявку на вывод ниже этих сумм.")}
           </p>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
+import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,17 +36,17 @@ const emptyForm = {
   duration_unit: "days" as DurationUnit,
 };
 
-function timeLeft(expires_at: string | null): string | null {
+function timeLeft(expires_at: string | null, tr: (s: string) => string): string | null {
   if (!expires_at) return null;
   const ms = new Date(expires_at).getTime() - Date.now();
-  if (ms <= 0) return "истёк";
+  if (ms <= 0) return tr("истёк");
   const s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}д ${h}ч`;
-  if (h > 0) return `${h}ч ${m}м`;
-  return `${m}м`;
+  if (d > 0) return `${d}${tr("д")} ${h}${tr("ч")}`;
+  if (h > 0) return `${h}${tr("ч")} ${m}${tr("м")}`;
+  return `${m}${tr("м")}`;
 }
 
 function computeExpiresAt(value: string, unit: DurationUnit): string {
@@ -61,6 +62,7 @@ function isExhausted(p: Promo): boolean {
 }
 
 export default function PromoCodesSection() {
+  const { tr } = useTranslation();
   const [promos, setPromos] = useState<Promo[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -84,9 +86,9 @@ export default function PromoCodesSection() {
 
   const submit = async () => {
     const code = form.code.trim();
-    if (!code) return toast.error("Введите промокод");
+    if (!code) return toast.error(tr("Введите промокод"));
     const reward_pt = Number(form.reward_pt);
-    if (!(reward_pt > 0)) return toast.error("Некорректная награда");
+    if (!(reward_pt > 0)) return toast.error(tr("Некорректная награда"));
     // No lim + no expiry = infinite (1 activation per account still enforced on redeem).
     try {
       await adminApi("create_promo", {
@@ -95,7 +97,7 @@ export default function PromoCodesSection() {
         max_uses: form.limit_uses ? Number(form.max_uses) : null,
         expires_at: form.limit_time ? computeExpiresAt(form.duration_value, form.duration_unit) : null,
       });
-      toast.success("Промокод создан");
+      toast.success(tr("Промокод создан"));
       setDialogOpen(false);
       setForm(emptyForm);
       fetchData();
@@ -112,7 +114,7 @@ export default function PromoCodesSection() {
   const restart = async (p: Promo) => {
     try {
       await adminApi("restart_promo", { promo_id: p.id });
-      toast.success("Промокод перезапущен");
+      toast.success(tr("Промокод перезапущен"));
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -120,13 +122,13 @@ export default function PromoCodesSection() {
   const remove = async (p: Promo) => {
     try {
       await adminApi("delete_promo", { promo_id: p.id });
-      toast.success("Промокод удалён");
+      toast.success(tr("Промокод удалён"));
       fetchData();
     } catch (e: any) { toast.error(e.message); }
   };
 
   const copyCode = async (code: string) => {
-    try { await navigator.clipboard.writeText(code); toast.success("Скопировано"); } catch {}
+    try { await navigator.clipboard.writeText(code); toast.success(tr("Скопировано")); } catch {}
   };
 
   const active = promos.filter((p) => !isExhausted(p));
@@ -134,7 +136,7 @@ export default function PromoCodesSection() {
 
   const renderRow = (p: Promo, dim: boolean) => {
     const left = p.max_uses != null ? Math.max(0, p.max_uses - p.used_count) : null;
-    const tl = timeLeft(p.expires_at);
+    const tl = timeLeft(p.expires_at, tr);
     const paused = p.is_paused && !isExhausted(p);
     return (
       <div
@@ -154,29 +156,29 @@ export default function PromoCodesSection() {
             <button
               onClick={() => copyCode(p.code)}
               className="font-mono font-semibold text-sm tracking-wider hover:underline flex items-center gap-1.5"
-              title="Скопировать"
+              title={tr("Скопировать")}
             >
               {p.code}
               <Copy className="h-3 w-3 opacity-50" />
             </button>
-            {dim && <Badge variant="outline" className="rounded-lg text-xs text-muted-foreground">Исчерпан</Badge>}
-            {paused && <Badge variant="outline" className="rounded-lg text-xs text-amber-500 border-amber-500/40">На паузе</Badge>}
-            {!dim && !paused && <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">Активен</Badge>}
+            {dim && <Badge variant="outline" className="rounded-lg text-xs text-muted-foreground">{tr("Исчерпан")}</Badge>}
+            {paused && <Badge variant="outline" className="rounded-lg text-xs text-amber-500 border-amber-500/40">{tr("На паузе")}</Badge>}
+            {!dim && !paused && <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">{tr("Активен")}</Badge>}
           </div>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap text-xs">
-            <span className="font-medium">{p.reward_pt} PT за активацию</span>
+            <span className="font-medium">{p.reward_pt} PT {tr("за активацию")}</span>
             <span className="text-muted-foreground">·</span>
             <span className="flex items-center gap-1 text-muted-foreground">
               <UsersIcon className="h-3 w-3" />
-              {p.used_count}{p.max_uses != null ? `/${p.max_uses}` : ""} активаций
-              {left != null && !dim && <span className="text-emerald-500">· осталось {left}</span>}
+              {p.used_count}{p.max_uses != null ? `/${p.max_uses}` : ""} {tr("активаций")}
+              {left != null && !dim && <span className="text-emerald-500">· {tr("осталось")} {left}</span>}
             </span>
             {tl && (
               <>
                 <span className="text-muted-foreground">·</span>
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  {dim ? "срок истёк" : `осталось ${tl}`}
+                  {dim ? tr("срок истёк") : `${tr("осталось")} ${tl}`}
                 </span>
               </>
             )}
@@ -193,33 +195,33 @@ export default function PromoCodesSection() {
             {!dim && (
               <DropdownMenuItem onClick={() => togglePause(p)}>
                 {p.is_paused ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
-                {p.is_paused ? "Возобновить" : "Приостановить"}
+                {p.is_paused ? tr("Возобновить") : tr("Приостановить")}
               </DropdownMenuItem>
             )}
             {dim && (
               <DropdownMenuItem onClick={() => restart(p)}>
-                <RotateCcw className="h-4 w-4 mr-2" /> Перезапустить
+                <RotateCcw className="h-4 w-4 mr-2" /> {tr("Перезапустить")}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={() => copyCode(p.code)}>
-              <Copy className="h-4 w-4 mr-2" /> Скопировать код
+              <Copy className="h-4 w-4 mr-2" /> {tr("Скопировать код")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" /> Удалить
+                  <Trash2 className="h-4 w-4 mr-2" /> {tr("Удалить")}
                 </DropdownMenuItem>
               </AlertDialogTrigger>
               <AlertDialogContent className="glass-card border-0">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Удалить промокод «{p.code}»?</AlertDialogTitle>
-                  <AlertDialogDescription>Действие необратимо. Активации сохранятся в истории пользователей.</AlertDialogDescription>
+                  <AlertDialogTitle>{tr("Удалить промокод")} «{p.code}»?</AlertDialogTitle>
+                  <AlertDialogDescription>{tr("Действие необратимо. Активации сохранятся в истории пользователей.")}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-xl">Отмена</AlertDialogCancel>
+                  <AlertDialogCancel className="rounded-xl">{tr("Отмена")}</AlertDialogCancel>
                   <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => remove(p)}>
-                    Удалить
+                    {tr("Удалить")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -234,30 +236,30 @@ export default function PromoCodesSection() {
     <div className="glass-card overflow-hidden">
       <div className="flex items-center justify-between p-6 pb-4">
         <div>
-          <h2 className="text-lg font-semibold">Промокоды</h2>
-          <p className="text-xs text-muted-foreground mt-1">Начисляют PT пользователям при активации в мини-аппе.</p>
+          <h2 className="text-lg font-semibold">{tr("Промокоды")}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{tr("Начисляют PT пользователям при активации в мини-аппе.")}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setForm(emptyForm); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="rounded-xl gap-2 bg-gradient-to-r from-brand-purple to-brand-blue text-white border-0">
-              <Plus className="h-4 w-4" /> Новый промокод
+              <Plus className="h-4 w-4" /> {tr("Новый промокод")}
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-card border-0">
-            <DialogHeader><DialogTitle>Новый промокод</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{tr("Новый промокод")}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Код</Label>
+                <Label>{tr("Код")}</Label>
                 <Input
                   className="rounded-xl font-mono tracking-wider"
                   value={form.code}
                   onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                  placeholder="Любые буквы, цифры, символы"
+                  placeholder={tr("Любые буквы, цифры, символы")}
                   autoFocus
                 />
               </div>
               <div>
-                <Label>Награда, PT</Label>
+                <Label>{tr("Награда, PT")}</Label>
                 <Input
                   type="number"
                   min="0.01"
@@ -275,7 +277,7 @@ export default function PromoCodesSection() {
                     checked={form.limit_uses}
                     onChange={(e) => setForm((f) => ({ ...f, limit_uses: e.target.checked }))}
                   />
-                  Лимит активаций
+                  {tr("Лимит активаций")}
                 </label>
                 {form.limit_uses && (
                   <Input
@@ -284,7 +286,7 @@ export default function PromoCodesSection() {
                     className="rounded-lg"
                     value={form.max_uses}
                     onChange={(e) => setForm((f) => ({ ...f, max_uses: e.target.value }))}
-                    placeholder="Например, 100"
+                    placeholder={tr("Например, 100")}
                   />
                 )}
               </div>
@@ -296,7 +298,7 @@ export default function PromoCodesSection() {
                     checked={form.limit_time}
                     onChange={(e) => setForm((f) => ({ ...f, limit_time: e.target.checked }))}
                   />
-                  Срок действия
+                  {tr("Срок действия")}
                 </label>
                 {form.limit_time && (
                   <div className="flex gap-2">
@@ -310,9 +312,9 @@ export default function PromoCodesSection() {
                     <Select value={form.duration_unit} onValueChange={(v) => setForm((f) => ({ ...f, duration_unit: v as DurationUnit }))}>
                       <SelectTrigger className="rounded-lg w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="minutes">минут</SelectItem>
-                        <SelectItem value="hours">часов</SelectItem>
-                        <SelectItem value="days">дней</SelectItem>
+                        <SelectItem value="minutes">{tr("минут")}</SelectItem>
+                        <SelectItem value="hours">{tr("часов")}</SelectItem>
+                        <SelectItem value="days">{tr("дней")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -320,11 +322,11 @@ export default function PromoCodesSection() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Можно выбрать одно из ограничений, оба или ни одного. Если ничего не выбрано — промокод бесконечный (но всё равно <b>1 активация на аккаунт</b>). Одинаковые коды создать нельзя.
+                {tr("Можно выбрать одно из ограничений, оба или ни одного. Если ничего не выбрано — промокод бесконечный (но всё равно")} <b>{tr("1 активация на аккаунт")}</b>{tr("). Одинаковые коды создать нельзя.")}
               </p>
 
               <Button onClick={submit} className="w-full rounded-xl bg-gradient-to-r from-brand-purple to-brand-blue text-white">
-                Создать
+                {tr("Создать")}
               </Button>
             </div>
           </DialogContent>
@@ -333,15 +335,15 @@ export default function PromoCodesSection() {
 
       <div className="px-6 pb-6 space-y-6">
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">Загрузка…</p>
+          <p className="text-center text-muted-foreground py-8">{tr("Загрузка…")}</p>
         ) : promos.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">Промокодов пока нет. Создайте первый.</p>
+          <p className="text-center text-muted-foreground py-8">{tr("Промокодов пока нет. Создайте первый.")}</p>
         ) : (
           <>
             {active.length > 0 && (
               <div className="space-y-2">
                 <div className="text-xs uppercase tracking-wider text-muted-foreground px-1">
-                  Активные · {active.length}
+                  {tr("Активные")} · {active.length}
                 </div>
                 <div className="space-y-2">{active.map((p) => renderRow(p, false))}</div>
               </div>
@@ -349,7 +351,7 @@ export default function PromoCodesSection() {
             {exhausted.length > 0 && (
               <div className="space-y-2">
                 <div className="text-xs uppercase tracking-wider text-muted-foreground px-1">
-                  Исчерпанные · {exhausted.length}
+                  {tr("Исчерпанные")} · {exhausted.length}
                 </div>
                 <div className="space-y-2">{exhausted.map((p) => renderRow(p, true))}</div>
               </div>
