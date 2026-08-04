@@ -31,7 +31,7 @@ const ACTION_META: Record<string, { label: string; icon: any; color: string }> =
 };
 
 export default function UsersPage() {
-  const { t } = useTranslation();
+  const { t, tr } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState<any[]>([]);
   const [farms, setFarms] = useState<any[]>([]);
@@ -369,30 +369,30 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RotateCcw className="h-5 w-5 text-orange-500" />
-              Обнулить баланс
+              {tr("Обнулить баланс")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-3 rounded-xl bg-orange-500/10 text-sm">
               <div>{resetUser?.username ? `@${resetUser.username}` : `ID ${resetUser?.telegram_id}`}</div>
-              <div className="text-xs text-muted-foreground mt-1">Текущий баланс: <span className="font-semibold text-foreground">{Number(resetUser?.balance_pt || 0).toFixed(2)} PT</span></div>
+              <div className="text-xs text-muted-foreground mt-1">{tr("Текущий баланс")}: <span className="font-semibold text-foreground">{Number(resetUser?.balance_pt || 0).toFixed(2)} PT</span></div>
             </div>
             <div>
-              <Label>Причина (необязательно)</Label>
+              <Label>{tr("Причина (необязательно)")}</Label>
               <Textarea
                 className="rounded-xl mt-1"
                 value={resetReason}
                 onChange={(e) => setResetReason(e.target.value)}
-                placeholder="Например: подозрительная активность / нарушение правил"
+                placeholder={tr("Например: подозрительная активность / нарушение правил")}
                 rows={3}
                 maxLength={500}
               />
-              <p className="text-[11px] text-muted-foreground mt-1">Причина попадёт в «Все логи», Алерты, историю транзакций пользователя и экспорт.</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{tr("Причина попадёт в «Все логи», Алерты, историю транзакций пользователя и экспорт.")}</p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" className="rounded-xl" onClick={() => { setResetUser(null); setResetReason(""); }}>Отмена</Button>
-            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white" onClick={confirmReset}>Обнулить</Button>
+            <Button variant="ghost" className="rounded-xl" onClick={() => { setResetUser(null); setResetReason(""); }}>{tr("Отмена")}</Button>
+            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 text-white" onClick={confirmReset}>{tr("Обнулить")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -457,11 +457,11 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                 {display}
                 {user.is_banned && <Badge variant="destructive" className="rounded-md text-[10px]">BAN</Badge>}
                 {user.is_suspicious && <Badge className="rounded-md text-[10px] bg-yellow-500/10 text-yellow-600 border-yellow-500/20">⚠️</Badge>}
-                {user.balance_frozen && <Badge variant="outline" className="rounded-md text-[10px]">🧊 Frozen</Badge>}
+                {user.balance_frozen && <Badge variant="outline" className="rounded-md text-[10px]">🧊 {tr("Frozen")}</Badge>}
               </DialogTitle>
               <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                 <Circle className={`h-2 w-2 fill-current ${room?.online ? "text-emerald-500" : "text-muted-foreground"}`} />
-                {room?.online ? "В сети сейчас" : (user.last_seen_at ? `Был(а): ${format(parseISO(user.last_seen_at), "dd.MM.yyyy HH:mm")}` : "Никогда не заходил(а)")}
+                {room?.online ? tr("В сети сейчас") : (user.last_seen_at ? `${tr("Был(а)")}: ${format(parseISO(user.last_seen_at), "dd.MM.yyyy HH:mm")}` : tr("Никогда не заходил(а)"))}
               </div>
             </div>
           </div>
@@ -472,7 +472,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                   <Ban className={`h-4 w-4 ${user.is_banned ? "text-destructive" : ""}`} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{user.is_banned ? "Разбан" : "Бан"}</TooltipContent>
+              <TooltipContent>{user.is_banned ? tr("Разбан") : tr("Бан")}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -480,7 +480,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                   <Snowflake className={`h-4 w-4 ${user.balance_frozen ? "text-brand-blue" : ""}`} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{user.balance_frozen ? "Разморозить" : "Заморозить"}</TooltipContent>
+              <TooltipContent>{user.balance_frozen ? tr("Разморозить") : tr("Заморозить")}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -488,7 +488,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                   <ShieldAlert className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Капча</TooltipContent>
+              <TooltipContent>{tr("Капча")}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -496,7 +496,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Обнулить</TooltipContent>
+              <TooltipContent>{tr("Обнулить")}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -504,7 +504,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                   <MessageSquare className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Сообщение</TooltipContent>
+              <TooltipContent>{tr("Сообщение")}</TooltipContent>
             </Tooltip>
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -522,24 +522,24 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
           <>
             {/* KPI grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <StatBox icon={Wallet} label="Баланс" value={`${Number(user.balance_pt).toFixed(2)} PT`} sub={user.balance_frozen ? "заморожен" : ""} />
-              <StatBox icon={Trophy} label="Топ по балансу" value={room.rank_balance ? `#${room.rank_balance}` : "—"} sub={`из ${room.total_users}`} />
-              <StatBox icon={UsersIcon} label="Топ рефералов" value={room.rank_referrals ? `#${room.rank_referrals}` : "—"} sub={`${Number(user.referral_earnings_pt || 0).toFixed(2)} PT`} />
-              <StatBox icon={Ticket} label="Топ промокодеров" value={room.rank_promo ? `#${room.rank_promo}` : "—"} sub={`${room.promo_count} шт.`} />
+              <StatBox icon={Wallet} label={tr("Баланс")} value={`${Number(user.balance_pt).toFixed(2)} PT`} sub={user.balance_frozen ? tr("заморожен") : ""} />
+              <StatBox icon={Trophy} label={tr("Топ по балансу")} value={room.rank_balance ? `#${room.rank_balance}` : "—"} sub={`${tr("из")} ${room.total_users}`} />
+              <StatBox icon={UsersIcon} label={tr("Топ рефералов")} value={room.rank_referrals ? `#${room.rank_referrals}` : "—"} sub={`${Number(user.referral_earnings_pt || 0).toFixed(2)} PT`} />
+              <StatBox icon={Ticket} label={tr("Топ промокодеров")} value={room.rank_promo ? `#${room.rank_promo}` : "—"} sub={`${room.promo_count} ${tr("шт.")}`} />
             </div>
 
             <Tabs defaultValue={initialTab || "tx"}>
               <TabsList className="rounded-xl w-full flex-wrap h-auto">
-                <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> Транзакции ({room.activity.length})</TabsTrigger>
-                <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> Выводы ({(room.withdrawals || []).length})</TabsTrigger>
-                <TabsTrigger value="alerts" className="rounded-lg gap-1.5"><Bell className="h-3.5 w-3.5" /> Алерты ({room.alerts.length})</TabsTrigger>
-                <TabsTrigger value="refs" className="rounded-lg gap-1.5"><UsersIcon className="h-3.5 w-3.5" /> Рефералы ({room.referrals_total})</TabsTrigger>
-                <TabsTrigger value="info" className="rounded-lg gap-1.5"><Network className="h-3.5 w-3.5" /> Данные</TabsTrigger>
+                <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> {tr("Транзакции")} ({room.activity.length})</TabsTrigger>
+                <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> {tr("Выводы")} ({(room.withdrawals || []).length})</TabsTrigger>
+                <TabsTrigger value="alerts" className="rounded-lg gap-1.5"><Bell className="h-3.5 w-3.5" /> {tr("Алерты")} ({room.alerts.length})</TabsTrigger>
+                <TabsTrigger value="refs" className="rounded-lg gap-1.5"><UsersIcon className="h-3.5 w-3.5" /> {tr("Рефералы")} ({room.referrals_total})</TabsTrigger>
+                <TabsTrigger value="info" className="rounded-lg gap-1.5"><Network className="h-3.5 w-3.5" /> {tr("Данные")}</TabsTrigger>
               </TabsList>
 
               {/* Transactions */}
               <TabsContent value="tx" className="mt-3 space-y-1.5">
-                {room.activity.length === 0 && <EmptyState text="Транзакций пока нет" />}
+                {room.activity.length === 0 && <EmptyState text={tr("Транзакций пока нет")} />}
                 {room.activity.map((a: any) => {
                   const meta = ACTION_META[a.action_type] || ACTION_META.subscribe;
                   const Icon = meta.icon;
@@ -552,7 +552,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium">{meta.label}</span>
+                          <span className="font-medium">{tr(meta.label)}</span>
                           {a.task_public_id && (
                             a.action_type === "promo_reward" ? (
                               <span
@@ -574,7 +574,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                           )}
                         </div>
                         {a.action_type === "promo_reward" && a.promo_deleted && (
-                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">Промо удалено</div>
+                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">{tr("Промо удалено")}</div>
                         )}
                         {a.task_title && <div className="text-xs text-muted-foreground truncate">{a.task_title}</div>}
                         <div className="text-[10.5px] text-muted-foreground font-mono mt-0.5">
@@ -591,13 +591,13 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
 
               {/* Withdrawals */}
               <TabsContent value="withdrawals" className="mt-3 space-y-1.5">
-                {(room.withdrawals || []).length === 0 && <EmptyState text="Заявок на вывод не было" />}
+                {(room.withdrawals || []).length === 0 && <EmptyState text={tr("Заявок на вывод не было")} />}
                 {(room.withdrawals || []).map((w: any) => {
                   const statusMeta = w.status === "approved" || w.status === "paid"
-                    ? { label: "Оплачено", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
+                    ? { label: tr("Оплачено"), cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" }
                     : w.status === "rejected"
-                    ? { label: "Отменено", cls: "bg-destructive/10 text-destructive border-destructive/30" }
-                    : { label: "В ожидании", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" };
+                    ? { label: tr("Отменено"), cls: "bg-destructive/10 text-destructive border-destructive/30" }
+                    : { label: tr("В ожидании"), cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" };
                   return (
                     <div
                       key={w.id}
@@ -625,7 +625,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                         <div className="text-[11px] font-mono text-muted-foreground break-all pl-11">{w.wallet_address}</div>
                       )}
                       {w.cancel_reason && !w.cancel_reason.startsWith("await:") && (
-                        <div className="text-[11px] text-destructive pl-11 mt-1">Причина: {w.cancel_reason}</div>
+                        <div className="text-[11px] text-destructive pl-11 mt-1">{tr("Причина")}: {w.cancel_reason}</div>
                       )}
 
 
@@ -637,7 +637,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
 
               {/* Alerts */}
               <TabsContent value="alerts" className="mt-3 space-y-1.5">
-                {room.alerts.length === 0 && <EmptyState text="Алертов по этому пользователю нет" />}
+                {room.alerts.length === 0 && <EmptyState text={tr("Алертов по этому пользователю нет")} />}
                 {room.alerts.map((al: any) => (
                   <div key={al.id} className="glass-card p-3 flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-destructive/10 text-destructive shrink-0">
@@ -657,14 +657,14 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
               {/* Referrals */}
               <TabsContent value="refs" className="mt-3 space-y-2">
                 <div className="glass-card p-3 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Всего рефералов</span>
+                  <span className="text-muted-foreground">{tr("Всего рефералов")}</span>
                   <span className="font-semibold">{room.referrals_total}</span>
                 </div>
                 <div className="glass-card p-3 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Всего заработано с рефералов</span>
+                  <span className="text-muted-foreground">{tr("Всего заработано с рефералов")}</span>
                   <span className="font-semibold text-brand-gold">{Number(room.referrals_earnings_total || 0).toFixed(2)} PT</span>
                 </div>
-                {room.referrals.length === 0 ? <EmptyState text="Приглашённых пока нет" /> : (
+                {room.referrals.length === 0 ? <EmptyState text={tr("Приглашённых пока нет")} /> : (
                   <div className="space-y-1.5">
                     {room.referrals.map((r: any) => (
                       <button
@@ -686,7 +686,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-sm font-semibold text-brand-gold">+{Number(r.earned_from).toFixed(2)} PT</div>
-                          <div className="text-[10px] text-muted-foreground">заработано с него</div>
+                          <div className="text-[10px] text-muted-foreground">{tr("заработано с него")}</div>
                         </div>
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground shrink-0" />
                       </button>
@@ -699,20 +699,20 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
               <TabsContent value="info" className="mt-3 space-y-2">
                 <div className="glass-card p-3 space-y-1.5 text-sm">
                   <InfoRow label="Telegram ID" value={<span className="font-mono">{user.telegram_id}</span>} />
-                  <InfoRow label="Внутренний ID" value={<span className="font-mono text-xs">{user.id}</span>} />
+                  <InfoRow label={tr("Внутренний ID")} value={<span className="font-mono text-xs">{user.id}</span>} />
                   <InfoRow label="Username" value={user.username ? `@${user.username}` : "—"} />
-                  <InfoRow label="Регистрация" value={format(parseISO(user.created_at), "dd.MM.yyyy HH:mm")} />
-                  <InfoRow label="Ежедневный бонус" value={user.daily_bonus_at ? format(parseISO(user.daily_bonus_at), "dd.MM.yyyy HH:mm") : "—"} />
-                  <InfoRow label="Кол-во капч" value={String(user.captcha_count || 0)} />
-                  <InfoRow label="Нарушений" value={String(user.violation_count || 0)} />
+                  <InfoRow label={tr("Регистрация")} value={format(parseISO(user.created_at), "dd.MM.yyyy HH:mm")} />
+                  <InfoRow label={tr("Ежедневный бонус")} value={user.daily_bonus_at ? format(parseISO(user.daily_bonus_at), "dd.MM.yyyy HH:mm") : "—"} />
+                  <InfoRow label={tr("Кол-во капч")} value={String(user.captcha_count || 0)} />
+                  <InfoRow label={tr("Нарушений")} value={String(user.violation_count || 0)} />
                   {user.ton_wallet_address && (
-                    <InfoRow label="TON кошелёк" value={
+                    <InfoRow label={tr("TON кошелёк")} value={
                       <span className="flex items-center gap-2">
                         <span className="font-mono text-xs break-all">{user.ton_wallet_address}</span>
                         <button
                           onClick={() => { navigator.clipboard.writeText(user.ton_wallet_address); }}
                           className="press-soft text-[11px] px-2 py-0.5 rounded bg-primary/10 text-primary shrink-0"
-                        >Копировать</button>
+                        >{tr("Копировать")}</button>
                       </span>
                     } />
                   )}
@@ -730,7 +730,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                     >
                       <span className="flex items-center gap-2">
                         <Network className="h-4 w-4 text-muted-foreground" />
-                        IP-адреса ({room.ips.length})
+                        {tr("IP-адреса")} ({room.ips.length})
                       </span>
                       {showIps ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
@@ -746,7 +746,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                               </div>
                               {farm && farm.others.length > 0 && (
                                 <div className="mt-1.5 pl-2 border-l-2 border-destructive/40 text-[11px] text-destructive">
-                                  Ферма: ещё {farm.others.length} акк(а) с этого IP
+                                  {tr("Ферма: ещё {n} акк(а) с этого IP").replace("{n}", String(farm.others.length))}
                                 </div>
                               )}
                             </div>
