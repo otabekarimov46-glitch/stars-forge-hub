@@ -63,7 +63,7 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   reaction:      { label: "Реакция",        short: "Реакция",   icon: Heart,      bar: "bg-pink-500",           badge: "bg-pink-500/10 text-pink-500 border-pink-500/20",             row: "bg-pink-500/[0.04] hover:bg-pink-500/[0.08]" },
   survey:        { label: "Опрос",          short: "Опрос",     icon: Heart,      bar: "bg-teal-500",           badge: "bg-teal-500/10 text-teal-500 border-teal-500/20",             row: "bg-teal-500/[0.04] hover:bg-teal-500/[0.08]" },
   balance_reset: { label: "Обнуление баланса", short: "Обнуление", icon: RotateCcw, bar: "bg-orange-500",       badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",       row: "bg-orange-500/[0.05] hover:bg-orange-500/[0.10]" },
-  promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]" },
+  promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-yellow-400",         badge: "bg-yellow-400/15 text-yellow-500 border-yellow-400/30",       row: "bg-yellow-400/[0.06] hover:bg-yellow-400/[0.12]" },
   withdrawal_paid:     { label: "Вывод выполнен",  short: "Вывод", icon: ArrowUp, bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.05] hover:bg-emerald-500/[0.10]" },
   withdrawal_rejected: { label: "Вывод отменён",   short: "Вывод", icon: ArrowUp, bar: "bg-emerald-600",        badge: "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",    row: "bg-emerald-600/[0.05] hover:bg-emerald-600/[0.10]" },
 };
@@ -452,7 +452,7 @@ export default function AlertsPage() {
                                 "font-mono text-xs px-1.5 py-0.5 rounded-lg border " +
                                 (l.promo_deleted
                                   ? "border-destructive/60 text-destructive bg-destructive/5"
-                                  : "border-emerald-500/40 text-emerald-500 bg-emerald-500/5")
+                                  : "border-yellow-400/50 text-yellow-500 bg-yellow-400/10")
                               }
                             >
                               {l.task_public_id || "—"}

@@ -25,7 +25,7 @@ const ACTION_META: Record<string, { label: string; icon: any; color: string }> =
   view_story:    { label: "Просмотр истории", icon: Camera,     color: "text-brand-gold" },
   reaction:      { label: "Реакция",          icon: Gift,       color: "text-pink-500" },
   balance_reset: { label: "Обнуление баланса", icon: RotateCcw, color: "text-orange-500" },
-  promo_reward:  { label: "Промокод",          icon: Gift,      color: "text-emerald-500" },
+  promo_reward:  { label: "Промокод",          icon: Gift,      color: "text-yellow-500" },
   withdrawal_paid:     { label: "Вывод выполнен", icon: ArrowUp, color: "text-emerald-500" },
   withdrawal_rejected: { label: "Вывод отменён (возврат)", icon: ArrowUp, color: "text-emerald-500" },
 };
@@ -560,7 +560,7 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                                   "font-mono text-[11px] px-1.5 py-0.5 rounded-lg border " +
                                   (a.promo_deleted
                                     ? "border-destructive/60 text-destructive bg-destructive/5"
-                                    : "border-emerald-500/40 text-emerald-500 bg-emerald-500/5")
+                                    : "border-yellow-400/50 text-yellow-500 bg-yellow-400/10")
                                 }
                               >
                                 {a.task_public_id}
