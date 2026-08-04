@@ -650,11 +650,24 @@ Deno.serve(async (req) => {
         const aliveVideos = new Set((vRes.data || []).map((x: any) => x.id));
         const aliveAdvs = new Set((aRes.data || []).map((x: any) => x.id));
 
+        // Promo existence check (promo logs keep the code snapshot in task_public_id)
+        const promoCodesUsed = Array.from(new Set(
+          rows.filter((r: any) => r.action_type === "promo_reward" && r.task_public_id)
+              .map((r: any) => String(r.task_public_id).toLowerCase())
+        ));
+        let alivePromos = new Set<string>();
+        if (promoCodesUsed.length) {
+          const { data: pc } = await supabase.from("promo_codes").select("code");
+          alivePromos = new Set((pc || []).map((x: any) => String(x.code).toLowerCase()));
+        }
+
         const logs = rows.map((r: any) => ({
           ...r,
           task_deleted: !!r.task_id && !aliveTasks.has(r.task_id),
           video_deleted: !!r.video_ad_id && !aliveVideos.has(r.video_ad_id),
           advertiser_deleted: !!r.advertiser_id && !aliveAdvs.has(r.advertiser_id),
+          promo_deleted: r.action_type === "promo_reward" && !!r.task_public_id
+            && !alivePromos.has(String(r.task_public_id).toLowerCase()),
         }));
 
         data = { logs, retention_days: retDays, retention_count: retCount };
@@ -747,11 +760,24 @@ Deno.serve(async (req) => {
 
         const pendingWithdrawal = (pendRes.data || []).find((w: any) => w.status === "pending") || null;
 
+        // Mark promo transactions whose promo code was deleted
+        const roomActivity = activityRes.data || [];
+        let roomAlivePromos = new Set<string>();
+        if (roomActivity.some((r: any) => r.action_type === "promo_reward")) {
+          const { data: pc2 } = await supabase.from("promo_codes").select("code");
+          roomAlivePromos = new Set((pc2 || []).map((x: any) => String(x.code).toLowerCase()));
+        }
+        const activityWithPromo = roomActivity.map((r: any) => ({
+          ...r,
+          promo_deleted: r.action_type === "promo_reward" && !!r.task_public_id
+            && !roomAlivePromos.has(String(r.task_public_id).toLowerCase()),
+        }));
+
         data = {
           user,
           online: user.last_seen_at && user.last_seen_at >= onlineCutoff,
           ips: ipsRes.data || [],
-          activity: activityRes.data || [],
+          activity: activityWithPromo,
           promos: promoRes.data || [],
           alerts: alertsRes.data || [],
           referrals,

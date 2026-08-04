@@ -533,7 +533,6 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                 <TabsTrigger value="tx" className="rounded-lg gap-1.5"><ListChecks className="h-3.5 w-3.5" /> Транзакции ({room.activity.length})</TabsTrigger>
                 <TabsTrigger value="withdrawals" className="rounded-lg gap-1.5"><ArrowUp className="h-3.5 w-3.5" /> Выводы ({(room.withdrawals || []).length})</TabsTrigger>
                 <TabsTrigger value="alerts" className="rounded-lg gap-1.5"><Bell className="h-3.5 w-3.5" /> Алерты ({room.alerts.length})</TabsTrigger>
-                <TabsTrigger value="promo" className="rounded-lg gap-1.5"><Ticket className="h-3.5 w-3.5" /> Промокоды ({room.promos.length})</TabsTrigger>
                 <TabsTrigger value="refs" className="rounded-lg gap-1.5"><UsersIcon className="h-3.5 w-3.5" /> Рефералы ({room.referrals_total})</TabsTrigger>
                 <TabsTrigger value="info" className="rounded-lg gap-1.5"><Network className="h-3.5 w-3.5" /> Данные</TabsTrigger>
               </TabsList>
@@ -555,12 +554,28 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">{meta.label}</span>
                           {a.task_public_id && (
-                            <span className="font-mono text-[11px] text-primary">{a.task_public_id}</span>
+                            a.action_type === "promo_reward" ? (
+                              <span
+                                className={
+                                  "font-mono text-[11px] px-1.5 py-0.5 rounded-lg border " +
+                                  (a.promo_deleted
+                                    ? "border-destructive/60 text-destructive bg-destructive/5"
+                                    : "border-emerald-500/40 text-emerald-500 bg-emerald-500/5")
+                                }
+                              >
+                                {a.task_public_id}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-[11px] text-primary">{a.task_public_id}</span>
+                            )
                           )}
                           {a.advertiser_public_id && (
                             <span className="font-mono text-[11px] text-muted-foreground">{a.advertiser_public_id}</span>
                           )}
                         </div>
+                        {a.action_type === "promo_reward" && a.promo_deleted && (
+                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">Промо удалено</div>
+                        )}
                         {a.task_title && <div className="text-xs text-muted-foreground truncate">{a.task_title}</div>}
                         <div className="text-[10.5px] text-muted-foreground font-mono mt-0.5">
                           {format(parseISO(a.created_at), "dd.MM.yy HH:mm:ss")}
@@ -635,37 +650,6 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                       </div>
                       <p className="text-sm">{al.message}</p>
                     </div>
-                  </div>
-                ))}
-              </TabsContent>
-
-              {/* Promo */}
-              <TabsContent value="promo" className="mt-3 space-y-1.5">
-                {room.promos.length === 0 && <EmptyState text="Промокоды не активировал" />}
-                {room.promos.map((p: any) => (
-                  <div key={p.id} className="glass-card p-3 flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
-                      <Gift className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={
-                            "font-mono text-sm px-2 py-0.5 rounded-lg border " +
-                            (!p.promo_id || !p.promo_codes
-                              ? "border-destructive/60 text-destructive bg-destructive/5"
-                              : "border-border/60")
-                          }
-                        >
-                          {p.promo_codes?.code || p.promo_code || "—"}
-                        </span>
-                        {(!p.promo_id || !p.promo_codes) && (
-                          <span className="text-[10px] uppercase tracking-wider text-destructive/80">удалён</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground mt-1">{format(parseISO(p.redeemed_at), "dd.MM.yyyy HH:mm")}</div>
-                    </div>
-                    <div className="font-semibold text-brand-gold whitespace-nowrap">+{Number(p.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT</div>
                   </div>
                 ))}
               </TabsContent>

@@ -142,6 +142,7 @@ export default function AlertsPage() {
       const meta = ACTION_META[(l.action_type as ActionType)] || ACTION_META.subscribe;
       const isVideo = l.action_type === "video";
       const isReset = l.action_type === "balance_reset";
+      const isPromoRow = l.action_type === "promo_reward";
       const started = l.started_at ? parseISO(l.started_at) : null;
       const finished = l.finished_at ? parseISO(l.finished_at) : (l.created_at ? parseISO(l.created_at) : null);
       const reward = Number(l.reward_pt || 0);
@@ -152,6 +153,8 @@ export default function AlertsPage() {
         "ID задания": l.task_public_id ?? "",
         "Название / Причина": l.task_title ?? "",
         "Задание удалено": (l.task_deleted || l.video_deleted) ? "да" : "нет",
+        "Промокод": isPromoRow ? (l.task_public_id ?? "") : "",
+        "Промо удалено": isPromoRow ? (l.promo_deleted ? "да" : "нет") : "",
         "Рекламодатель": l.advertiser_deleted ? "Удалён" : (l.advertiser_name ?? "—"),
         "ID рекламодателя": l.advertiser_public_id ?? "",
         "Начало просмотра": isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
@@ -163,6 +166,7 @@ export default function AlertsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 34 }, { wch: 14 },
+      { wch: 16 }, { wch: 14 },
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
@@ -419,6 +423,7 @@ export default function AlertsPage() {
                   ? `${format(started, "HH:mm:ss")} — ${format(finished, "HH:mm:ss")} · ${format(finished, "dd.MM.yy")}`
                   : format(finished, "HH:mm:ss · dd.MM.yy");
                 const isWithdrawal = l.action_type === "withdrawal_paid" || l.action_type === "withdrawal_rejected";
+                const isPromo = l.action_type === "promo_reward";
                 return (
                   <div
                     key={l.id}
@@ -437,11 +442,22 @@ export default function AlertsPage() {
                           <div className="text-[11px] text-muted-foreground font-mono">ID: {l.user_telegram_id}</div>
                         )}
                       </div>
-                      {/* task */}
+                      {/* task / promo */}
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="outline" className={`rounded-lg text-[10px] px-1.5 py-0 ${meta.badge}`}>{meta.short}</Badge>
-                          {l.task_public_id ? (
+                          {isPromo ? (
+                            <span
+                              className={
+                                "font-mono text-xs px-1.5 py-0.5 rounded-lg border " +
+                                (l.promo_deleted
+                                  ? "border-destructive/60 text-destructive bg-destructive/5"
+                                  : "border-emerald-500/40 text-emerald-500 bg-emerald-500/5")
+                              }
+                            >
+                              {l.task_public_id || "—"}
+                            </span>
+                          ) : l.task_public_id ? (
                             (l.video_deleted || l.task_deleted) ? (
                               <span
                                 className="font-mono text-xs text-muted-foreground underline decoration-destructive decoration-2 underline-offset-2 cursor-help"
@@ -461,6 +477,9 @@ export default function AlertsPage() {
                             <span className="font-mono text-xs text-muted-foreground">—</span>
                           )}
                         </div>
+                        {isPromo && l.promo_deleted && (
+                          <div className="text-[10px] uppercase tracking-wider text-destructive/80">Промо удалено</div>
+                        )}
                         {l.task_title && (
                           <div className="text-xs text-muted-foreground truncate">{l.task_title}</div>
                         )}
