@@ -426,6 +426,7 @@ export default function UsersPage() {
 }
 
 function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, onBan, onFreeze, onCaptcha, onReset, onMessage, onJumpToUser, initialTab, highlightWd }: any) {
+  const { tr } = useTranslation();
   const wdRefs = useRef<Record<string, HTMLDivElement | null>>({});
   useEffect(() => {
     if (!highlightWd || !room?.withdrawals) return;
