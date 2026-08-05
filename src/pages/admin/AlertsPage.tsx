@@ -589,9 +589,21 @@ export default function AlertsPage() {
                       {/* time */}
                       <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">{timeStr}</div>
                       {/* reward */}
-                      <div className={`text-sm font-semibold whitespace-nowrap ${isWithdrawal ? "text-emerald-500" : Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
-                        {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
+                      <div className="flex items-center gap-2 justify-between md:justify-end">
+                        <div className={`text-sm font-semibold whitespace-nowrap ${isWithdrawal ? "text-emerald-500" : Number(l.reward_pt) < 0 ? "text-orange-500" : isRef ? "text-indigo-500" : "text-brand-gold"}`}>
+                          {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
+                        </div>
+                        {isRef && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); flashPair(l); }}
+                            title={tr("Показать источник")}
+                            className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-500 flex items-center justify-center hover:bg-indigo-500/20 transition-colors shrink-0"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
+
                     </div>
                   </div>
                 );
