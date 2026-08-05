@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
@@ -7,13 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare, Ticket, Search, Clock, Trash2,
   ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download, RotateCcw, Gift, ArrowUp,
+  Share2, CornerLeftUp, ArrowDown, Trophy, Percent, TrendingUp, UserPlus, Calendar, ExternalLink,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import * as XLSX from "xlsx";
+
 
 const TYPE_ICONS: Record<string, any> = {
   suspicious_ip: ShieldAlert,
