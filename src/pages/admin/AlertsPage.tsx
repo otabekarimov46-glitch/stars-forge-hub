@@ -212,7 +212,7 @@ export default function AlertsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 34 }, { wch: 14 },
-      { wch: 16 }, { wch: 14 },
+      { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 10 },
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
@@ -224,7 +224,14 @@ export default function AlertsPage() {
   useEffect(() => {
     if (tab === "promo_logs") fetchLogs();
     if (tab === "activity") fetchActivityLogs();
+    if (tab === "referral_logs") fetchReferralLogs();
   }, [tab]);
+  useEffect(() => {
+    if (tab !== "referral_logs") return;
+    const h = setTimeout(() => fetchReferralLogs(), 300);
+    return () => clearTimeout(h);
+  }, [refSearch]);
+
   useEffect(() => {
     if (tab !== "promo_logs") return;
     const h = setTimeout(() => fetchLogs(), 300);
