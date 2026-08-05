@@ -70,9 +70,11 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-yellow-400",         badge: "bg-yellow-400/15 text-yellow-500 border-yellow-400/30",       row: "bg-yellow-400/[0.06] hover:bg-yellow-400/[0.12]" },
   withdrawal_paid:     { label: "Вывод выполнен",  short: "Вывод", icon: ArrowUp, bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.05] hover:bg-emerald-500/[0.10]" },
   withdrawal_rejected: { label: "Вывод отменён",   short: "Вывод", icon: ArrowUp, bar: "bg-emerald-600",        badge: "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",    row: "bg-emerald-600/[0.05] hover:bg-emerald-600/[0.10]" },
+  referral_reward:     { label: "Рефералка",       short: "Рефералка", icon: Share2, bar: "bg-indigo-500",      badge: "bg-indigo-500/10 text-indigo-500 border-indigo-500/25",       row: "bg-indigo-500/[0.05] hover:bg-indigo-500/[0.10]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
+const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "referral_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
+
 
 export default function AlertsPage() {
   const { t, tr } = useTranslation();
