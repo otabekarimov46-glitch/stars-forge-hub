@@ -253,13 +253,14 @@ Deno.serve(async (req) => {
           .eq("id", view_id);
 
         let newBalance = Number(user.balance_pt);
+        let refCredit: any = null;
         if (!user.balance_frozen) {
           newBalance = Number(user.balance_pt) + Number(video.reward_pt);
           await supabase
             .from("users")
             .update({ balance_pt: newBalance })
             .eq("id", user.id);
-          await creditReferral(supabase, user.id, Number(video.reward_pt), "video", { video_ad_id: view.video_ad_id });
+          refCredit = await creditReferral(supabase, user.id, Number(video.reward_pt), "video", { video_ad_id: view.video_ad_id });
         }
 
 
@@ -279,7 +280,7 @@ Deno.serve(async (req) => {
             supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
           ]);
           const adv: any = (v2 as any)?.advertisers || null;
-          await supabase.from("activity_logs").insert({
+          const baseLog = {
             user_id: user.id,
             user_username: u2?.username || null,
             user_telegram_id: u2?.telegram_id ?? null,
@@ -293,8 +294,11 @@ Deno.serve(async (req) => {
             reward_pt: Number(video.reward_pt),
             started_at: view.started_at,
             finished_at: new Date().toISOString(),
-          });
+          };
+          const { data: inserted } = await supabase.from("activity_logs").insert(baseLog).select("id").single();
+          await logReferralActivity(supabase, refCredit, { ...baseLog, id: inserted?.id || null });
         } catch (_) { /* logging must never break reward flow */ }
+
 
         // NOTE: We intentionally do NOT send a Telegram message on every reward.
         // Per-view chat spam caused the bot to be rate-limited / temporarily restricted
@@ -921,10 +925,11 @@ Deno.serve(async (req) => {
         }).eq("id", task_id);
 
         let newBalance = Number(user.balance_pt);
+        let refCreditTask: any = null;
         if (!user.balance_frozen) {
           newBalance = Number(user.balance_pt) + Number(task.reward_pt);
           await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
-          await creditReferral(supabase, user.id, Number(task.reward_pt), "task", { task_id, type: task.type });
+          refCreditTask = await creditReferral(supabase, user.id, Number(task.reward_pt), "task", { task_id, type: task.type });
         }
 
 
@@ -944,7 +949,7 @@ Deno.serve(async (req) => {
             supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
           ]);
           const adv: any = (t2 as any)?.advertisers || null;
-          await supabase.from("activity_logs").insert({
+          const baseLog = {
             user_id: user.id,
             user_username: u2?.username || null,
             user_telegram_id: u2?.telegram_id ?? null,
@@ -957,8 +962,11 @@ Deno.serve(async (req) => {
             advertiser_public_id: adv?.public_id || null,
             reward_pt: Number(task.reward_pt),
             finished_at: new Date().toISOString(),
-          });
+          };
+          const { data: inserted } = await supabase.from("activity_logs").insert(baseLog).select("id").single();
+          await logReferralActivity(supabase, refCreditTask, { ...baseLog, id: inserted?.id || null });
         } catch (_) { /* logging must never break reward flow */ }
+
 
         // Schedule a background re-check for subscribe tasks, using the PER-TASK interval.
         // Also clears any prior "unsub" row for this task (user re-subscribed).
@@ -1181,24 +1189,31 @@ Deno.serve(async (req) => {
   }
 });
 
+const REFERRAL_PERCENT = 5;
+
+/**
+ * Credits the inviter with REFERRAL_PERCENT% of the reward.
+ * Returns info about the credited referral (or null) so the caller can write a
+ * paired admin activity log linked to the source task/video log.
+ */
 async function creditReferral(supabase: any, userId: string, reward: number, source: "task" | "video", meta: Record<string, any>) {
   try {
-    if (!reward || reward <= 0) return;
+    if (!reward || reward <= 0) return null;
     const { data: u } = await supabase
       .from("users")
-      .select("referrer_id")
+      .select("referrer_id, username, telegram_id")
       .eq("id", userId)
       .single();
-    if (!u?.referrer_id) return;
+    if (!u?.referrer_id) return null;
     const { data: ref } = await supabase
       .from("users")
-      .select("id, balance_pt, referral_earnings_pt, balance_frozen, is_banned")
+      .select("id, username, telegram_id, balance_pt, referral_earnings_pt, balance_frozen, is_banned")
       .eq("id", u.referrer_id)
       .single();
-    if (!ref || ref.is_banned || ref.balance_frozen) return;
+    if (!ref || ref.is_banned || ref.balance_frozen) return null;
     // 5%, обрезаем до 2 знаков (0.5 → 0.5, 0.13 → 0.13, 0.155 → 0.16)
-    const bonus = Math.round(reward * 0.05 * 100) / 100;
-    if (bonus <= 0) return;
+    const bonus = Math.round(reward * (REFERRAL_PERCENT / 100) * 100) / 100;
+    if (bonus <= 0) return null;
     const newBalance = Math.round((Number(ref.balance_pt) + bonus) * 100) / 100;
     const newEarnings = Math.round((Number(ref.referral_earnings_pt || 0) + bonus) * 100) / 100;
     await supabase.from("users").update({
@@ -1208,12 +1223,54 @@ async function creditReferral(supabase: any, userId: string, reward: number, sou
     await supabase.from("logs_activity").insert({
       user_id: ref.id,
       action: "referral_reward",
-      metadata: { from_user_id: userId, source, bonus, base_reward: reward, ...meta },
+      metadata: { from_user_id: userId, source, bonus, base_reward: reward, percent: REFERRAL_PERCENT, ...meta },
     });
+    return {
+      referrer_id: ref.id,
+      referrer_username: ref.username || null,
+      referrer_telegram_id: ref.telegram_id ?? null,
+      from_user_id: userId,
+      from_username: u.username || null,
+      from_telegram_id: u.telegram_id ?? null,
+      bonus,
+      base_reward: reward,
+      percent: REFERRAL_PERCENT,
+    };
   } catch (e) {
     console.log("creditReferral error", String(e));
+    return null;
   }
 }
+
+/** Writes the admin "Рефералка" activity log paired with the source reward log. */
+async function logReferralActivity(supabase: any, r: any, sourceLog: any) {
+  if (!r) return;
+  try {
+    await supabase.from("activity_logs").insert({
+      user_id: r.referrer_id,
+      user_username: r.referrer_username,
+      user_telegram_id: r.referrer_telegram_id,
+      action_type: "referral_reward",
+      task_id: sourceLog?.task_id || null,
+      video_ad_id: sourceLog?.video_ad_id || null,
+      task_title: sourceLog?.task_title || null,
+      task_public_id: sourceLog?.task_public_id || null,
+      advertiser_id: sourceLog?.advertiser_id || null,
+      advertiser_name: sourceLog?.advertiser_name || null,
+      advertiser_public_id: sourceLog?.advertiser_public_id || null,
+      reward_pt: r.bonus,
+      ref_from_user_id: r.from_user_id,
+      ref_from_username: r.from_username,
+      ref_from_telegram_id: r.from_telegram_id,
+      ref_percent: r.percent,
+      ref_source_log_id: sourceLog?.id || null,
+      finished_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.log("logReferralActivity error", String(e));
+  }
+}
+
 
 async function recordIp(supabase: any, userId: string, ip: string) {
   const { data: existingIp } = await supabase

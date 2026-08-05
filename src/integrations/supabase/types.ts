@@ -23,6 +23,11 @@ export type Database = {
           created_at: string
           finished_at: string | null
           id: string
+          ref_from_telegram_id: number | null
+          ref_from_user_id: string | null
+          ref_from_username: string | null
+          ref_percent: number | null
+          ref_source_log_id: string | null
           reward_pt: number
           started_at: string | null
           task_id: string | null
@@ -41,6 +46,11 @@ export type Database = {
           created_at?: string
           finished_at?: string | null
           id?: string
+          ref_from_telegram_id?: number | null
+          ref_from_user_id?: string | null
+          ref_from_username?: string | null
+          ref_percent?: number | null
+          ref_source_log_id?: string | null
           reward_pt?: number
           started_at?: string | null
           task_id?: string | null
@@ -59,6 +69,11 @@ export type Database = {
           created_at?: string
           finished_at?: string | null
           id?: string
+          ref_from_telegram_id?: number | null
+          ref_from_user_id?: string | null
+          ref_from_username?: string | null
+          ref_percent?: number | null
+          ref_source_log_id?: string | null
           reward_pt?: number
           started_at?: string | null
           task_id?: string | null

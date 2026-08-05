@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApi } from "@/lib/admin-api";
 import { useTranslation } from "@/lib/i18n";
@@ -7,13 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Check, AlertTriangle, Bell, Info, ShieldAlert, MessageSquare, Ticket, Search, Clock, Trash2,
   ScrollText, Film, Users as UsersIcon, Newspaper, Camera, Heart, ArrowUpRight, Download, RotateCcw, Gift, ArrowUp,
+  Share2, CornerLeftUp, ArrowDown, Trophy, Percent, TrendingUp, UserPlus, Calendar, ExternalLink,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import * as XLSX from "xlsx";
+
 
 const TYPE_ICONS: Record<string, any> = {
   suspicious_ip: ShieldAlert,
@@ -53,7 +56,8 @@ const COUNT_OPTIONS = [
   { value: "10000", label: "Последние 10 000" },
 ];
 
-type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward" | "withdrawal_paid" | "withdrawal_rejected";
+type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward" | "withdrawal_paid" | "withdrawal_rejected" | "referral_reward";
+
 
 const ACTION_META: Record<ActionType, { label: string; short: string; icon: any; bar: string; badge: string; row: string; }> = {
   video:         { label: "Видеореклама",   short: "Видео",     icon: Film,       bar: "bg-brand-purple",       badge: "bg-brand-purple/10 text-brand-purple border-brand-purple/20", row: "bg-brand-purple/[0.04] hover:bg-brand-purple/[0.08]" },
@@ -66,9 +70,11 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   promo_reward:  { label: "Промокод",       short: "Промо",     icon: Gift,       bar: "bg-yellow-400",         badge: "bg-yellow-400/15 text-yellow-500 border-yellow-400/30",       row: "bg-yellow-400/[0.06] hover:bg-yellow-400/[0.12]" },
   withdrawal_paid:     { label: "Вывод выполнен",  short: "Вывод", icon: ArrowUp, bar: "bg-emerald-500",        badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",    row: "bg-emerald-500/[0.05] hover:bg-emerald-500/[0.10]" },
   withdrawal_rejected: { label: "Вывод отменён",   short: "Вывод", icon: ArrowUp, bar: "bg-emerald-600",        badge: "bg-emerald-600/10 text-emerald-600 border-emerald-600/20",    row: "bg-emerald-600/[0.05] hover:bg-emerald-600/[0.10]" },
+  referral_reward:     { label: "Рефералка",       short: "Рефералка", icon: Share2, bar: "bg-indigo-500",      badge: "bg-indigo-500/10 text-indigo-500 border-indigo-500/25",       row: "bg-indigo-500/[0.05] hover:bg-indigo-500/[0.10]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
+const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "referral_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
+
 
 export default function AlertsPage() {
   const { t, tr } = useTranslation();
@@ -92,6 +98,29 @@ export default function AlertsPage() {
   const [aTypes, setATypes] = useState<Set<ActionType>>(new Set());
   const [aRetDays, setARetDays] = useState<string>("0");
   const [aRetCount, setARetCount] = useState<string>("0");
+  const logRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Referral logs
+  const [refData, setRefData] = useState<any>(null);
+  const [refLoading, setRefLoading] = useState(false);
+  const [refSearch, setRefSearch] = useState("");
+  const [refOpen, setRefOpen] = useState<any>(null);
+
+  const flashPair = (log: any) => {
+    const ids = [log.id, log.ref_source_log_id].filter(Boolean) as string[];
+    const target = logRowRefs.current[log.ref_source_log_id] || logRowRefs.current[log.id];
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    ids.forEach((id) => {
+      const el = logRowRefs.current[id];
+      if (!el) return;
+      el.classList.remove("anchor-pulse");
+      // force reflow so the animation restarts on repeated clicks
+      void el.offsetWidth;
+      el.classList.add("anchor-pulse");
+      setTimeout(() => el.classList.remove("anchor-pulse"), 2600);
+    });
+  };
+
 
   const fetchAlerts = async () => {
     try {
@@ -136,6 +165,20 @@ export default function AlertsPage() {
     }
   };
 
+  const fetchReferralLogs = async () => {
+    setRefLoading(true);
+    try {
+      const data = await adminApi("get_referral_logs", { user_search: refSearch.trim() });
+      setRefData(data || { referrers: [] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRefLoading(false);
+    }
+  };
+
+
+
   const exportActivityLogsXlsx = () => {
     if (!aLogs.length) return;
     const rows = aLogs.map((l) => {
@@ -155,6 +198,9 @@ export default function AlertsPage() {
         [tr("Задание удалено")]: (l.task_deleted || l.video_deleted) ? tr("да") : tr("нет"),
         [tr("Промокод")]: isPromoRow ? (l.task_public_id ?? "") : "",
         [tr("Промо удалено")]: isPromoRow ? (l.promo_deleted ? tr("да") : tr("нет")) : "",
+        [tr("Приглашённый")]: l.action_type === "referral_reward" ? (l.ref_from_username ? `@${l.ref_from_username}` : (l.ref_from_telegram_id ? `ID ${l.ref_from_telegram_id}` : "")) : "",
+        [tr("Процент")]: l.action_type === "referral_reward" && l.ref_percent != null ? `${l.ref_percent}%` : "",
+
         [tr("Рекламодатель")]: l.advertiser_deleted ? tr("Удалён") : (l.advertiser_name ?? "—"),
         [tr("ID рекламодателя")]: l.advertiser_public_id ?? "",
         [tr("Начало просмотра")]: isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
@@ -166,7 +212,7 @@ export default function AlertsPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 34 }, { wch: 14 },
-      { wch: 16 }, { wch: 14 },
+      { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 10 },
       { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 },
     ];
     const wb = XLSX.utils.book_new();
@@ -178,7 +224,14 @@ export default function AlertsPage() {
   useEffect(() => {
     if (tab === "promo_logs") fetchLogs();
     if (tab === "activity") fetchActivityLogs();
+    if (tab === "referral_logs") fetchReferralLogs();
   }, [tab]);
+  useEffect(() => {
+    if (tab !== "referral_logs") return;
+    const h = setTimeout(() => fetchReferralLogs(), 300);
+    return () => clearTimeout(h);
+  }, [refSearch]);
+
   useEffect(() => {
     if (tab !== "promo_logs") return;
     const h = setTimeout(() => fetchLogs(), 300);
@@ -272,7 +325,12 @@ export default function AlertsPage() {
             <Ticket className="h-4 w-4" />
             {tr("Логи промокодов")}
           </TabsTrigger>
+          <TabsTrigger value="referral_logs" className="rounded-lg gap-2">
+            <Share2 className="h-4 w-4" />
+            {tr("Логи рефералов")}
+          </TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="alerts" className="mt-4 space-y-3">
           {alerts.length === 0 && (
@@ -424,16 +482,20 @@ export default function AlertsPage() {
                   : format(finished, "HH:mm:ss · dd.MM.yy");
                 const isWithdrawal = l.action_type === "withdrawal_paid" || l.action_type === "withdrawal_rejected";
                 const isPromo = l.action_type === "promo_reward";
+                const isRef = l.action_type === "referral_reward";
+                const invited = l.ref_from_username ? `@${l.ref_from_username}` : (l.ref_from_telegram_id ? `ID ${l.ref_from_telegram_id}` : "—");
                 return (
                   <div
                     key={l.id}
+                    ref={(el) => { logRowRefs.current[l.id] = el; }}
                     onClick={isWithdrawal ? () => openWithdrawalInUser(l) : undefined}
-                    className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden ${meta.row} ${isWithdrawal ? "cursor-pointer" : ""}`}
+                    className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden rounded-2xl ${meta.row} ${isWithdrawal ? "cursor-pointer" : ""} ${isRef ? "ring-1 ring-indigo-500/20 ml-0 md:ml-6" : ""}`}
                   >
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${meta.bar}`} />
                     <div className={`p-2 rounded-xl ${meta.badge} shrink-0 self-center ml-1`}>
                       <Icon className="h-4 w-4" />
                     </div>
+
                     <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_auto] gap-2 md:items-center">
                       {/* user */}
                       <div className="min-w-0">
@@ -446,6 +508,12 @@ export default function AlertsPage() {
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="outline" className={`rounded-lg text-[10px] px-1.5 py-0 ${meta.badge}`}>{tr(meta.short)}</Badge>
+                          {isRef && l.ref_percent != null && (
+                            <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-500 border-indigo-500/25">
+                              {l.ref_percent}%
+                            </Badge>
+                          )}
+
                           {isPromo ? (
                             <span
                               className={
@@ -480,9 +548,15 @@ export default function AlertsPage() {
                         {isPromo && l.promo_deleted && (
                           <div className="text-[10px] uppercase tracking-wider text-destructive/80">{tr("Промо удалено")}</div>
                         )}
+                        {isRef && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {tr("Приглашённый")}: <span className="text-foreground font-medium">{invited}</span>
+                          </div>
+                        )}
                         {l.task_title && (
                           <div className="text-xs text-muted-foreground truncate">{l.task_title}</div>
                         )}
+
                       </div>
                       {/* advertiser */}
                       <div className="min-w-0 flex flex-col gap-0.5">
@@ -515,9 +589,21 @@ export default function AlertsPage() {
                       {/* time */}
                       <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">{timeStr}</div>
                       {/* reward */}
-                      <div className={`text-sm font-semibold whitespace-nowrap ${isWithdrawal ? "text-emerald-500" : Number(l.reward_pt) < 0 ? "text-orange-500" : "text-brand-gold"}`}>
-                        {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
+                      <div className="flex items-center gap-2 justify-between md:justify-end">
+                        <div className={`text-sm font-semibold whitespace-nowrap ${isWithdrawal ? "text-emerald-500" : Number(l.reward_pt) < 0 ? "text-orange-500" : isRef ? "text-indigo-500" : "text-brand-gold"}`}>
+                          {Number(l.reward_pt) < 0 ? "" : "+"}{Number(l.reward_pt).toFixed(2).replace(/\.?0+$/, "")} PT
+                        </div>
+                        {isRef && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); flashPair(l); }}
+                            title={tr("Показать источник")}
+                            className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-500 flex items-center justify-center hover:bg-indigo-500/20 transition-colors shrink-0"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
+
                     </div>
                   </div>
                 );
@@ -615,7 +701,181 @@ export default function AlertsPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* ===== REFERRAL LOGS ===== */}
+        <TabsContent value="referral_logs" className="mt-4 space-y-3">
+          <div className="glass-card p-3 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={refSearch}
+                onChange={(e) => setRefSearch(e.target.value)}
+                placeholder={tr("Поиск по @username или telegram_id")}
+                className="pl-9 rounded-xl"
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
+              <UserPlus className="h-3.5 w-3.5" />
+              {tr("Пригласивших")}: <b className="text-foreground">{refData?.total_inviters ?? 0}</b>
+              <span className="opacity-40">·</span>
+              <TrendingUp className="h-3.5 w-3.5" />
+              {tr("Выплачено")}: <b className="text-indigo-500">{Number(refData?.total_paid_pt || 0)} PT</b>
+            </div>
+          </div>
+
+          {refLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+            </div>
+          ) : !refData?.referrers?.length ? (
+            <div className="glass-card p-12 text-center text-muted-foreground">
+              <Share2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>{tr("Логов рефералов не найдено")}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {refData.referrers.map((g: any) => {
+                const name = g.username ? `@${g.username}` : `ID ${g.telegram_id ?? "?"}`;
+                const shown = g.invitees.slice(0, 3);
+                return (
+                  <button
+                    key={g.user_id}
+                    onClick={() => setRefOpen(g)}
+                    className="w-full text-left glass-card p-4 rounded-2xl relative overflow-hidden hover:bg-indigo-500/[0.06] transition-colors"
+                  >
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
+                    <div className="flex items-start gap-3 ml-1">
+                      <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 shrink-0">
+                        <Share2 className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{tr("Пригласивший")}:</span>
+                          <span className="text-sm font-semibold truncate">{name}</span>
+                          <span className="text-sm font-semibold text-indigo-500">+{g.total_pt} PT</span>
+                          <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0 gap-1 bg-brand-gold/10 text-brand-gold border-brand-gold/25">
+                            <Trophy className="h-3 w-3" /> #{g.rank}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 flex items-center gap-1 text-muted-foreground text-xs">
+                          <ArrowDown className="h-3.5 w-3.5" />
+                          {tr("Приглашённые")}: <b className="text-foreground">({g.invitees.length})</b>
+                        </div>
+                        <div className="mt-1 space-y-0.5">
+                          {shown.map((i: any, idx: number) => (
+                            <div key={(i.user_id || "u") + idx} className="text-xs flex items-center gap-2">
+                              <span className="truncate">{i.username ? `@${i.username}` : `ID ${i.telegram_id ?? "?"}`}</span>
+                              <span className="text-indigo-500 font-medium">+{i.total_pt} PT</span>
+                            </div>
+                          ))}
+                          {g.invitees.length > shown.length && (
+                            <div className="text-xs text-muted-foreground">+{g.invitees.length - shown.length}…</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="hidden sm:flex flex-col items-end gap-1 text-[11px] text-muted-foreground shrink-0">
+                        <span className="font-mono">{g.last_at ? format(parseISO(g.last_at), "dd.MM.yy HH:mm") : "—"}</span>
+                        <span>{tr("Начислений")}: {g.logs_count}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <Dialog open={!!refOpen} onOpenChange={(o) => !o && setRefOpen(null)}>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-indigo-500" />
+                  {refOpen?.username ? `@${refOpen.username}` : `ID ${refOpen?.telegram_id ?? "?"}`}
+                </DialogTitle>
+              </DialogHeader>
+              {refOpen && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { icon: TrendingUp, label: tr("Заработано с рефералов"), value: `${refOpen.total_pt} PT` },
+                      { icon: UserPlus, label: tr("Приглашённых"), value: refOpen.invited_total },
+                      { icon: Percent, label: tr("Начислений"), value: refOpen.logs_count },
+                      { icon: Trophy, label: tr("Место по рефералам"), value: `#${refOpen.rank} ${tr("из")} ${refData?.total_inviters ?? 0}` },
+                    ].map((s, i) => (
+                      <div key={i} className="glass-card p-3 rounded-xl">
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <s.icon className="h-3.5 w-3.5" />{s.label}
+                        </div>
+                        <div className="mt-1 text-sm font-semibold">{s.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="glass-card p-3 rounded-xl space-y-1 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {tr("Первое начисление")}: <b className="text-foreground font-mono">{refOpen.first_at ? format(parseISO(refOpen.first_at), "dd.MM.yyyy HH:mm:ss") : "—"}</b>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      {tr("Последнее начисление")}: <b className="text-foreground font-mono">{refOpen.last_at ? format(parseISO(refOpen.last_at), "dd.MM.yyyy HH:mm:ss") : "—"}</b>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Percent className="h-3.5 w-3.5" />
+                      {tr("Баланс")}: <b className="text-foreground">{refOpen.balance_pt} PT</b>
+                    </div>
+                    <button
+                      onClick={() => { setRefOpen(null); navigate(`/admin/users?focus=${refOpen.user_id}`); }}
+                      className="mt-1 inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {tr("Открыть профиль")}<ExternalLink className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                      {tr("Приглашённые")} ({refOpen.invitees.length})
+                    </div>
+                    <div className="space-y-1.5">
+                      {refOpen.invitees.map((i: any, idx: number) => (
+                        <div key={(i.user_id || "u") + idx} className="glass-card p-2.5 rounded-xl flex items-center gap-2 text-xs">
+                          <UsersIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="flex-1 truncate font-medium">{i.username ? `@${i.username}` : `ID ${i.telegram_id ?? "?"}`}</span>
+                          {i.is_banned && (
+                            <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0 bg-destructive/10 text-destructive border-destructive/25">{tr("Забанен")}</Badge>
+                          )}
+                          <span className="text-muted-foreground">{i.count}×</span>
+                          <span className="text-indigo-500 font-semibold whitespace-nowrap">+{i.total_pt} PT</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                      {tr("Все логи")} ({refOpen.logs.length})
+                    </div>
+                    <div className="space-y-1.5">
+                      {refOpen.logs.map((l: any) => (
+                        <div key={l.id} className="glass-card p-2.5 rounded-xl flex items-center gap-2 text-xs">
+                          <CornerLeftUp className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                          <span className="truncate flex-1">
+                            {l.ref_from_username ? `@${l.ref_from_username}` : `ID ${l.ref_from_telegram_id ?? "?"}`}
+                            {l.task_title ? <span className="text-muted-foreground"> · {l.task_title}</span> : null}
+                          </span>
+                          {l.ref_percent != null && <span className="text-muted-foreground">{l.ref_percent}%</span>}
+                          <span className="text-muted-foreground font-mono whitespace-nowrap">{format(parseISO(l.created_at), "dd.MM.yy HH:mm:ss")}</span>
+                          <span className="text-indigo-500 font-semibold whitespace-nowrap">+{Number(l.reward_pt)} PT</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
+

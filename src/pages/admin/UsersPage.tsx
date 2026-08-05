@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   Ban, Snowflake, ShieldAlert, RotateCcw, MessageSquare, Search, Network, Skull,
   X, Trophy, Users as UsersIcon, Ticket, Bell, Wallet, Gift, Clock, ChevronDown, ChevronUp,
-  Film, Newspaper, Camera, Send, ListChecks, ArrowUpRight, ArrowUp, Circle, ExternalLink, AlertTriangle,
+  Film, Newspaper, Camera, Send, ListChecks, ArrowUpRight, ArrowUp, Circle, ExternalLink, AlertTriangle, Share2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ const ACTION_META: Record<string, { label: string; icon: any; color: string }> =
   promo_reward:  { label: "Промокод",          icon: Gift,      color: "text-yellow-500" },
   withdrawal_paid:     { label: "Вывод выполнен", icon: ArrowUp, color: "text-emerald-500" },
   withdrawal_rejected: { label: "Вывод отменён (возврат)", icon: ArrowUp, color: "text-emerald-500" },
+  referral_reward:     { label: "Рефералка",   icon: Share2,  color: "text-indigo-500" },
 };
 
 export default function UsersPage() {
@@ -577,12 +578,18 @@ function UserRoomContent({ user, room, loading, showIps, setShowIps, onClose, on
                         {a.action_type === "promo_reward" && a.promo_deleted && (
                           <div className="text-[10px] uppercase tracking-wider text-destructive/80">{tr("Промо удалено")}</div>
                         )}
+                        {a.action_type === "referral_reward" && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {tr("Приглашённый")}: <span className="text-foreground font-medium">{a.ref_from_username ? `@${a.ref_from_username}` : (a.ref_from_telegram_id ? `ID ${a.ref_from_telegram_id}` : "—")}</span>
+                            {a.ref_percent != null ? ` · ${a.ref_percent}%` : ""}
+                          </div>
+                        )}
                         {a.task_title && <div className="text-xs text-muted-foreground truncate">{a.task_title}</div>}
                         <div className="text-[10.5px] text-muted-foreground font-mono mt-0.5">
                           {format(parseISO(a.created_at), "dd.MM.yy HH:mm:ss")}
                         </div>
                       </div>
-                      <div className={`font-semibold whitespace-nowrap ${a.action_type === "withdrawal_paid" || a.action_type === "withdrawal_rejected" ? "text-emerald-500" : negative ? "text-orange-500" : "text-brand-gold"}`}>
+                      <div className={`font-semibold whitespace-nowrap ${a.action_type === "withdrawal_paid" || a.action_type === "withdrawal_rejected" ? "text-emerald-500" : negative ? "text-orange-500" : a.action_type === "referral_reward" ? "text-indigo-500" : "text-brand-gold"}`}>
                         {negative ? "" : "+"}{reward.toFixed(2).replace(/\.?0+$/, "")} PT
                       </div>
                     </div>
