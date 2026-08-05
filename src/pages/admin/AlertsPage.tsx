@@ -198,6 +198,9 @@ export default function AlertsPage() {
         [tr("Задание удалено")]: (l.task_deleted || l.video_deleted) ? tr("да") : tr("нет"),
         [tr("Промокод")]: isPromoRow ? (l.task_public_id ?? "") : "",
         [tr("Промо удалено")]: isPromoRow ? (l.promo_deleted ? tr("да") : tr("нет")) : "",
+        [tr("Приглашённый")]: l.action_type === "referral_reward" ? (l.ref_from_username ? `@${l.ref_from_username}` : (l.ref_from_telegram_id ? `ID ${l.ref_from_telegram_id}` : "")) : "",
+        [tr("Процент")]: l.action_type === "referral_reward" && l.ref_percent != null ? `${l.ref_percent}%` : "",
+
         [tr("Рекламодатель")]: l.advertiser_deleted ? tr("Удалён") : (l.advertiser_name ?? "—"),
         [tr("ID рекламодателя")]: l.advertiser_public_id ?? "",
         [tr("Начало просмотра")]: isVideo && started ? format(started, "yyyy-MM-dd HH:mm:ss") : "",
