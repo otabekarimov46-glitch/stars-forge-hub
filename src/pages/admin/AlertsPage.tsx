@@ -325,7 +325,12 @@ export default function AlertsPage() {
             <Ticket className="h-4 w-4" />
             {tr("Логи промокодов")}
           </TabsTrigger>
+          <TabsTrigger value="referral_logs" className="rounded-lg gap-2">
+            <Share2 className="h-4 w-4" />
+            {tr("Логи рефералов")}
+          </TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="alerts" className="mt-4 space-y-3">
           {alerts.length === 0 && (
