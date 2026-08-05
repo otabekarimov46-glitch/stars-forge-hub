@@ -165,6 +165,20 @@ export default function AlertsPage() {
     }
   };
 
+  const fetchReferralLogs = async () => {
+    setRefLoading(true);
+    try {
+      const data = await adminApi("get_referral_logs", { user_search: refSearch.trim() });
+      setRefData(data || { referrers: [] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRefLoading(false);
+    }
+  };
+
+
+
   const exportActivityLogsXlsx = () => {
     if (!aLogs.length) return;
     const rows = aLogs.map((l) => {
