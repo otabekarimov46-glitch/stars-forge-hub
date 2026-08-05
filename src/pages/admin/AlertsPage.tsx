@@ -482,16 +482,20 @@ export default function AlertsPage() {
                   : format(finished, "HH:mm:ss · dd.MM.yy");
                 const isWithdrawal = l.action_type === "withdrawal_paid" || l.action_type === "withdrawal_rejected";
                 const isPromo = l.action_type === "promo_reward";
+                const isRef = l.action_type === "referral_reward";
+                const invited = l.ref_from_username ? `@${l.ref_from_username}` : (l.ref_from_telegram_id ? `ID ${l.ref_from_telegram_id}` : "—");
                 return (
                   <div
                     key={l.id}
+                    ref={(el) => { logRowRefs.current[l.id] = el; }}
                     onClick={isWithdrawal ? () => openWithdrawalInUser(l) : undefined}
-                    className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden ${meta.row} ${isWithdrawal ? "cursor-pointer" : ""}`}
+                    className={`glass-card p-3 flex items-stretch gap-3 relative overflow-hidden rounded-2xl ${meta.row} ${isWithdrawal ? "cursor-pointer" : ""} ${isRef ? "ring-1 ring-indigo-500/20 ml-0 md:ml-6" : ""}`}
                   >
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${meta.bar}`} />
                     <div className={`p-2 rounded-xl ${meta.badge} shrink-0 self-center ml-1`}>
                       <Icon className="h-4 w-4" />
                     </div>
+
                     <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_auto] gap-2 md:items-center">
                       {/* user */}
                       <div className="min-w-0">
