@@ -508,6 +508,12 @@ export default function AlertsPage() {
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="outline" className={`rounded-lg text-[10px] px-1.5 py-0 ${meta.badge}`}>{tr(meta.short)}</Badge>
+                          {isRef && l.ref_percent != null && (
+                            <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0 bg-indigo-500/10 text-indigo-500 border-indigo-500/25">
+                              {l.ref_percent}%
+                            </Badge>
+                          )}
+
                           {isPromo ? (
                             <span
                               className={
