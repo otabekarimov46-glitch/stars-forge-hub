@@ -98,6 +98,29 @@ export default function AlertsPage() {
   const [aTypes, setATypes] = useState<Set<ActionType>>(new Set());
   const [aRetDays, setARetDays] = useState<string>("0");
   const [aRetCount, setARetCount] = useState<string>("0");
+  const logRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Referral logs
+  const [refData, setRefData] = useState<any>(null);
+  const [refLoading, setRefLoading] = useState(false);
+  const [refSearch, setRefSearch] = useState("");
+  const [refOpen, setRefOpen] = useState<any>(null);
+
+  const flashPair = (log: any) => {
+    const ids = [log.id, log.ref_source_log_id].filter(Boolean) as string[];
+    const target = logRowRefs.current[log.ref_source_log_id] || logRowRefs.current[log.id];
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    ids.forEach((id) => {
+      const el = logRowRefs.current[id];
+      if (!el) return;
+      el.classList.remove("anchor-pulse");
+      // force reflow so the animation restarts on repeated clicks
+      void el.offsetWidth;
+      el.classList.add("anchor-pulse");
+      setTimeout(() => el.classList.remove("anchor-pulse"), 2600);
+    });
+  };
+
 
   const fetchAlerts = async () => {
     try {
