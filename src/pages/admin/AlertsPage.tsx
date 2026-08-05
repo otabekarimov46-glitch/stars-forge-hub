@@ -548,9 +548,15 @@ export default function AlertsPage() {
                         {isPromo && l.promo_deleted && (
                           <div className="text-[10px] uppercase tracking-wider text-destructive/80">{tr("Промо удалено")}</div>
                         )}
+                        {isRef && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {tr("Приглашённый")}: <span className="text-foreground font-medium">{invited}</span>
+                          </div>
+                        )}
                         {l.task_title && (
                           <div className="text-xs text-muted-foreground truncate">{l.task_title}</div>
                         )}
+
                       </div>
                       {/* advertiser */}
                       <div className="min-w-0 flex flex-col gap-0.5">
