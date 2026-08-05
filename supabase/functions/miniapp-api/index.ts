@@ -253,13 +253,14 @@ Deno.serve(async (req) => {
           .eq("id", view_id);
 
         let newBalance = Number(user.balance_pt);
+        let refCredit: any = null;
         if (!user.balance_frozen) {
           newBalance = Number(user.balance_pt) + Number(video.reward_pt);
           await supabase
             .from("users")
             .update({ balance_pt: newBalance })
             .eq("id", user.id);
-          await creditReferral(supabase, user.id, Number(video.reward_pt), "video", { video_ad_id: view.video_ad_id });
+          refCredit = await creditReferral(supabase, user.id, Number(video.reward_pt), "video", { video_ad_id: view.video_ad_id });
         }
 
 
@@ -279,7 +280,7 @@ Deno.serve(async (req) => {
             supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
           ]);
           const adv: any = (v2 as any)?.advertisers || null;
-          await supabase.from("activity_logs").insert({
+          const baseLog = {
             user_id: user.id,
             user_username: u2?.username || null,
             user_telegram_id: u2?.telegram_id ?? null,
@@ -293,8 +294,11 @@ Deno.serve(async (req) => {
             reward_pt: Number(video.reward_pt),
             started_at: view.started_at,
             finished_at: new Date().toISOString(),
-          });
+          };
+          const { data: inserted } = await supabase.from("activity_logs").insert(baseLog).select("id").single();
+          await logReferralActivity(supabase, refCredit, { ...baseLog, id: inserted?.id || null });
         } catch (_) { /* logging must never break reward flow */ }
+
 
         // NOTE: We intentionally do NOT send a Telegram message on every reward.
         // Per-view chat spam caused the bot to be rate-limited / temporarily restricted
