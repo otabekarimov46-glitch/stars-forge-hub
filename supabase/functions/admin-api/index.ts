@@ -526,6 +526,120 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ===== REFERRAL LOGS (grouped by inviter) =====
+      case "get_referral_logs": {
+        const userFilter = String(params.user_search || "").trim().replace(/^@/, "");
+
+        const [logsRes, usersRes] = await Promise.all([
+          supabase
+            .from("activity_logs")
+            .select("*")
+            .eq("action_type", "referral_reward")
+            .order("created_at", { ascending: false })
+            .limit(5000),
+          supabase.from("users").select("id, username, telegram_id, balance_pt, created_at, referrer_id, referral_earnings_pt, is_banned, last_seen_at"),
+        ]);
+        if (logsRes.error) { error = logsRes.error; break; }
+
+        const allUsers = usersRes.data || [];
+        const userById = new Map<string, any>(allUsers.map((u: any) => [u.id, u]));
+        const invitedCount = new Map<string, number>();
+        allUsers.forEach((u: any) => {
+          if (u.referrer_id) invitedCount.set(u.referrer_id, (invitedCount.get(u.referrer_id) || 0) + 1);
+        });
+
+        const groups = new Map<string, any>();
+        (logsRes.data || []).forEach((l: any) => {
+          const rid = l.user_id;
+          if (!rid) return;
+          if (!groups.has(rid)) {
+            const ru = userById.get(rid) || {};
+            groups.set(rid, {
+              user_id: rid,
+              username: l.user_username || ru.username || null,
+              telegram_id: l.user_telegram_id ?? ru.telegram_id ?? null,
+              balance_pt: Number(ru.balance_pt || 0),
+              is_banned: !!ru.is_banned,
+              total_pt: 0,
+              logs_count: 0,
+              invited_total: invitedCount.get(rid) || 0,
+              first_at: l.created_at,
+              last_at: l.created_at,
+              by_type: {} as Record<string, number>,
+              inviteesMap: new Map<string, any>(),
+              logs: [] as any[],
+            });
+          }
+          const g = groups.get(rid);
+          const bonus = Number(l.reward_pt || 0);
+          g.total_pt += bonus;
+          g.logs_count += 1;
+          if (l.created_at < g.first_at) g.first_at = l.created_at;
+          if (l.created_at > g.last_at) g.last_at = l.created_at;
+          if (g.logs.length < 300) g.logs.push(l);
+
+          const fid = l.ref_from_user_id || "unknown";
+          if (!g.inviteesMap.has(fid)) {
+            const fu = userById.get(fid) || {};
+            g.inviteesMap.set(fid, {
+              user_id: l.ref_from_user_id || null,
+              username: l.ref_from_username || fu.username || null,
+              telegram_id: l.ref_from_telegram_id ?? fu.telegram_id ?? null,
+              total_pt: 0,
+              count: 0,
+              last_at: l.created_at,
+              joined_at: fu.created_at || null,
+              is_banned: !!fu.is_banned,
+            });
+          }
+          const inv = g.inviteesMap.get(fid);
+          inv.total_pt += bonus;
+          inv.count += 1;
+          if (l.created_at > inv.last_at) inv.last_at = l.created_at;
+        });
+
+        let list = Array.from(groups.values()).map((g: any) => {
+          const invitees = Array.from(g.inviteesMap.values())
+            .map((i: any) => ({ ...i, total_pt: Math.round(i.total_pt * 100) / 100 }))
+            .sort((a: any, b: any) => b.total_pt - a.total_pt);
+          const byType: Record<string, number> = {};
+          g.logs.forEach((l: any) => {
+            const k = l.video_ad_id ? "video" : "task";
+            byType[k] = (byType[k] || 0) + 1;
+          });
+          delete g.inviteesMap;
+          return {
+            ...g,
+            total_pt: Math.round(g.total_pt * 100) / 100,
+            invitees,
+            invitees_earning: invitees.length,
+            by_type: byType,
+          };
+        }).sort((a: any, b: any) => b.total_pt - a.total_pt);
+
+        // global rank by referral earnings (across every inviter, before filtering)
+        list = list.map((g: any, i: number) => ({ ...g, rank: i + 1 }));
+        const totalInviters = list.length;
+
+        if (userFilter) {
+          const needle = userFilter.toLowerCase();
+          list = list.filter((g: any) =>
+            (g.username || "").toLowerCase().includes(needle) ||
+            String(g.telegram_id || "").includes(needle) ||
+            g.invitees.some((i: any) => (i.username || "").toLowerCase().includes(needle) || String(i.telegram_id || "").includes(needle))
+          );
+        }
+
+        data = {
+          referrers: list,
+          total_inviters: totalInviters,
+          total_paid_pt: Math.round(list.reduce((s: number, g: any) => s + g.total_pt, 0) * 100) / 100,
+        };
+        break;
+      }
+
+
+
       // ===== SETTINGS =====
       case "get_settings": {
         const res = await supabase.from("settings").select("*");
