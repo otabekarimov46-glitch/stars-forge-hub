@@ -925,10 +925,11 @@ Deno.serve(async (req) => {
         }).eq("id", task_id);
 
         let newBalance = Number(user.balance_pt);
+        let refCreditTask: any = null;
         if (!user.balance_frozen) {
           newBalance = Number(user.balance_pt) + Number(task.reward_pt);
           await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
-          await creditReferral(supabase, user.id, Number(task.reward_pt), "task", { task_id, type: task.type });
+          refCreditTask = await creditReferral(supabase, user.id, Number(task.reward_pt), "task", { task_id, type: task.type });
         }
 
 
@@ -948,7 +949,7 @@ Deno.serve(async (req) => {
             supabase.from("users").select("username, telegram_id").eq("id", user.id).maybeSingle(),
           ]);
           const adv: any = (t2 as any)?.advertisers || null;
-          await supabase.from("activity_logs").insert({
+          const baseLog = {
             user_id: user.id,
             user_username: u2?.username || null,
             user_telegram_id: u2?.telegram_id ?? null,
@@ -961,8 +962,11 @@ Deno.serve(async (req) => {
             advertiser_public_id: adv?.public_id || null,
             reward_pt: Number(task.reward_pt),
             finished_at: new Date().toISOString(),
-          });
+          };
+          const { data: inserted } = await supabase.from("activity_logs").insert(baseLog).select("id").single();
+          await logReferralActivity(supabase, refCreditTask, { ...baseLog, id: inserted?.id || null });
         } catch (_) { /* logging must never break reward flow */ }
+
 
         // Schedule a background re-check for subscribe tasks, using the PER-TASK interval.
         // Also clears any prior "unsub" row for this task (user re-subscribed).
