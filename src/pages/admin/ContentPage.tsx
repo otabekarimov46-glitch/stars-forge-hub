@@ -625,6 +625,8 @@ export default function ContentPage() {
               )}
             </div>
           </>
+        ) : activeAdvertiser.is_system ? (
+          <TadsSection advertiser={activeAdvertiser} onBack={() => setActiveAdvertiser(null)} />
         ) : (
           <>
             {/* Inside advertiser */}
