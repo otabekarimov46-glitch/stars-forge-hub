@@ -6,6 +6,7 @@ import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 import { useMiniAppI18n, MINIAPP_LANGS } from "@/lib/miniapp-i18n";
 import { useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
+import { showTadsRewarded } from "@/lib/tads";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
