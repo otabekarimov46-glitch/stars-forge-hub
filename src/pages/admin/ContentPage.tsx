@@ -520,22 +520,35 @@ export default function ContentPage() {
                       onClick={() => setActiveAdvertiser(a)}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
-                          <Building2 className="h-5 w-5" />
+                        <div className={`p-2.5 rounded-xl ${a.is_system ? "bg-violet-500/10 text-violet-500" : "bg-brand-purple/10 text-brand-purple"}`}>
+                          {a.is_system ? <Megaphone className="h-5 w-5" /> : <Building2 className="h-5 w-5" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm truncate">{a.name}</p>
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} {tr("всего")}</Badge>
-                            {a.video_count > 0 && (
-                              <Badge variant="outline" className="rounded-lg text-xs gap-1">
-                                <Film className="h-3 w-3" /> {a.video_count}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <p className="font-semibold text-sm truncate">{a.name}</p>
+                            {a.is_system && (
+                              <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0 bg-violet-500/10 text-violet-500 border-violet-500/25 shrink-0">
+                                {tr("Рекламная сеть")}
                               </Badge>
                             )}
-                            {a.active_count > 0 && (
-                              <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
-                                {a.active_count} {tr("активных")}
-                              </Badge>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {a.is_system ? (
+                              <Badge variant="outline" className="rounded-lg text-xs">{tr("Внешняя реклама")}</Badge>
+                            ) : (
+                              <>
+                                <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} {tr("всего")}</Badge>
+                                {a.video_count > 0 && (
+                                  <Badge variant="outline" className="rounded-lg text-xs gap-1">
+                                    <Film className="h-3 w-3" /> {a.video_count}
+                                  </Badge>
+                                )}
+                                {a.active_count > 0 && (
+                                  <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
+                                    {a.active_count} {tr("активных")}
+                                  </Badge>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
