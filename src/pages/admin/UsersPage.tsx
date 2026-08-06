@@ -20,6 +20,7 @@ import { format, parseISO } from "date-fns";
 
 const ACTION_META: Record<string, { label: string; icon: any; color: string }> = {
   video:         { label: "Видеореклама",     icon: Film,       color: "text-brand-purple" },
+  tads:          { label: "Видеореклама TADS", icon: Film,       color: "text-violet-500" },
   subscribe:     { label: "Подписка",         icon: Send,       color: "text-brand-blue" },
   view_post:     { label: "Просмотр поста",   icon: Newspaper,  color: "text-brand-green" },
   view_story:    { label: "Просмотр истории", icon: Camera,     color: "text-brand-gold" },
