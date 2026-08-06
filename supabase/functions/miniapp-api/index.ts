@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
     const { action, ...params } = await req.json();
 
     const DAILY_VIDEO_LIMIT = 100;
+    const TADS_DAILY_LIMIT = 100;
+    const TADS_MIN_INTERVAL_MS = 10 * 1000;
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       || req.headers.get("cf-connecting-ip")
@@ -1265,6 +1267,27 @@ Deno.serve(async (req) => {
 });
 
 const REFERRAL_PERCENT = 5;
+
+/** Reads the TADS ad-network configuration from settings. */
+async function getTadsConfig(supabase: any) {
+  try {
+    const { data } = await supabase
+      .from("settings").select("key,value")
+      .in("key", ["tads_reward_pt", "tads_paused", "tads_widget_id"]);
+    const map: Record<string, string> = {};
+    for (const r of data || []) map[r.key] = r.value;
+    const paused = String(map.tads_paused ?? "false") === "true";
+    const reward = Number(map.tads_reward_pt ?? 0.5);
+    return {
+      enabled: !paused,
+      paused,
+      widget_id: String(map.tads_widget_id ?? "11349"),
+      reward_pt: Number.isFinite(reward) && reward > 0 ? reward : 0,
+    };
+  } catch {
+    return { enabled: false, paused: true, widget_id: "11349", reward_pt: 0 };
+  }
+}
 
 /**
  * Credits the inviter with REFERRAL_PERCENT% of the reward.
