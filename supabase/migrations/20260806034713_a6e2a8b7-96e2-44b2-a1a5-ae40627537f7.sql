@@ -1,0 +1,1 @@
+ALTER TABLE public.advertisers ADD COLUMN IF NOT EXISTS is_system boolean NOT NULL DEFAULT false;

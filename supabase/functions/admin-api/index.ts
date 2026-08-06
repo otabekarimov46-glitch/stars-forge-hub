@@ -222,6 +222,8 @@ Deno.serve(async (req) => {
         break;
       }
       case "update_advertiser": {
+        const { data: adv } = await supabase.from("advertisers").select("is_system").eq("id", params.advertiser_id).maybeSingle();
+        if (adv?.is_system) { error = { message: "Системного рекламодателя нельзя переименовать" }; break; }
         const res = await supabase.from("advertisers")
           .update({ name: params.name, updated_at: new Date().toISOString() })
           .eq("id", params.advertiser_id);
@@ -229,11 +231,64 @@ Deno.serve(async (req) => {
         break;
       }
       case "delete_advertiser": {
+        const { data: adv } = await supabase.from("advertisers").select("is_system").eq("id", params.advertiser_id).maybeSingle();
+        if (adv?.is_system) { error = { message: "Системного рекламодателя нельзя удалить" }; break; }
         // Cascade: delete advertiser's tasks AND video ads
         await supabase.from("tasks").delete().eq("advertiser_id", params.advertiser_id);
         await supabase.from("video_ads").delete().eq("advertiser_id", params.advertiser_id);
         const res = await supabase.from("advertisers").delete().eq("id", params.advertiser_id);
         data = res.data; error = res.error;
+        break;
+      }
+
+      // ===== TADS AD NETWORK =====
+      case "get_tads": {
+        const [sRes, advRes, logsRes] = await Promise.all([
+          supabase.from("settings").select("key,value").in("key", ["tads_reward_pt", "tads_paused", "tads_widget_id"]),
+          supabase.from("advertisers").select("id, name, public_id, created_at").eq("name", "TADS").maybeSingle(),
+          supabase.from("activity_logs").select("created_at, reward_pt, user_id").eq("action_type", "tads"),
+        ]);
+        const map: Record<string, string> = {};
+        (sRes.data || []).forEach((r: any) => { map[r.key] = r.value; });
+        const logs = logsRes.data || [];
+        const now = Date.now();
+        const windowStats = (ms: number | null) => {
+          const rows = ms == null ? logs : logs.filter((l: any) => now - new Date(l.created_at).getTime() <= ms);
+          return {
+            views: rows.length,
+            spent_pt: Math.round(rows.reduce((s: number, l: any) => s + Number(l.reward_pt || 0), 0) * 100) / 100,
+            users: new Set(rows.map((l: any) => l.user_id)).size,
+          };
+        };
+        data = {
+          advertiser: advRes.data || null,
+          settings: {
+            reward_pt: Number(map.tads_reward_pt ?? 0.5),
+            paused: String(map.tads_paused ?? "false") === "true",
+            widget_id: String(map.tads_widget_id ?? "11349"),
+          },
+          stats: {
+            day: windowStats(24 * 3600 * 1000),
+            week: windowStats(7 * 24 * 3600 * 1000),
+            month: windowStats(30 * 24 * 3600 * 1000),
+            all: windowStats(null),
+          },
+        };
+        break;
+      }
+      case "update_tads_settings": {
+        const rows: any[] = [];
+        if (params.reward_pt != null) {
+          const v = Number(params.reward_pt);
+          if (!Number.isFinite(v) || v < 0) { error = { message: "Некорректная цена за просмотр" }; break; }
+          rows.push({ key: "tads_reward_pt", value: String(v), updated_at: new Date().toISOString() });
+        }
+        if (params.paused != null) {
+          rows.push({ key: "tads_paused", value: params.paused ? "true" : "false", updated_at: new Date().toISOString() });
+        }
+        if (rows.length === 0) { data = { ok: true }; break; }
+        const res = await supabase.from("settings").upsert(rows);
+        data = { ok: true }; error = res.error;
         break;
       }
       case "bulk_toggle_advertiser_tasks": {

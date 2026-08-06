@@ -6,6 +6,7 @@ import logoImg from "@/assets/logo.png";
 import { useAntiClicker } from "@/hooks/use-anti-clicker";
 import { useMiniAppI18n, MINIAPP_LANGS } from "@/lib/miniapp-i18n";
 import { useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
+import { showTadsRewarded } from "@/lib/tads";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -130,6 +131,12 @@ export default function MiniApp() {
   // Set right after a video finishes — shown in the completed screen
   const [lastFinished, setLastFinished] = useState<{ video: VideoAd; reward: number; rewarded: boolean } | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoAd | null>(null);
+
+  // ===== TADS external ad network =====
+  const [tadsCfg, setTadsCfg] = useState<{ enabled: boolean; widget_id: string; reward_pt: number } | null>(null);
+  const [tadsTurn, setTadsTurn] = useState(false);
+  const [tadsBusy, setTadsBusy] = useState(false);
+  const [tadsToast, setTadsToast] = useState<{ ok: boolean; reward?: number; message?: string } | null>(null);
 
   // Category sheet snap points (collapses below ~70%)
   const [snap, setSnap] = useState<string | number | null>(0.97);
@@ -409,6 +416,7 @@ export default function MiniApp() {
       const data = await miniAppApi("get_next_video", { telegram_id: telegramId, start_param: tgUser.start_param });
       if (data?.locked) { setStatus("locked"); return; }
       if (data?.user) setUser(data.user);
+      if (data?.tads) setTadsCfg(data.tads);
       if (!data?.video) { setStatus("no_video"); return; }
       setVideo(data.video);
       setPosterUrl(null);
@@ -645,6 +653,8 @@ export default function MiniApp() {
   };
 
   const watchNext = async () => {
+    // Mixing rule: one regular video, then one TADS ad.
+    if (tadsCfg?.enabled) setTadsTurn(true);
     if (!nextVideo) { loadVideo(); return; }
     setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
     setViewId(null); setElapsed(0); finishedRef.current = false;
@@ -653,6 +663,35 @@ export default function MiniApp() {
     setLastFinished(null);
     setStatus("ready");
 
+  };
+
+  // ===== TADS rewarded ad =====
+  const watchTadsAd = async () => {
+    if (tadsBusy || !telegramId || !tadsCfg?.enabled) return;
+    setTadsBusy(true);
+    setTadsToast(null);
+    try {
+      const shown = await showTadsRewarded(tadsCfg.widget_id);
+      if (!shown.ok) throw new Error(shown.error || t("tads_error"));
+      const res = await miniAppApi("tads_reward", { telegram_id: telegramId });
+      if (res?.locked) { setStatus("locked"); return; }
+      if (!res?.rewarded) {
+        setTadsToast({ ok: false, message: res?.reason === "limit" ? t("tads_limit") : t("tads_error") });
+      } else {
+        if (typeof res.new_balance === "number") {
+          setUser((u) => u ? { ...u, balance_pt: res.new_balance } : u);
+        }
+        setTadsToast({ ok: true, reward: Number(res.amount || 0) });
+      }
+      // Next slot goes back to a regular video.
+      setTadsTurn(false);
+    } catch (e: any) {
+      setTadsToast({ ok: false, message: e?.message || t("tads_error") });
+      setTadsTurn(false);
+    } finally {
+      setTadsBusy(false);
+      setTimeout(() => setTadsToast(null), 3500);
+    }
   };
 
   // Fire dynamic checkpoints
@@ -1026,7 +1065,48 @@ export default function MiniApp() {
             </div>
           )}
 
-          {status === "no_video" && (
+          {/* ===== TADS partner ad (compact card, no cover) ===== */}
+          {tadsCfg?.enabled && tadsTurn && (status === "ready" || status === "no_video") && (
+            <div className="screen-enter">
+              <button
+                type="button"
+                onClick={watchTadsAd}
+                disabled={tadsBusy}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 disabled:opacity-60"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500/25 to-blue-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  {tadsBusy
+                    ? <Loader2 className="w-5 h-5 text-white/80 animate-spin" />
+                    : <Play className="w-5 h-5 text-white/85" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">
+                    {tadsBusy ? t("tads_loading") : t("tads_watch")}
+                  </div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("tads_hint")}</div>
+                </div>
+                <div className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold tabular-nums bg-gradient-to-br from-purple-600 to-blue-600 shrink-0">
+                  +{tadsCfg.reward_pt} PT
+                </div>
+              </button>
+              {tadsToast && (
+                <div className={`mt-2 rounded-2xl px-3.5 py-2.5 text-[12.5px] text-center border ${
+                  tadsToast.ok
+                    ? "bg-emerald-400/10 border-emerald-400/25 text-emerald-200"
+                    : "bg-red-400/10 border-red-400/25 text-red-200"
+                }`}>
+                  {tadsToast.ok ? `+${tadsToast.reward} PT` : tadsToast.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {status === "no_video" && !(tadsCfg?.enabled && tadsTurn) && (
             <button
               type="button"
               onClick={() => { /* no-op — press feedback only */ }}
@@ -1049,7 +1129,7 @@ export default function MiniApp() {
             </button>
           )}
 
-          {status === "ready" && video && (
+          {status === "ready" && video && !(tadsCfg?.enabled && tadsTurn) && (
             <div key={video.id} className="screen-enter">
               <div className="rounded-3xl overflow-hidden"
                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>

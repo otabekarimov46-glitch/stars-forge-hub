@@ -56,11 +56,12 @@ const COUNT_OPTIONS = [
   { value: "10000", label: "Последние 10 000" },
 ];
 
-type ActionType = "video" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward" | "withdrawal_paid" | "withdrawal_rejected" | "referral_reward";
+type ActionType = "video" | "tads" | "subscribe" | "view_post" | "view_story" | "reaction" | "survey" | "balance_reset" | "promo_reward" | "withdrawal_paid" | "withdrawal_rejected" | "referral_reward";
 
 
 const ACTION_META: Record<ActionType, { label: string; short: string; icon: any; bar: string; badge: string; row: string; }> = {
   video:         { label: "Видеореклама",   short: "Видео",     icon: Film,       bar: "bg-brand-purple",       badge: "bg-brand-purple/10 text-brand-purple border-brand-purple/20", row: "bg-brand-purple/[0.04] hover:bg-brand-purple/[0.08]" },
+  tads:          { label: "Видеореклама TADS", short: "TADS",    icon: Film,       bar: "bg-violet-500",         badge: "bg-violet-500/10 text-violet-500 border-violet-500/25",       row: "bg-violet-500/[0.05] hover:bg-violet-500/[0.10]" },
   subscribe:     { label: "Подписка",       short: "Подписка",  icon: UsersIcon,  bar: "bg-brand-blue",         badge: "bg-brand-blue/10 text-brand-blue border-brand-blue/20",       row: "bg-brand-blue/[0.04] hover:bg-brand-blue/[0.08]" },
   view_post:     { label: "Просмотр поста", short: "Пост",      icon: Newspaper,  bar: "bg-brand-green",        badge: "bg-brand-green/10 text-brand-green border-brand-green/20",     row: "bg-brand-green/[0.04] hover:bg-brand-green/[0.08]" },
   view_story:    { label: "Просмотр истории", short: "История", icon: Camera,     bar: "bg-brand-gold",         badge: "bg-brand-gold/10 text-brand-gold border-brand-gold/20",       row: "bg-brand-gold/[0.04] hover:bg-brand-gold/[0.08]" },
@@ -73,7 +74,7 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   referral_reward:     { label: "Рефералка",       short: "Рефералка", icon: Share2, bar: "bg-indigo-500",      badge: "bg-indigo-500/10 text-indigo-500 border-indigo-500/25",       row: "bg-indigo-500/[0.05] hover:bg-indigo-500/[0.10]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "referral_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
+const FILTERABLE: ActionType[] = ["video", "tads", "subscribe", "view_post", "view_story", "promo_reward", "referral_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
 
 
 export default function AlertsPage() {

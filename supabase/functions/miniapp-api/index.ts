@@ -21,6 +21,8 @@ Deno.serve(async (req) => {
     const { action, ...params } = await req.json();
 
     const DAILY_VIDEO_LIMIT = 100;
+    const TADS_DAILY_LIMIT = 100;
+    const TADS_MIN_INTERVAL_MS = 10 * 1000;
 
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
       || req.headers.get("cf-connecting-ip")
@@ -87,7 +89,8 @@ Deno.serve(async (req) => {
           daily_bonus_at: user.daily_bonus_at,
           balance_frozen: !!user.balance_frozen,
         };
-        if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload } });
+        const tads = await getTadsConfig(supabase);
+        if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload, tads } });
 
         const unwatched = list.filter((v: any) => !watchedIds.has(v.id));
         const watchedAgain = list.filter((v: any) => watchedIds.has(v.id));
@@ -95,7 +98,81 @@ Deno.serve(async (req) => {
         const queue = [...shuffle(unwatched), ...shuffle(watchedAgain)];
         const video = queue[0] || null;
 
-        return jsonResponse({ data: { video, user: userPayload } });
+        return jsonResponse({ data: { video, user: userPayload, tads } });
+      }
+
+      // ===== TADS rewarded ads (external ad network) =====
+      case "tads_reward": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, username, telegram_id, balance_pt, balance_frozen, is_banned, captcha_pending")
+          .eq("telegram_id", telegram_id)
+          .single();
+        if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) return jsonResponse({ data: { locked: true } });
+
+        const tads = await getTadsConfig(supabase);
+        if (!tads.enabled) return jsonResponse({ data: { rewarded: false, reason: "paused" } });
+
+        // Server-side throttling so TADS views cannot be farmed faster than real ads.
+        const utcDayStart = new Date();
+        utcDayStart.setUTCHours(0, 0, 0, 0);
+        const { data: recentTads } = await supabase
+          .from("activity_logs")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .eq("action_type", "tads")
+          .gte("created_at", utcDayStart.toISOString())
+          .order("created_at", { ascending: false });
+        const todayTads = recentTads || [];
+        if (todayTads.length >= TADS_DAILY_LIMIT) {
+          return jsonResponse({ data: { rewarded: false, reason: "limit", limit: TADS_DAILY_LIMIT } });
+        }
+        if (todayTads[0] && Date.now() - new Date(todayTads[0].created_at).getTime() < TADS_MIN_INTERVAL_MS) {
+          return jsonResponse({ data: { rewarded: false, reason: "too_fast" } });
+        }
+
+        const reward = tads.reward_pt;
+        let newBalance = Number(user.balance_pt);
+        let refCredit: any = null;
+        if (!user.balance_frozen && reward > 0) {
+          newBalance = Math.round((Number(user.balance_pt) + reward) * 100) / 100;
+          await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+          refCredit = await creditReferral(supabase, user.id, reward, "video", { tads: true });
+        }
+
+        await recordIp(supabase, user.id, ip);
+        await supabase.from("logs_activity").insert({
+          user_id: user.id,
+          action: "tads_reward",
+          ip_address: ip,
+          metadata: { reward_pt: reward, source: "tads" },
+        });
+
+        try {
+          const { data: adv } = await supabase
+            .from("advertisers").select("id, public_id").eq("name", "TADS").maybeSingle();
+          const baseLog = {
+            user_id: user.id,
+            user_username: user.username || null,
+            user_telegram_id: user.telegram_id ?? null,
+            action_type: "tads",
+            task_title: "Видеореклама TADS",
+            advertiser_id: adv?.id || null,
+            advertiser_name: "TADS",
+            advertiser_public_id: adv?.public_id || null,
+            reward_pt: reward,
+            finished_at: new Date().toISOString(),
+          };
+          const { data: inserted } = await supabase.from("activity_logs").insert(baseLog).select("id").single();
+          await logReferralActivity(supabase, refCredit, { ...baseLog, id: inserted?.id || null });
+        } catch (_) { /* logging must never break reward flow */ }
+
+        return jsonResponse({ data: { rewarded: true, amount: reward, new_balance: newBalance } });
       }
 
       case "start_view": {
@@ -1049,7 +1126,7 @@ Deno.serve(async (req) => {
           .from("logs_activity")
           .select("id, action, created_at, metadata")
           .eq("user_id", user.id)
-           .in("action", ["task_reward", "video_reward", "promo_reward", "balance_reset", "referral_reward", "withdrawal_request", "withdrawal_paid", "withdrawal_rejected"])
+           .in("action", ["task_reward", "video_reward", "tads_reward", "promo_reward", "balance_reset", "referral_reward", "withdrawal_request", "withdrawal_paid", "withdrawal_rejected"])
            .order("created_at", { ascending: false })
            .limit(80);
          const items = (rows || []).map((r: any) => {
@@ -1059,6 +1136,7 @@ Deno.serve(async (req) => {
            let label = "Задание";
            let amount = Number(meta.reward_pt || 0);
            if (r.action === "video_reward") { kind = "video"; sub = "video"; label = "Видеореклама"; }
+           else if (r.action === "tads_reward") { kind = "video"; sub = "tads"; label = "Видеореклама TADS"; }
            else if (r.action === "promo_reward") { kind = "promo"; sub = "promo"; label = "Промокод"; amount = Number(meta.reward_pt || 0); }
            else if (r.action === "referral_reward") { kind = "referral"; sub = "referral"; label = "Реферальный бонус"; amount = Number(meta.bonus || 0); }
            else if (r.action === "balance_reset") { kind = "reset"; sub = "reset"; label = "Обнуление баланса"; amount = Number(meta.amount || 0); }
@@ -1190,6 +1268,27 @@ Deno.serve(async (req) => {
 });
 
 const REFERRAL_PERCENT = 5;
+
+/** Reads the TADS ad-network configuration from settings. */
+async function getTadsConfig(supabase: any) {
+  try {
+    const { data } = await supabase
+      .from("settings").select("key,value")
+      .in("key", ["tads_reward_pt", "tads_paused", "tads_widget_id"]);
+    const map: Record<string, string> = {};
+    for (const r of data || []) map[r.key] = r.value;
+    const paused = String(map.tads_paused ?? "false") === "true";
+    const reward = Number(map.tads_reward_pt ?? 0.5);
+    return {
+      enabled: !paused,
+      paused,
+      widget_id: String(map.tads_widget_id ?? "11349"),
+      reward_pt: Number.isFinite(reward) && reward > 0 ? reward : 0,
+    };
+  } catch {
+    return { enabled: false, paused: true, widget_id: "11349", reward_pt: 0 };
+  }
+}
 
 /**
  * Credits the inviter with REFERRAL_PERCENT% of the reward.

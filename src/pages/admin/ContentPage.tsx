@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical, Newspaper, Camera, Hash, Copy, Search, ArrowRight, X } from "lucide-react";
+import { Plus, Trash2, Upload, Eye, Users as UsersIcon, Film, Heart, Link2, Building2, ChevronLeft, Power, PowerOff, Pencil, MoreVertical, Newspaper, Camera, Hash, Copy, Search, ArrowRight, X, Megaphone } from "lucide-react";
+import TadsSection from "@/components/admin/TadsSection";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -520,22 +521,35 @@ export default function ContentPage() {
                       onClick={() => setActiveAdvertiser(a)}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="p-2.5 rounded-xl bg-brand-purple/10 text-brand-purple">
-                          <Building2 className="h-5 w-5" />
+                        <div className={`p-2.5 rounded-xl ${a.is_system ? "bg-violet-500/10 text-violet-500" : "bg-brand-purple/10 text-brand-purple"}`}>
+                          {a.is_system ? <Megaphone className="h-5 w-5" /> : <Building2 className="h-5 w-5" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm truncate">{a.name}</p>
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} {tr("всего")}</Badge>
-                            {a.video_count > 0 && (
-                              <Badge variant="outline" className="rounded-lg text-xs gap-1">
-                                <Film className="h-3 w-3" /> {a.video_count}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <p className="font-semibold text-sm truncate">{a.name}</p>
+                            {a.is_system && (
+                              <Badge variant="outline" className="rounded-lg text-[10px] px-1.5 py-0 bg-violet-500/10 text-violet-500 border-violet-500/25 shrink-0">
+                                {tr("Рекламная сеть")}
                               </Badge>
                             )}
-                            {a.active_count > 0 && (
-                              <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
-                                {a.active_count} {tr("активных")}
-                              </Badge>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {a.is_system ? (
+                              <Badge variant="outline" className="rounded-lg text-xs">{tr("Внешняя реклама")}</Badge>
+                            ) : (
+                              <>
+                                <Badge variant="outline" className="rounded-lg text-xs">{a.tasks_count} {tr("всего")}</Badge>
+                                {a.video_count > 0 && (
+                                  <Badge variant="outline" className="rounded-lg text-xs gap-1">
+                                    <Film className="h-3 w-3" /> {a.video_count}
+                                  </Badge>
+                                )}
+                                {a.active_count > 0 && (
+                                  <Badge variant="outline" className="rounded-lg text-xs text-emerald-500 border-emerald-500/30">
+                                    {a.active_count} {tr("активных")}
+                                  </Badge>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -558,42 +572,51 @@ export default function ContentPage() {
                                 </button>
                               )}
                             </div>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
-                              <Pencil className="h-4 w-4 mr-2" /> {tr("Переименовать")}
-                            </DropdownMenuItem>
-                            {a.tasks_count > 0 && (
+                            {!a.is_system && (
                               <>
-                                <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
-                                  <Power className="h-4 w-4 mr-2" /> {tr("Включить все")}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
+                                  <Pencil className="h-4 w-4 mr-2" /> {tr("Переименовать")}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
-                                  <PowerOff className="h-4 w-4 mr-2" /> {tr("Отключить все")}
-                                </DropdownMenuItem>
+                                {a.tasks_count > 0 && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
+                                      <Power className="h-4 w-4 mr-2" /> {tr("Включить все")}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
+                                      <PowerOff className="h-4 w-4 mr-2" /> {tr("Отключить все")}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                      <Trash2 className="h-4 w-4 mr-2" /> {tr("Удалить рекламодателя")}
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="glass-card border-0">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>{tr("Удалить")} «{a.name}»?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {tr("Все")} {a.tasks_count} {tr("единиц контента рекламодателя будут удалены безвозвратно.")}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
+                                      <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
+                                        {t("common.delete")}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </>
                             )}
-                            <DropdownMenuSeparator />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" /> {tr("Удалить рекламодателя")}
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="glass-card border-0">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>{tr("Удалить")} «{a.name}»?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {tr("Все")} {a.tasks_count} {tr("единиц контента рекламодателя будут удалены безвозвратно.")}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
-                                  <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
-                                    {t("common.delete")}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {a.is_system && (
+                              <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                                {tr("Встроенная рекламная сеть — нельзя удалить или переименовать.")}
+                              </div>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -603,6 +626,8 @@ export default function ContentPage() {
               )}
             </div>
           </>
+        ) : activeAdvertiser.is_system ? (
+          <TadsSection advertiser={activeAdvertiser} onBack={() => setActiveAdvertiser(null)} />
         ) : (
           <>
             {/* Inside advertiser */}
