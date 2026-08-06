@@ -415,6 +415,7 @@ export default function MiniApp() {
       const data = await miniAppApi("get_next_video", { telegram_id: telegramId, start_param: tgUser.start_param });
       if (data?.locked) { setStatus("locked"); return; }
       if (data?.user) setUser(data.user);
+      if (data?.tads) setTadsCfg(data.tads);
       if (!data?.video) { setStatus("no_video"); return; }
       setVideo(data.video);
       setPosterUrl(null);
