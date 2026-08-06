@@ -652,6 +652,8 @@ export default function MiniApp() {
   };
 
   const watchNext = async () => {
+    // Mixing rule: one regular video, then one TADS ad.
+    if (tadsCfg?.enabled) setTadsTurn(true);
     if (!nextVideo) { loadVideo(); return; }
     setVideo(nextVideo); setNextVideo(null); setPosterUrl(null);
     setViewId(null); setElapsed(0); finishedRef.current = false;
@@ -660,6 +662,35 @@ export default function MiniApp() {
     setLastFinished(null);
     setStatus("ready");
 
+  };
+
+  // ===== TADS rewarded ad =====
+  const watchTadsAd = async () => {
+    if (tadsBusy || !telegramId || !tadsCfg?.enabled) return;
+    setTadsBusy(true);
+    setTadsToast(null);
+    try {
+      const shown = await showTadsRewarded(tadsCfg.widget_id);
+      if (!shown.ok) throw new Error(shown.error || t("tads_error"));
+      const res = await miniAppApi("tads_reward", { telegram_id: telegramId });
+      if (res?.locked) { setStatus("locked"); return; }
+      if (!res?.rewarded) {
+        setTadsToast({ ok: false, message: res?.reason === "limit" ? t("tads_limit") : t("tads_error") });
+      } else {
+        if (typeof res.new_balance === "number") {
+          setUser((u) => u ? { ...u, balance_pt: res.new_balance } : u);
+        }
+        setTadsToast({ ok: true, reward: Number(res.amount || 0) });
+      }
+      // Next slot goes back to a regular video.
+      setTadsTurn(false);
+    } catch (e: any) {
+      setTadsToast({ ok: false, message: e?.message || t("tads_error") });
+      setTadsTurn(false);
+    } finally {
+      setTadsBusy(false);
+      setTimeout(() => setTadsToast(null), 3500);
+    }
   };
 
   // Fire dynamic checkpoints
