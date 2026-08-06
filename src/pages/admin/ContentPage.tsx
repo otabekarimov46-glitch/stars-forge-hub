@@ -571,42 +571,51 @@ export default function ContentPage() {
                                 </button>
                               )}
                             </div>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
-                              <Pencil className="h-4 w-4 mr-2" /> {tr("Переименовать")}
-                            </DropdownMenuItem>
-                            {a.tasks_count > 0 && (
+                            {!a.is_system && (
                               <>
-                                <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
-                                  <Power className="h-4 w-4 mr-2" /> {tr("Включить все")}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => { setEditingAdvId(a.id); setAdvForm({ name: a.name }); setAdvDialogOpen(true); }}>
+                                  <Pencil className="h-4 w-4 mr-2" /> {tr("Переименовать")}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
-                                  <PowerOff className="h-4 w-4 mr-2" /> {tr("Отключить все")}
-                                </DropdownMenuItem>
+                                {a.tasks_count > 0 && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => bulkToggle(a.id, true)}>
+                                      <Power className="h-4 w-4 mr-2" /> {tr("Включить все")}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => bulkToggle(a.id, false)}>
+                                      <PowerOff className="h-4 w-4 mr-2" /> {tr("Отключить все")}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                      <Trash2 className="h-4 w-4 mr-2" /> {tr("Удалить рекламодателя")}
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="glass-card border-0">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>{tr("Удалить")} «{a.name}»?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {tr("Все")} {a.tasks_count} {tr("единиц контента рекламодателя будут удалены безвозвратно.")}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
+                                      <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
+                                        {t("common.delete")}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </>
                             )}
-                            <DropdownMenuSeparator />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" /> {tr("Удалить рекламодателя")}
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="glass-card border-0">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>{tr("Удалить")} «{a.name}»?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {tr("Все")} {a.tasks_count} {tr("единиц контента рекламодателя будут удалены безвозвратно.")}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="rounded-xl">{t("common.cancel")}</AlertDialogCancel>
-                                  <AlertDialogAction className="rounded-xl bg-destructive text-destructive-foreground" onClick={() => deleteAdvertiser(a.id)}>
-                                    {t("common.delete")}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {a.is_system && (
+                              <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                                {tr("Встроенная рекламная сеть — нельзя удалить или переименовать.")}
+                              </div>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
