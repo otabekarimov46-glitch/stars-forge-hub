@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
           daily_bonus_at: user.daily_bonus_at,
           balance_frozen: !!user.balance_frozen,
         };
-        if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload } });
+        const tads = await getTadsConfig(supabase);
+        if (list.length === 0) return jsonResponse({ data: { video: null, user: userPayload, tads } });
 
         const unwatched = list.filter((v: any) => !watchedIds.has(v.id));
         const watchedAgain = list.filter((v: any) => watchedIds.has(v.id));
@@ -95,7 +96,81 @@ Deno.serve(async (req) => {
         const queue = [...shuffle(unwatched), ...shuffle(watchedAgain)];
         const video = queue[0] || null;
 
-        return jsonResponse({ data: { video, user: userPayload } });
+        return jsonResponse({ data: { video, user: userPayload, tads } });
+      }
+
+      // ===== TADS rewarded ads (external ad network) =====
+      case "tads_reward": {
+        const { telegram_id } = params;
+        if (!telegram_id) throw new Error("telegram_id required");
+
+        const { data: user } = await supabase
+          .from("users")
+          .select("id, username, telegram_id, balance_pt, balance_frozen, is_banned, captcha_pending")
+          .eq("telegram_id", telegram_id)
+          .single();
+        if (!user) throw new Error("User not found");
+        if (user.is_banned) throw new Error("Аккаунт заблокирован");
+        if (user.captcha_pending) return jsonResponse({ data: { locked: true } });
+
+        const tads = await getTadsConfig(supabase);
+        if (!tads.enabled) return jsonResponse({ data: { rewarded: false, reason: "paused" } });
+
+        // Server-side throttling so TADS views cannot be farmed faster than real ads.
+        const utcDayStart = new Date();
+        utcDayStart.setUTCHours(0, 0, 0, 0);
+        const { data: recentTads } = await supabase
+          .from("activity_logs")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .eq("action_type", "tads")
+          .gte("created_at", utcDayStart.toISOString())
+          .order("created_at", { ascending: false });
+        const todayTads = recentTads || [];
+        if (todayTads.length >= TADS_DAILY_LIMIT) {
+          return jsonResponse({ data: { rewarded: false, reason: "limit", limit: TADS_DAILY_LIMIT } });
+        }
+        if (todayTads[0] && Date.now() - new Date(todayTads[0].created_at).getTime() < TADS_MIN_INTERVAL_MS) {
+          return jsonResponse({ data: { rewarded: false, reason: "too_fast" } });
+        }
+
+        const reward = tads.reward_pt;
+        let newBalance = Number(user.balance_pt);
+        let refCredit: any = null;
+        if (!user.balance_frozen && reward > 0) {
+          newBalance = Math.round((Number(user.balance_pt) + reward) * 100) / 100;
+          await supabase.from("users").update({ balance_pt: newBalance }).eq("id", user.id);
+          refCredit = await creditReferral(supabase, user.id, reward, "video", { tads: true });
+        }
+
+        await recordIp(supabase, user.id, ip);
+        await supabase.from("logs_activity").insert({
+          user_id: user.id,
+          action: "tads_reward",
+          ip_address: ip,
+          metadata: { reward_pt: reward, source: "tads" },
+        });
+
+        try {
+          const { data: adv } = await supabase
+            .from("advertisers").select("id, public_id").eq("name", "TADS").maybeSingle();
+          const baseLog = {
+            user_id: user.id,
+            user_username: user.username || null,
+            user_telegram_id: user.telegram_id ?? null,
+            action_type: "tads",
+            task_title: "Видеореклама TADS",
+            advertiser_id: adv?.id || null,
+            advertiser_name: "TADS",
+            advertiser_public_id: adv?.public_id || null,
+            reward_pt: reward,
+            finished_at: new Date().toISOString(),
+          };
+          const { data: inserted } = await supabase.from("activity_logs").insert(baseLog).select("id").single();
+          await logReferralActivity(supabase, refCredit, { ...baseLog, id: inserted?.id || null });
+        } catch (_) { /* logging must never break reward flow */ }
+
+        return jsonResponse({ data: { rewarded: true, amount: reward, new_balance: newBalance } });
       }
 
       case "start_view": {
