@@ -1126,7 +1126,7 @@ Deno.serve(async (req) => {
           .from("logs_activity")
           .select("id, action, created_at, metadata")
           .eq("user_id", user.id)
-           .in("action", ["task_reward", "video_reward", "promo_reward", "balance_reset", "referral_reward", "withdrawal_request", "withdrawal_paid", "withdrawal_rejected"])
+           .in("action", ["task_reward", "video_reward", "tads_reward", "promo_reward", "balance_reset", "referral_reward", "withdrawal_request", "withdrawal_paid", "withdrawal_rejected"])
            .order("created_at", { ascending: false })
            .limit(80);
          const items = (rows || []).map((r: any) => {
@@ -1136,6 +1136,7 @@ Deno.serve(async (req) => {
            let label = "Задание";
            let amount = Number(meta.reward_pt || 0);
            if (r.action === "video_reward") { kind = "video"; sub = "video"; label = "Видеореклама"; }
+           else if (r.action === "tads_reward") { kind = "video"; sub = "tads"; label = "Видеореклама TADS"; }
            else if (r.action === "promo_reward") { kind = "promo"; sub = "promo"; label = "Промокод"; amount = Number(meta.reward_pt || 0); }
            else if (r.action === "referral_reward") { kind = "referral"; sub = "referral"; label = "Реферальный бонус"; amount = Number(meta.bonus || 0); }
            else if (r.action === "balance_reset") { kind = "reset"; sub = "reset"; label = "Обнуление баланса"; amount = Number(meta.amount || 0); }
