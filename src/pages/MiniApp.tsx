@@ -131,6 +131,12 @@ export default function MiniApp() {
   const [lastFinished, setLastFinished] = useState<{ video: VideoAd; reward: number; rewarded: boolean } | null>(null);
   const [nextVideo, setNextVideo] = useState<VideoAd | null>(null);
 
+  // ===== TADS external ad network =====
+  const [tadsCfg, setTadsCfg] = useState<{ enabled: boolean; widget_id: string; reward_pt: number } | null>(null);
+  const [tadsTurn, setTadsTurn] = useState(false);
+  const [tadsBusy, setTadsBusy] = useState(false);
+  const [tadsToast, setTadsToast] = useState<{ ok: boolean; reward?: number; message?: string } | null>(null);
+
   // Category sheet snap points (collapses below ~70%)
   const [snap, setSnap] = useState<string | number | null>(0.97);
 
