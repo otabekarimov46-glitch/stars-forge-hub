@@ -1065,7 +1065,48 @@ export default function MiniApp() {
             </div>
           )}
 
-          {status === "no_video" && (
+          {/* ===== TADS partner ad (compact card, no cover) ===== */}
+          {tadsCfg?.enabled && tadsTurn && (status === "ready" || status === "no_video") && (
+            <div className="screen-enter">
+              <button
+                type="button"
+                onClick={watchTadsAd}
+                disabled={tadsBusy}
+                className="press w-full rounded-2xl p-3.5 flex items-center gap-3 text-left transition-all duration-200 disabled:opacity-60"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500/25 to-blue-500/25 border border-white/10 flex items-center justify-center shrink-0">
+                  {tadsBusy
+                    ? <Loader2 className="w-5 h-5 text-white/80 animate-spin" />
+                    : <Play className="w-5 h-5 text-white/85" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14.5px] font-medium text-white/95 leading-tight">
+                    {tadsBusy ? t("tads_loading") : t("tads_watch")}
+                  </div>
+                  <div className="text-[11.5px] text-white/50 mt-0.5">{t("tads_hint")}</div>
+                </div>
+                <div className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold tabular-nums bg-gradient-to-br from-purple-600 to-blue-600 shrink-0">
+                  +{tadsCfg.reward_pt} PT
+                </div>
+              </button>
+              {tadsToast && (
+                <div className={`mt-2 rounded-2xl px-3.5 py-2.5 text-[12.5px] text-center border ${
+                  tadsToast.ok
+                    ? "bg-emerald-400/10 border-emerald-400/25 text-emerald-200"
+                    : "bg-red-400/10 border-red-400/25 text-red-200"
+                }`}>
+                  {tadsToast.ok ? `+${tadsToast.reward} PT` : tadsToast.message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {status === "no_video" && !(tadsCfg?.enabled && tadsTurn) && (
             <button
               type="button"
               onClick={() => { /* no-op — press feedback only */ }}
