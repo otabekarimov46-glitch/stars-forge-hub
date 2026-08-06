@@ -974,9 +974,61 @@ const WITHDRAW_EXT: Record<MiniAppLang, Dict> = {
   },
 };
 
-// Merge PROMO_EXT + RESUB_EXT + WITHDRAW_EXT into main dicts.
+const TADS_EXT: Record<MiniAppLang, Dict> = {
+  ru: {
+    tads_watch: "Смотреть рекламу",
+    tads_hint: "Реклама от партнёров",
+    tads_loading: "Загрузка рекламы…",
+    tads_error: "Реклама недоступна, попробуйте позже",
+    tads_limit: "Лимит просмотров рекламы исчерпан",
+  },
+  be: {
+    tads_watch: "Глядзець рэкламу",
+    tads_hint: "Рэклама ад партнёраў",
+    tads_loading: "Загрузка рэкламы…",
+    tads_error: "Рэклама недаступная, спрабуйце пазней",
+    tads_limit: "Ліміт праглядаў рэкламы вычарпаны",
+  },
+  kk: {
+    tads_watch: "Жарнама көру",
+    tads_hint: "Серіктестер жарнамасы",
+    tads_loading: "Жарнама жүктелуде…",
+    tads_error: "Жарнама қолжетімсіз, кейінірек көріңіз",
+    tads_limit: "Жарнама көру шегі бітті",
+  },
+  uz: {
+    tads_watch: "Reklama ko‘rish",
+    tads_hint: "Hamkorlar reklamasi",
+    tads_loading: "Reklama yuklanmoqda…",
+    tads_error: "Reklama mavjud emas, keyinroq urinib ko‘ring",
+    tads_limit: "Reklama ko‘rish limiti tugadi",
+  },
+  az: {
+    tads_watch: "Reklama bax",
+    tads_hint: "Tərəfdaş reklamı",
+    tads_loading: "Reklam yüklənir…",
+    tads_error: "Reklam əlçatan deyil, sonra yenidən yoxlayın",
+    tads_limit: "Reklam baxış limiti bitdi",
+  },
+  hy: {
+    tads_watch: "Դիտել գովազդ",
+    tads_hint: "Գործընկերների գովազդ",
+    tads_loading: "Գովազդը բեռնվում է…",
+    tads_error: "Գովազդը հասանելի չէ, փորձեք ավելի ուշ",
+    tads_limit: "Գովազդի դիտումների սահմանաչափը սպառված է",
+  },
+  ky: {
+    tads_watch: "Жарнама көрүү",
+    tads_hint: "Партнёрлордун жарнамасы",
+    tads_loading: "Жарнама жүктөлүүдө…",
+    tads_error: "Жарнама жеткиликсиз, кийинчерээк аракет кылыңыз",
+    tads_limit: "Жарнама көрүү лимити бүттү",
+  },
+};
+
+// Merge PROMO_EXT + RESUB_EXT + WITHDRAW_EXT + TADS_EXT into main dicts.
 (Object.keys(DICTS) as MiniAppLang[]).forEach((l) => {
-  Object.assign(DICTS[l], PROMO_EXT[l], RESUB_EXT[l], WITHDRAW_EXT[l]);
+  Object.assign(DICTS[l], PROMO_EXT[l], RESUB_EXT[l], WITHDRAW_EXT[l], TADS_EXT[l]);
 });
 
 
