@@ -1129,7 +1129,7 @@ export default function MiniApp() {
             </button>
           )}
 
-          {status === "ready" && video && (
+          {status === "ready" && video && !(tadsCfg?.enabled && tadsTurn) && (
             <div key={video.id} className="screen-enter">
               <div className="rounded-3xl overflow-hidden"
                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}>
