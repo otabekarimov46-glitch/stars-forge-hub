@@ -74,7 +74,7 @@ const ACTION_META: Record<ActionType, { label: string; short: string; icon: any;
   referral_reward:     { label: "Рефералка",       short: "Рефералка", icon: Share2, bar: "bg-indigo-500",      badge: "bg-indigo-500/10 text-indigo-500 border-indigo-500/25",       row: "bg-indigo-500/[0.05] hover:bg-indigo-500/[0.10]" },
 };
 
-const FILTERABLE: ActionType[] = ["video", "subscribe", "view_post", "view_story", "promo_reward", "referral_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
+const FILTERABLE: ActionType[] = ["video", "tads", "subscribe", "view_post", "view_story", "promo_reward", "referral_reward", "balance_reset", "withdrawal_paid", "withdrawal_rejected"];
 
 
 export default function AlertsPage() {
